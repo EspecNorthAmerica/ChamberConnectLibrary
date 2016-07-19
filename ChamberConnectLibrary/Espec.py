@@ -1,8 +1,8 @@
 ﻿'''
-Copyright (C) Espec North America, INC. - All Rights Reserved
-Written by Myles Metzler mmetzler@espec.com, May. 2016
+Upper level interface for Espec Corp. Controllers (just the P300 for now)
 
-Espec P300 interface for Espec Web Controller V2
+:copyright: (C) Espec North America, INC.
+:license: MIT, see LICENSE for more details.
 '''
 import datetime, redis, time
 from controllerAbstract import CtlrProperty, ControllerInterfaceError, itemproperty

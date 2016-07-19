@@ -1,8 +1,8 @@
 ﻿'''
-Copyright (C) Espec North America, INC. - All Rights Reserved
-Written by Myles Metzler mmetzler@espec.com, April 2016
+Handle the actual communication with Espec Corp. Controllers
 
-Abstraction to the physicall interace used by Espec Corperations controllers.
+:copyright: (C) Espec North America, INC.
+:license: MIT, see LICENSE for more details.
 '''
 import serial, socket
 

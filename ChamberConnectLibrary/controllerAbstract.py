@@ -1,8 +1,8 @@
 ﻿'''
-Copyright (C) Espec North America, INC. - All Rights Reserved
-Written by Myles Metzler mmetzler@espec.com, Jan. 2016
+Common interface for all All ChamberConnectLibrary upper level interfaces
 
-controller abstract for Espec Web Controller V2
+:copyright: (C) Espec North America, INC.
+:license: MIT, see LICENSE for more details.
 '''
 from abc import ABCMeta, abstractmethod
 import traceback, time #needed for debug only...

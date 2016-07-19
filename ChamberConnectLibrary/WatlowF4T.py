@@ -1,8 +1,8 @@
 ﻿'''
-Copyright (C) Espec North America, INC. - All Rights Reserved
-Written by Myles Metzler mmetzler@espec.com, Jan. 2016
+Upper level interface for the Watlow F4T controller
 
-Watlow F4T interface for Espec Web Controller V2
+:copyright: (C) Espec North America, INC.
+:license: MIT, see LICENSE for more details.
 '''
 #from pymodbus.client.sync import ModbusTcpClient as ModbusClient
 import time, redis, datetime, traceback

@@ -1,8 +1,8 @@
 ﻿'''
-Copyright (C) Espec North America, INC. - All Rights Reserved
-Written by Myles Metzler mmetzler@espec.com, May. 2016
+An exclusive lock for talking to controllers using redis.
 
-interface lock using redis for 
+:copyright: (C) Espec North America, INC.
+:license: MIT, see LICENSE for more details.
 '''
 import redis, time
 

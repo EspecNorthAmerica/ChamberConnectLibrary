@@ -1,8 +1,8 @@
 ﻿'''
-Copyright (C) Espec North America, INC. - All Rights Reserved
-Written by Myles Metzler mmetzler@espec.com, April 2016
+A direct implimentation of the P300's communication interface.
 
-Simple implimentations of all commands the P300 supports
+:copyright: (C) Espec North America, INC.
+:license: MIT, see LICENSE for more details.
 '''
 from EspecInteract import *
 import re
