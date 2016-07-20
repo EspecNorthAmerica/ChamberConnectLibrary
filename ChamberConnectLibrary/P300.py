@@ -27,7 +27,7 @@ class P300:
                                     kwargs.get('databits',8),kwargs.get('stopbits',1),kwargs.get('timeout',1),
                                     kwargs.get('address',1),kwargs.get('delimeter','\r\n'))
         else:
-            self.ctlr = EspecTCP(kwags['host'],kwargs.get('port',10001),kwargs.get('timeout',1),kwargs.get('address',1),kwargs.get('delimeter','\r\n'))
+            self.ctlr = EspecTCP(kwargs['host'],kwargs.get('port',10001),kwargs.get('timeout',1),kwargs.get('address',1),kwargs.get('delimeter','\r\n'))
 
     def __del__(self):
         self.cleanup()

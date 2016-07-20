@@ -9,12 +9,12 @@ import redis, time
 class LockTimeout(BaseException):
     pass
 
-class Lock(object):
-    def __init__(self, redis, key, expires=120, timeout=60):
+class redisLock(object):
+    def __init__(self, key, expires=120, timeout=60):
         self.key = key
         self.timeout = timeout
         self.expires = expires
-        self.redis = redis
+        self.redis = redis.Redis(host='localhost', port=6379)
     def __enter__(self):
         timeout = self.timeout
         while timeout >= 0:
@@ -29,23 +29,3 @@ class Lock(object):
         raise LockTimeout("Timeout waiting for lock")
     def __exit__(self, exc_type, exc_value, traceback):
         self.redis.delete(self.key)
-
-def exclusive(func):
-    def wrapper(self,*args,**kwargs):
-        if kwargs.get('exclusive',True):
-            with Lock(self.redis,'%s-lock' % (self.serialport if self.interface == "RTU" else self.host)):
-                try:
-                    try: del kwargs['exclusive']
-                    except: pass
-                    self.connect()
-                    return func(self,*args,**kwargs)
-                finally:
-                    try:
-                        self.close()
-                        if self.interface == "TCP": time.sleep(0.1) #forcefully slow down connection cycles
-                    except: pass
-        else:
-            try: del kwargs['exclusive']
-            except: pass
-            return func(self,*args,**kwargs)
-    return wrapper

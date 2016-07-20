@@ -5,22 +5,16 @@ Upper level interface for the Watlow F4T controller
 :license: MIT, see LICENSE for more details.
 '''
 #from pymodbus.client.sync import ModbusTcpClient as ModbusClient
-import time, redis, datetime, traceback
+import time, datetime, traceback
 from modbus import *
 from struct import *
-from controllerAbstract import CtlrProperty, ControllerInterfaceError
-from redisLock import *
+from controllerAbstract import CtlrProperty, ControllerInterfaceError, exclusive
 
 class WatlowF4T(CtlrProperty):
 
     def __init__(self,**kwargs):
         '''Must set some configuration values here'''
-        self.client = None
-        self.host = kwargs.get('host',"10.30.100.90")
-        self.interface = kwargs.get('interface',"TCP")
-        self.adr = kwargs.get('adr',1)
-        self.serialport = kwargs.get('serialport', 4-1) #zero indexed COM4 = 3
-        self.baudrate = kwargs.get('baudrate',19200)
+        self.init_common(**kwargs)
         self.cond_event = kwargs.get('cond_event',0)
         self.cond_event_toggle = kwargs.get('cond_event_toggle',False)
         self.limits = kwargs.get('limits',[5]) #list of limits needs to be supplied 1,2,3,4,5,6 are posible
@@ -36,10 +30,7 @@ class WatlowF4T(CtlrProperty):
         #these are detectable from the part number (call process_partno())
         self.alarms = kwargs.get('alarms',6)
         self.profiles = kwargs.get('profiles',False)
-        self.loops = kwargs.get('loops',1)
-        self.cascades = kwargs.get('cascades',0)
 
-        self.redis = redis.Redis(host='localhost', port=6379)
         self.update_profile_loop_map()
         self.watlowValDict = {1:'2', 2:'3', 3:'50Hz', 4:'60Hz', 9:'ambientError',
                               10:'auto', 11:'b', 13: 'both', 15:u'C', 17:'closeOnAlarm',

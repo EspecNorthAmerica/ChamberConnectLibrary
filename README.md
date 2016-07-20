@@ -1,8 +1,12 @@
 # ChamberConnectLibrary
 Python library for interfacing with Espec North America chambers with P300 &amp; Watlow F4T controllers.
 
-Requires Pyserial, Redis.
+Written for python 2.7, requires Pyserial module.
 
-Not really ready to post it but well...
-Redis requirement is to be removed so that custom exclusivity locks can be used, with default provided.
-Documention to be added at a later time.
+To test run test.py(on windows uing COM port #3)
+P300:
+    test.py Espec Serial \\.\COM3 19200
+Watlow F4T:
+    test.py Espec Serial \\.\COM3 38400
+
+Documentation to be added to the wiki when time permits.

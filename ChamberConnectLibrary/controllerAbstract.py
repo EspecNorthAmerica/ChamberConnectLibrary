@@ -6,12 +6,33 @@ Common interface for all All ChamberConnectLibrary upper level interfaces
 '''
 from abc import ABCMeta, abstractmethod
 import traceback, time #needed for debug only...
+from threading import RLock
 
 class ControllerInterfaceError(Exception):
     pass
 
+def exclusive(func):
+    def wrapper(self,*args,**kwargs):
+        if kwargs.get('exclusive',True):
+            with self.lock:
+                try:
+                    try: del kwargs['exclusive']
+                    except: pass
+                    self.connect()
+                    return func(self,*args,**kwargs)
+                finally:
+                    try:
+                        self.close()
+                        if self.interface == "TCP": time.sleep(0.1) #forcefully slow down connection cycles
+                    except: pass
+        else:
+            try: del kwargs['exclusive']
+            except: pass
+            return func(self,*args,**kwargs)
+    return wrapper
+
 class itemproperty(object):
-    '''MIT licensed from http://code.activestate.com/recipes/577703-item-properties/
+    '''copyright Ian Kelly, MIT licensed from http://code.activestate.com/recipes/577703-item-properties/
     an implimentation of the python property class with support for index/keys'''
     def __init__(self, fget=None, fset=None, fdel=None, doc=None):
         if doc is None and fget is not None and hasattr(fget, "__doc__"):
@@ -44,7 +65,7 @@ class itemproperty(object):
 
 
 class bounditemproperty(object):
-    '''MIT licensed from http://code.activestate.com/recipes/577703-item-properties/'''
+    '''copyright Ian Kelly, MIT licensed from http://code.activestate.com/recipes/577703-item-properties/'''
     def __init__(self, item_property, instance):
         self.__item_property = item_property
         self.__instance = instance
@@ -69,6 +90,17 @@ class bounditemproperty(object):
 
 class CtlrProperty:
     __metaclass__= ABCMeta
+
+    def init_common(self,**kwargs):
+        self.client = None
+        self.host = kwargs.get('host',"10.30.100.90")
+        self.interface = kwargs.get('interface',"TCP")
+        self.adr = kwargs.get('adr',1)
+        self.serialport = kwargs.get('serialport', 4-1) #zero indexed COM4 = 3
+        self.baudrate = kwargs.get('baudrate',19200)
+        self.loops = kwargs.get('loops',1)
+        self.cascades = kwargs.get('cascades',0)
+        self.lock = kwargs.get('lock',RLock())
 
     @abstractmethod
     def get_datetime(self): pass

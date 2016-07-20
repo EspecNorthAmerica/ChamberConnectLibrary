@@ -4,24 +4,15 @@ Upper level interface for Espec Corp. Controllers (just the P300 for now)
 :copyright: (C) Espec North America, INC.
 :license: MIT, see LICENSE for more details.
 '''
-import datetime, redis, time
-from controllerAbstract import CtlrProperty, ControllerInterfaceError, itemproperty
+import datetime, time
+from controllerAbstract import CtlrProperty, ControllerInterfaceError, exclusive
 from P300 import *
-from redisLock import *
 
 class Espec(CtlrProperty):
 
     def __init__(self,**kwargs):
-        self.client = None
-        self.host = kwargs.get('host',"10.30.100.90")
-        self.interface = kwargs.get('interface',"TCP")
-        self.adr = kwargs.get('adr',1)
-        self.serialport = kwargs.get('serialport', 4-1) #zero indexed COM4 = 3
-        self.baudrate = kwargs.get('baudrate',19200)
+        self.init_common(**kwargs)
         self.freshness = kwargs.get('freshness',0)
-        self.redis = redis.Redis(host='localhost', port=6379)
-        self.loops = kwargs.get('loops',1)
-        self.cascades = kwargs.get('cascades',0)
         self.cache = {}
         self.temp,self.humi = 1,2
         self.lpd = {'temp':self.temp,'humi':self.humi,
