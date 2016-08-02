@@ -1,12 +1,19 @@
 # ChamberConnectLibrary
 Python library for interfacing with Espec North America chambers with P300 &amp; Watlow F4T controllers.
 
-Written for python 2.7, requires Pyserial module.
+## Requirements
+python 2.7.x
 
-To test run test.py(on windows uing COM port #3)
+## Installation
+```pip install chamberconnectlibrary```
 
-P300: ```test.py Espec Serial \\.\COM3 19200```
+## Testing
 
-Watlow F4T: ```test.py Espec Serial \\.\COM3 38400```
+To test run chamberconnectlibrary-test.py(on windows using COM port #3, test script is located in Python2.7\Scripts directory)
 
-Documentation to be added to the wiki when time permits.
+P300: ```chamberconnectlibrary-test.py Espec Serial \\.\COM3 19200```
+
+Watlow F4T: ```chamberconnectlibrary-test.py Espec Serial \\.\COM3 38400```
+
+## Documentation
+To be added to the GitHub wiki when development status is more firm.
