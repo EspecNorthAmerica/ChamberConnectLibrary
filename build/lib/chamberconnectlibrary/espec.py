@@ -426,7 +426,10 @@ class Espec(CtlrProperty):
 
     @exclusive
     def set_networkSettings(self,value):
-        self.client.write_IPSet(value.get('address','0.0.0.0'),value.get('mask','0.0.0.0'),value.get('gateway','0.0.0.0'))
+        if value:
+            self.client.write_IPSet(value.get('address','0.0.0.0'),value.get('mask','0.0.0.0'),value.get('gateway','0.0.0.0'))
+        else:
+            self.client.write_IPSet('0.0.0.0','0.0.0.0','0.0.0.0')
 
 
 if __name__ == '__main__':

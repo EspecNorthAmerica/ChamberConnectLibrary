@@ -43,6 +43,7 @@ class EspecTCP:
         self.socket.setblocking(True)
         self.socket.connect((host,port))
         self.address = address
+        self.delimeter = delimeter
     def __del__(self):
         try:
             self.close()
