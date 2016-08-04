@@ -835,7 +835,7 @@ class WatlowF4T(CtlrProperty):
     def get_prgm_empty(self):
         '''create a empty null program'''
         haswaits = self.waits[0] != '' or self.waits[1] != '' or self.waits[2] != '' or self.waits[3] != ''
-        gsd,lp,evd,wd = [],[],[],[]
+        gsd,ld,evd,wd = [],[],[],[]
         for i in range(self.loops):
             gsd.append({'value':3.0})
         for j in range(self.loops + self.cascades):
