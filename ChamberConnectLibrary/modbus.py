@@ -120,12 +120,12 @@ class modbusRTU(modbus):
         rcrc = struct.unpack('>H',self.serial.read(2))[0]
         ccrc = self.calc_crc(head+body)
         if self.address != raddress:
-            sendHex = ":".join("{:02x}".format(ord(c) for c in packet + crc))
-            recHex = ":".join("{:02x}".format(ord(c) for c in (head+body+rcrc)))
+            sendHex = ":".join(["{:02x}".format(ord(c)) for c in (packet+crc)])
+            recHex = ":".join(["{:02x}".format(ord(c)) for c in (head+body+rcrc)])
             raise ModbusError("Address error; Sent=%s, Recieved=%s" % (sendHex, recHex))
         if rcrc != ccrc:
-            sendHex = ":".join("{:02x}".format(ord(c) for c in packet + crc))
-            recHex = ":".join("{:02x}".format(ord(c) for c in (head+body+rcrc)))
+            sendHex = ":".join(["{:02x}".format(ord(c)) for c in (packet+crc)])
+            recHex = ":".join(["{:02x}".format(ord(c)) for c in (head+body+rcrc)])
             raise ModbusError("CRC error; Sent=%s, Recieved=%s" % (sendHex, recHex))
         return head + body
 
@@ -148,7 +148,7 @@ class modbusTCP(modbus):
         return struct.pack(">3H",self.id,0,length)
 
     def interact(self,packet):
-        self.sendHex = ":".join("{:02x}".format(ord(c) for c in packet))
+        self.sendHex = ":".join(["{:02x}".format(ord(c)) for c in packet])
         self.socket.send(self.makeMBAP(len(packet)) + packet)
         mbap_raw = self.socket.recv(6)
         if len(mbap_raw) != 6:

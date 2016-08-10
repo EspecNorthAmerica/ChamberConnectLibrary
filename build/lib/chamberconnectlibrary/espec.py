@@ -374,7 +374,10 @@ class Espec(CtlrProperty):
 
     @exclusive
     def get_prgm(self, N):
-        return self.client.read_prgm(N, self.cascades > 0)
+        try:
+            return self.client.read_prgm(N, self.cascades > 0)
+        except EspecError:
+            raise ControllerInterfaceError('Profile %d does not exist' % N)
 
     @exclusive
     def set_prgm(self,N,prgm):
