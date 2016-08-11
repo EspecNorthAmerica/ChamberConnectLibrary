@@ -91,7 +91,7 @@ class Espec(CtlrProperty):
                                     'enable_cascade':self.set_cascade_ctl},
                             'loop':{'setpoint':self.set_loop_sp,'setPoint':self.set_loop_sp,
                                     'range':self.set_loop_range,
-                                    'enable':self.set_loop_en,}}
+                                    'enable':self.set_loop_en}}
         if 'setpoint' in list and 'enable' in list:
             params = {'setpoint':list.pop('setpoint'),'enable':list.pop('enable')}
             if range in list:

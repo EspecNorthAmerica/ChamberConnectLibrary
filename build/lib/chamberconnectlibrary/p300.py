@@ -501,7 +501,8 @@ class P300:
             pgmnum: int, program to run if mode=="RUN"
             pgmstep: int, program step to run if mode=="RUN"'''
         cmd = 'TIMER WRITE,NO0,%d:%d,%s' %(time['hour'],time['minute'],mode)
-        if mode == 'RUN': cmd = '%s,RAM:%d,STEP%d' % (cmd,pgmnum,pgmstep)
+        if mode == 'RUN':
+            cmd = '%s,RAM:%d,STEP%d' % (cmd,pgmnum,pgmstep)
         self.ctlr.interact(cmd)
 
     def write_timerWriteStart(self,repeat,time,mode,date=None,days=None,pgmnum=None,pgmstep=None):
@@ -572,9 +573,9 @@ class P300:
             max: float
             min: float
             range: {"max":float,"min":float} this dictionary may be used to set max/min if params max/min are None'''
-        actsp = (' S%0.1f' % setpoint) if setpoint else ''
-        actmx = (' H%0.1f' % max) if max else (' H%0.1f' % range['max']) if range else ''
-        actmn = (' L%0.1f' % min) if min else (' L%0.1f' % range['min']) if range else ''
+        actsp = (' S%0.1f' % setpoint) if setpoint is not None else ''
+        actmx = (' H%0.1f' % max) if max is not None else (' H%0.1f' % range['max']) if range else ''
+        actmn = (' L%0.1f' % min) if min is not None else (' L%0.1f' % range['min']) if range else ''
         self.ctlr.interact('TEMP,%s%s%s' % (actsp,actmx,actmn))
 
     def write_humi(self,enable=True,setpoint=None,max=None,min=None,range=None):
@@ -585,9 +586,9 @@ class P300:
             max: float
             min: float
             range: {"max":float,"min":float} this dictionary may be used to set max/min if params max/min are None'''
-        actsp = (' S%0.1f' % setpoint) if setpoint else ''
-        actmx = (' H%0.1f' % max) if max else (' H%0.1f' % range['max']) if range else ''
-        actmn = (' L%0.1f' % min) if min else (' L%0.1f' % range['min']) if range else ''
+        actsp = (' S%0.1f' % setpoint) if setpoint is not None else ''
+        actmx = (' H%0.1f' % max) if max is not None else (' H%0.1f' % range['max']) if range else ''
+        actmn = (' L%0.1f' % min) if min is not None else (' L%0.1f' % range['min']) if range else ''
         self.ctlr.interact('HUMI,%s%s%s' % (actsp if enable else 'SOFF',actmx,actmn))
 
     def write_set(self,mode,setpoint=0):
@@ -747,13 +748,13 @@ class P300:
             gohumi: float, the humidity to end the steap at (optional for ramping)
             relays: [boolean], True= turn relay on, False=turn relay off, None=Do nothing (optional)'''
         cmd = 'RUN PRGM, TEMP%0.1f TIME%d:%d' % (temp,hour,minute)
-        if gotemp:
+        if gotemp is not None:
             cmd = '%s GOTEMP%0.1f' % (cmd,gotemp)
-        if humi:
+        if humi is not None:
             cmd = '%s HUMI%0.0f' % (cmd,humi)
-        if gohumi:
+        if gohumi is not None:
             cmd = '%s GOHUMI%0.0f' % (cmd,gohumi)
-        rlys = self.parse_relays(relays) if relays else {'on':None,'off':None}
+        rlys = self.parse_relays(relays) if relays is not None else {'on':None,'off':None}
         if rlys['on']:
             cmd = '%s RELAYON,%s' % (cmd,','.join(str(v) for v in rlys['on']))
         if rlys['off']:
