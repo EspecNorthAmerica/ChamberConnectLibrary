@@ -212,9 +212,7 @@ class WatlowF4T(CtlrProperty):
                                     'range':self.set_loop_range,
                                     'enable':self.set_loop_en,}}
         for k,v in list.items():
-            params = v if isinstance(v, dict) else {'value':v}
-            params.update({'exclusive':False,'N':N})
-            try: loopFunctions[type][k](**params)
+            try: loopFunctions[type][k](exclusive=False,N=N,value=v)
             except KeyError: pass
 
     @exclusive
@@ -315,8 +313,8 @@ class WatlowF4T(CtlrProperty):
     @exclusive
     def set_cascade_range(self,N,value): 
         self.range_check(N,1,self.loops)
-        self.client.writeHolding(4036+(N-1)*200, self.float_to_mod(value))
-        self.client.writeHolding(4038+(N-1)*200, self.float_to_mod(value))   
+        self.client.writeHolding(4036+(N-1)*200, self.float_to_mod(value['max']))
+        self.client.writeHolding(4038+(N-1)*200, self.float_to_mod(value['min']))   
 
     @exclusive
     def get_cascade_en(self,N):
@@ -360,8 +358,8 @@ class WatlowF4T(CtlrProperty):
         cm = self.client.readHolding(4200+(N-1)*200, 1)[0] == 62
         eve = True
         if (self.cascade_ctl_event[N-1] != 0):
-            eve = self.get_event(self.cascade_ctl_event[N-1],exclusive=False)
-        if constant or (self.cascade_ctl_event[N-1] != 0):
+            eve = self.get_event(self.cascade_ctl_event[N-1],exclusive=False)['current']
+        if self.cascade_ctl_event[N-1] != 0:
             return eve
         else:
             return cm

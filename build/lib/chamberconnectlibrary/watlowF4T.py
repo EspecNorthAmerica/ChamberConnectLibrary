@@ -360,8 +360,8 @@ class WatlowF4T(CtlrProperty):
         cm = self.client.readHolding(4200+(N-1)*200, 1)[0] == 62
         eve = True
         if (self.cascade_ctl_event[N-1] != 0):
-            eve = self.get_event(self.cascade_ctl_event[N-1],exclusive=False)
-        if constant or (self.cascade_ctl_event[N-1] != 0):
+            eve = self.get_event(self.cascade_ctl_event[N-1],exclusive=False)['current']
+        if self.cascade_ctl_event[N-1] != 0:
             return eve
         else:
             return cm
