@@ -12,21 +12,114 @@ class ModbusError(Exception):
 
 class modbus:
     '''A subset of a modbus master library, only impliments modbus functions:
-     3: Read Holding Register
+     3: Read Holding Register(s)
      6: Write Holding Register
      16: Write Multiple Holding Registers'''
+    errorMessages = {1: 'Illegal Function',
+                     2: 'Illegal Data Address',
+                     3: 'Illegal Data Value',
+                     4: 'Slave Device Failure',
+                     5: 'Acknowledge',
+                     6: 'Slave Device Busy',
+                     7: 'Negative Acknowledge',
+                     8: 'Memory Parity Error',
+                     10:'Gateway Path Unavalable',
+                     11:'Gateway Target Device Failed To Respond'}
+
 
     def readHolding(self,register,count=1):
-        '''Read holding register(s), returns a tuple containing all 16-bit values'''
+        '''
+        Read holding register(s)
+
+        Args:
+            register (int): The modbus register to read
+            count (int): The number of modbus registers to read (default=1)
+
+        Returns:
+            tuple. 16bit integers
+        '''
         packet = self.makePacket(3,register,count)
         rval = self.interact(packet)
         return self.decodePacket(rval, packet)
 
+    def readFloat(self, register, count=1):
+        '''
+        Read some floating point values from 2 adjacent modbus registers
+
+        Args:
+            register (int): the first register to start reading at.
+            count (int): the number of floats to read (2*count will actually be read)
+
+        Returns:
+            tuple. 32bit floats
+        '''
+        val = readHolding(self,register,count*2)
+        return [round(unpack('f',pack('HH',val[i], val[i+1]))[0],1) for i in range(0,count*2,2)]
+
+    def readString(self,register,count):
+        '''
+        Read a string
+
+        Args:
+            register (int): The register to start reading from
+            count(int): The number of registers to read (length of string)
+
+        Returns:
+            str
+        '''
+        val = readHolding(self,register,count)
+        str = ""
+        for x in val:
+            if x is not 0:
+                str = str + chr(x)
+        return str
+
     def writeHolding(self,register,value):
-        '''Write to holding register(s)'''
+        '''
+        Write to holding register(s), accepts single values or lists of values
+
+        Args:
+            register (int): register(s) to write to
+            value (int or list(int)): value(s) to write,
+
+        Return:
+            None
+        '''
         packet = self.makePacket(16 if type(value) in [list,tuple] else 6,register,value)
         rval = self.interact(packet)
         self.decodePacket(rval, packet)
+
+    def writeFloat(self, register, value):
+        '''
+        Write floating point values to the controller
+
+        Args:
+            register (int): first register to write to, 2 float value will be written.
+            value (float or list(float)): vlaue(s) to write to
+
+        Return:
+            None
+        '''
+        if type(value) in [list,tuple]:
+            self.writeHolding(''.join([unpack('HH',pack('f',val)) for val in value]))
+        else:
+            self.writeHolding(unpack('HH',pack('f',value)))
+
+    def writeString(self, register, value, length=20):
+        '''
+        Write a string to the controller
+
+        Args:
+            register (int): first register to wrote to
+            value (str): The string to write
+            length (int): The string will be padded or truncated to this length.
+
+        Return:
+            None
+        '''
+        mods = [ord(c) for c in val]
+        mods.extend([0]*length)
+        self.writeHolding(register,mods[0:length])
 
     def interact(self,packet):
         '''Interact with the physical interface'''
@@ -55,7 +148,8 @@ class modbus:
             recHex = ":".join("{:02x}".format(ord(c) for c in packet))
             raise ModbusError("Address error; Sent=%s, Recieved=%s" % (sendHex, recHex))
         if fc > 127:
-            raise ModbusError("Modbus Error: Exception code = %d" % (struct.unpack(">B",packet[2])[0]))
+            excCode = struct.unpack(">B",packet[2])[0]
+            raise ModbusError("Modbus Error: Exception code = %d(%s)" % (excCode, self.errorMessages.get(excCode,'Unknown error code')))
 
         if fc == 3: #Read holding register(s)
             cnt = struct.unpack(">B",packet[2])[0]/2
@@ -151,6 +245,8 @@ class modbusTCP(modbus):
         self.sendHex = ":".join(["{:02x}".format(ord(c)) for c in packet])
         self.socket.send(self.makeMBAP(len(packet)) + packet)
         mbap_raw = self.socket.recv(6)
+        if len(mbap_raw) == 0:
+            raise ModbusError("The controller did not respond to the request (MBAP length = 0)")
         if len(mbap_raw) != 6:
             raise ModbusError("MBAP length error; expected:6, got:%s (%r)" % (len(mbap_raw),mbap_raw))
         mbap = struct.unpack('>3H',mbap_raw)

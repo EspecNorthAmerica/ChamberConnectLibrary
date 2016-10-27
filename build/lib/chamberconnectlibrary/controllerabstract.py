@@ -137,6 +137,11 @@ class CtlrProperty:
     def get_loop_units(self,N): pass
     @abstractmethod
     def get_loop_mode(self,N): pass
+    @abstractmethod
+    def set_loop_mode(self,N,value): pass
+
+    def get_loop_power(self,N): raise NotImplementedError
+    def set_loop_power(self,N,value): raise NotImplementedError
 
     @abstractmethod
     def get_cascade_sp(self,N): pass
@@ -157,6 +162,8 @@ class CtlrProperty:
     @abstractmethod
     def get_cascade_mode(self,N): pass
     @abstractmethod
+    def set_cascade_mode(self,N,value): pass
+    @abstractmethod
     def get_cascade_ctl(self,N): pass
     @abstractmethod
     def set_cascade_ctl(self,N,value): pass
@@ -164,6 +171,9 @@ class CtlrProperty:
     def get_cascade_deviation(self,N): pass
     @abstractmethod
     def set_cascade_deviation(self,N,value): pass
+    
+    def get_cascade_power(self,N): raise NotImplementedError
+    def set_cascade_power(self,N,value): raise NotImplementedError
 
     @abstractmethod
     def get_event(self,N): pass
@@ -240,6 +250,7 @@ class CtlrProperty:
     loop_units = itemproperty(lambda self,N: self.get_loop_units(N),
                               doc='units of the specified loop')
     loop_mode = itemproperty(lambda self,N: self.get_loop_mode(N),
+                             lambda self,N,value: self.set_loop_mode(N,value),
                              doc='get the mode of the specified loop')
 
     cascade_sp = itemproperty(lambda self,N: self.get_cascade_sp(N),
@@ -256,6 +267,7 @@ class CtlrProperty:
     cascade_units = itemproperty(lambda self,N: self.get_cascade_units(N),
                                  doc='units of the cascade(PTCON) loop')
     cascade_mode = itemproperty(lambda self,N: self.get_cascade_mode(N),
+                                lambda self,N,value: self.set_cascade_mode(N,value),
                                 doc='get the mode of the cascade(PTCON) loop')
     cascade_ctl = itemproperty(lambda self,N: self.get_cascade_ctl(N),
                                lambda self,N,value: self.set_cascade_ctl(N,value),

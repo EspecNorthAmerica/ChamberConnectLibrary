@@ -855,11 +855,11 @@ class P300:
             raise
 
     def encode_refrig(self,mode,setpoint):
-        if mode =='off':
+        if mode in ['off','Off']:
             act = 'REF0'
-        elif mode == 'auto':
+        elif mode in ['auto','Auto']:
             act = 'REF9'
-        elif mode == 'manual':
+        elif mode in ['manual','Manual']:
             if setpoint == 0:
                 act = 'REF0'
             elif setpoint == 20:
@@ -869,9 +869,9 @@ class P300:
             elif setpoint == 100:
                 act = 'REF6'
             else:
-                raise ValueError('parameter "setpoint" must be one of the following: 20/50/100')
+                raise ValueError('parameter "setpoint" must be one of the following: 20/50/100 got: %d' % setpoint)
         else:
-            raise ValueError('parameter "mode" must be one of the following: "off"/"manual"/"auto"')
+            raise ValueError('parameter "mode" must be one of the following: "off"/"Off"/"manual"/"Manual"/"auto"/"Auto" supplied:%s' % mode)
         return act
 
     def parse_relays(self,relays):
