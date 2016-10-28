@@ -368,8 +368,9 @@ class Espec(CtlrProperty):
         return '%d:%02d:00' % (rtime['hour'],rtime['minute'])
 
     @exclusive
-    def get_prgm_time(self):
-        pgm = self.client.read_prgm(self.cached(self.client.read_prgmSet)['number'])
+    def get_prgm_time(self, pgm = None):
+        if pgm is None:
+            pgm = self.client.read_prgm(self.cached(self.client.read_prgmSet)['number'])
         pgms = self.cached(self.client.read_prgmMon)
 
         #counter_a must be the inner counter or the only counter

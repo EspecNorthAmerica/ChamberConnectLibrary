@@ -816,7 +816,7 @@ class WatlowF4T(CtlrProperty):
         return "%d:%02d:%02d" % (data[4], data[2], data[0])
 
     @exclusive
-    def get_prgm_time(self):
+    def get_prgm_time(self, pgm=None):
         '''time until program end'''
         data = self.client.readHolding(16570, 3)
         return "%d:%02d:00" % (data[2], data[0])

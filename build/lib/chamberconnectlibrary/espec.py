@@ -373,42 +373,30 @@ class Espec(CtlrProperty):
         pgms = self.cached(self.client.read_prgmMon)
 
         #counter_a must be the inner counter or the only counter
-        if pgm['counter_a']['cycles'] == 0 and pgm['counter_b']['cycles'] != 0:
-            pgm['counter_a'],pgm['counter_b'] = pgm['counter_b'],pgm['counter_a']
-            pgms['counter_a'],pgms['counter_b'] = pgms['counter_b'],pgms['counter_a']
-        elif pgm['counter_a']['end'] >= pgm['counter_b']['end'] and pgm['counter_a']['start'] <= pgm['counter_b']['start']:
+        if (pgm['counter_a']['end'] >= pgm['counter_b']['end'] and pgm['counter_a']['start'] <= pgm['counter_b']['start']) or (pgm['counter_a']['cycles'] == 0 and pgm['counter_b']['cycles'] != 0):
             pgm['counter_a'],pgm['counter_b'] = pgm['counter_b'],pgm['counter_a']
             pgms['counter_a'],pgms['counter_b'] = pgms['counter_b'],pgms['counter_a']
         cap = len(pgm['steps'])
         cap = cap*(pgm['counter_a']['cycles'] + 2) if pgm['counter_a']['cycles'] else cap
         cap = cap*(pgm['counter_b']['cycles'] + 2) if pgm['counter_b']['cycles'] else cap
-        cap += 1
+        cap += 2
 
         cA = pgms['counter_a']
         cB = pgms['counter_b']
         cS = pgms['pgmstep']-1
         tminutes = pgms['time']['hour']*60 + pgms['time']['minute']
-        safeguard = 0
-
-        print 'cA: %d, counter_a: %r' % (cA, pgm['counter_a'])
-        print 'cB: %d, counter_b: %r' % (cB, pgm['counter_b'])
-        print 'Step: %d' % cS
         pB = cB
-        while cS < len(pgm['steps']) and safeguard < cap:
-            safeguard += 1
-            print 'cS: %d, cA: %d, cB: %d' % (cS,cA,cB)
+        while cS < len(pgm['steps']) and cap:
+            cap -= 1
             if pgm['counter_a']['start'] == pgm['counter_b']['start'] and pgm['counter_a']['cycles'] and pgm['counter_b']['cycles'] and cS == pgm['counter_b']['start']-1:
                 if pB != cB:
                     cA = pgm['counter_a']['cycles']
             elif cS == pgm['counter_b']['start']-1 and pgm['counter_b']['cycles']:
-                print '\treset cA'
                 cA = pgm['counter_a']['cycles']
             if cS == pgm['counter_a']['end']-1 and pgm['counter_a']['cycles'] and cA:
-                print '\tdec cA'
                 cS = pgm['counter_a']['start']-1
                 cA -= 1
             elif cS == pgm['counter_b']['end']-1 and pgm['counter_b']['cycles'] and cB:
-                print '\tdec cB'
                 cS = pgm['counter_b']['start']-1
                 pB = cB
                 cB -= 1
@@ -417,9 +405,8 @@ class Espec(CtlrProperty):
                 cS += 1
             if cS < len(pgm['steps']):
                 tminutes += pgm['steps'][cS]['time']['hour']*60 + pgm['steps'][cS]['time']['minute']
-        if safeguard == cap:
+        if cap == 0:
             raise RuntimeError('Calculating the total program time remaining looks like it would run forever and was terminated.')
-        print 'safeguard: %d' % safeguard
         return "%d:%02d:00" % (int(tminutes/60), tminutes%60)
 
     @exclusive

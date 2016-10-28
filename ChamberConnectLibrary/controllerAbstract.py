@@ -204,7 +204,7 @@ class CtlrProperty:
     @abstractmethod
     def get_prgm_cstime(self): pass
     @abstractmethod
-    def get_prgm_time(self): pass
+    def get_prgm_time(self, pgm=None): pass
 
     @abstractmethod
     def get_prgm_name(self,N): pass
