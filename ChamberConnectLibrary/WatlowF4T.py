@@ -520,10 +520,10 @@ class WatlowF4T(CtlrProperty):
             raise ValueError('mode must be "Off"/"Auto"/"Manual"/"On" ("On" = set_loop_en(N,True) recieved: ' + value)
 
     @exclusive
-    def get_loop_mode(self, N, ):
+    def get_loop_mode(self, N):
         '''Returns loop state'''
         self.range_check(N,1,self.loops)
-        if self.get_loop_en(N,exclusive=False):
+        if self.get_loop_en(N,exclusive=False)['constant']:
             return {62:'Off',10:'Auto',54:'Manual'}[self.client.readHolding(2730+(N-1)*160, 1)[0]]
         else:
             return 'Off'
