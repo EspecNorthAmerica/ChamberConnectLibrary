@@ -674,7 +674,7 @@ class P300:
             if 'counter_b' in pgmdetail and pgmdetail['counter_b']['cycles'] > 0:
                 tmp = '%s,B(%d.%d.%d)' % (tmp,pgmdetail['counter_b']['start'],pgmdetail['counter_b']['end'],pgmdetail['counter_b']['cycles'])
             self.ctlr.interact(tmp)
-        if 'counter_b' in pgmdetail and not 'counter_a' in pgmdetail and pgmdetail['counter_b']['cycles'] > 0:
+        elif 'counter_b' in pgmdetail and pgmdetail['counter_b']['cycles'] > 0:
             self.ctlr.interact('PRGM DATA WRITE, PGM%d, COUNT,B(%d.%d.%d)' % ((pgmnum,pgmdetail['counter_b']['start'],pgmdetail['counter_b']['end'],pgmdetail['counter_b']['cycles'])))
         if 'end' in pgmdetail:
             self.ctlr.interact('PRGM DATA WRITE, PGM%d, END,%s' % (pgmnum,pgmdetail['end'] if pgmdetail['end'] != 'RUN' else 'RUN,PTN%s' % pgmdetail['next_prgm']))
