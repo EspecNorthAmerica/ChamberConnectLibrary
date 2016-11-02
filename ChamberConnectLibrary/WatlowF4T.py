@@ -1141,9 +1141,11 @@ class WatlowF4T(CtlrProperty):
             gsd.append({'value':3.0})
         for j in range(self.loops + self.cascades):
             lp = {'target':0,'rate':0,'mode':'','gsoak': False, 'cascade': False,
-                  'enable': True if self.loop_event[j] == 0 else False,
-                  'showEnable': False if self.loop_event[j] == 0 else True,
                   'isCascade': self.profile_loop_map[j]['type'] == 'cascade'}
+            if self.profile_loop_map[j]['type'] == 'cascade':
+                lp.update({'enable': self.cascade_event[j] == 0, 'showEnable': self.cascade_event[j] != 0})
+            else:
+                lp.update({'enable': self.loop_event[j - self.cascades] == 0 , 'showEnable': self.loop_event[j - self.cascades] != 0})
             ld.append(lp)
         hidden_events = self.loop_event + self.cascade_event + self.cascade_ctl_event
         hidden_events.append(self.cond_event)
