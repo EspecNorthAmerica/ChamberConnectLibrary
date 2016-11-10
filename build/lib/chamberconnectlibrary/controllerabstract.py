@@ -89,7 +89,7 @@ class bounditemproperty(object):
         fdel(self.__instance, key)
 
 class CtlrProperty:
-    __metaclass__= ABCMeta
+    __metaclass__ = ABCMeta
 
     def init_common(self,**kwargs):
         self.client = None
@@ -204,7 +204,7 @@ class CtlrProperty:
     @abstractmethod
     def get_prgm_cstime(self): pass
     @abstractmethod
-    def get_prgm_time(self): pass
+    def get_prgm_time(self, pgm=None): pass
 
     @abstractmethod
     def get_prgm_name(self,N): pass
@@ -308,222 +308,299 @@ class CtlrProperty:
                                doc='network settings displayed by the controller')
 
     def self_test(self,loops,cascades):
-        #preform a self test on all functions
+        '''preform a self test on all functions'''
+
+        def print_exception(trce):
+            print '\n'.join(['\t' + l for l in trce.split('\n')])
+
         print 'call process_controller():'
-        try: print '\t%r' % self.process_controller()
-        except: print '\t%r' % traceback.print_exc()
+        try:
+            print '\t%r' % self.process_controller()
+        except:
+            print_exception(traceback.format_exc())
 
         print 'read datetime:'
-        try: print '\t%r' % self.datetime
-        except: print '\t%r' % traceback.print_exc()
+        try:
+            print '\t%r' % self.datetime
+        except:
+            print_exception(traceback.format_exc())
 
         print 'write datetime:'
         try:
             self.datetime = self.datetime
             print '\tok'
-        except: print '\t%r' % traceback.print_exc()
+        except:
+            print_exception(traceback.format_exc())
 
         for i in range(1,loops+1):
             print 'read loop_sp[%d]:' % i
-            try: print '\t%r' % self.loop_sp[i]
-            except: print '\t%r' % traceback.print_exc()
+            try:
+                print '\t%r' % self.loop_sp[i]
+            except:
+                print_exception(traceback.format_exc())
             print 'write loop_sp[%d]:' %i
             try: 
                 self.loop_sp[i] = self.loop_sp[i]['constant']
                 print '\tok'
-            except: print '\t%r' % traceback.print_exc()
+            except:
+                print_exception(traceback.format_exc())
 
             print 'read loop_pv[%d]:' % i
-            try: print '\t%r' % self.loop_pv[i]
-            except: print '\t%r' % traceback.print_exc()
+            try:
+                print '\t%r' % self.loop_pv[i]
+            except:
+                print_exception(traceback.format_exc())
 
             print 'read loop_range[%d]:' % i
-            try: print '\t%r' % self.loop_range[i]
-            except: print '\t%r' % traceback.print_exc()
+            try:
+                print '\t%r' % self.loop_range[i]
+            except:
+                print_exception(traceback.format_exc())
             print 'write loop_range[%d]:' %i
             try: 
                 self.loop_range[i] = self.loop_range[i]
                 print '\tok'
-            except: print '\t%r' % traceback.print_exc()
+            except:
+                print_exception(traceback.format_exc())
 
             print 'read loop_en[%d]:' % i
-            try: print '\t%r' % self.loop_en[i]
-            except: print '\t%r' % traceback.print_exc()
+            try:
+                print '\t%r' % self.loop_en[i]
+            except:
+                print_exception(traceback.format_exc())
             print 'write loop_en[%d]:' %i
             try: 
                 self.loop_en[i] = self.loop_en[i]['constant']
                 print '\tok'
-            except: print '\t%r' % traceback.print_exc()
+            except:
+                print_exception(traceback.format_exc())
 
             print 'read loop_units[%d]:' % i
-            try: print '\t%r' % self.loop_units[i]
-            except: print '\t%r' % traceback.print_exc()
+            try:
+                print '\t%r' % self.loop_units[i]
+            except:
+                print_exception(traceback.format_exc())
 
             print 'read loop_mode[%d]:' % i
-            try: print '\t%r' % self.loop_mode[i]
-            except: print '\t%r' % traceback.print_exc()
+            try:
+                print '\t%r' % self.loop_mode[i]
+            except:
+                print_exception(traceback.format_exc())
 
         for i in range(1,cascades+1):
             print 'read cascade_sp[%d]:' % i
-            try: print '\t%r' % self.cascade_sp[i]
-            except: print '\t%r' % traceback.print_exc()
+            try:
+                print '\t%r' % self.cascade_sp[i]
+            except:
+                print_exception(traceback.format_exc())
             print 'write cascade_sp[%d]:' %i
             try: 
                 self.cascade_sp[i] = self.cascade_sp[i]['constant']
                 print '\tok'
-            except: print '\t%r' % traceback.print_exc()
+            except: print_exception(traceback.format_exc())
 
             print 'read cascade_pv[%d]:' % i
-            try: print '\t%r' % self.cascade_pv[i]
-            except: print '\t%r' % traceback.print_exc()
+            try:
+                print '\t%r' % self.cascade_pv[i]
+            except:
+                print_exception(traceback.format_exc())
 
             print 'read cascade_range[%d]:' % i
-            try: print '\t%r' % self.cascade_range[i]
-            except: print '\t%r' % traceback.print_exc()
+            try:
+                print '\t%r' % self.cascade_range[i]
+            except:
+                print_exception(traceback.format_exc())
             print 'write cascade_range[%d]:' %i
             try: 
                 self.cascade_range[i] = self.cascade_range[i]
                 print '\tok'
-            except: print '\t%r' % traceback.print_exc()
+            except:
+                print_exception(traceback.format_exc())
 
             print 'read cascade_en[%d]:' % i
-            try: print '\t%r' % self.cascade_en[i]
-            except: print '\t%r' % traceback.print_exc()
+            try:
+                print '\t%r' % self.cascade_en[i]
+            except:
+                print_exception(traceback.format_exc())
             print 'write cascade_en[%d]:' %i
             try: 
                 self.cascade_en[i] = self.cascade_en[i]['constant']
                 print '\tok'
-            except: print '\t%r' % traceback.print_exc()
+            except:
+                print_exception(traceback.format_exc())
 
             print 'read cascade_units[%d]:' % i
-            try: print '\t%r' % self.cascade_units[i]
-            except: print '\t%r' % traceback.print_exc()
+            try:
+                print '\t%r' % self.cascade_units[i]
+            except:
+                print_exception(traceback.format_exc())
 
             print 'read cascade_mode[%d]:' % i
-            try: print '\t%r' % self.cascade_mode[i]
-            except: print '\t%r' % traceback.print_exc()
+            try:
+                print '\t%r' % self.cascade_mode[i]
+            except:
+                print_exception(traceback.format_exc())
 
             print 'read cascade_ctl[%d]:' % i
-            try: print '\t%r' % self.cascade_ctl[i]
-            except: print '\t%r' % traceback.print_exc()
+            try:
+                print '\t%r' % self.cascade_ctl[i]
+            except:
+                print_exception(traceback.format_exc())
             print 'write cascade_ctl[%d]:' %i
             try: 
                 self.cascade_ctl[i] = self.cascade_ctl[i]
                 print '\tok'
-            except: print '\t%r' % traceback.print_exc()
+            except:
+                print_exception(traceback.format_exc())
 
             print 'read cascade_deviation[%d]:' % i
-            try: print '\t%r' % self.cascade_deviation[i]
-            except: print '\t%r' % traceback.print_exc()
+            try:
+                print '\t%r' % self.cascade_deviation[i]
+            except:
+                print_exception(traceback.format_exc())
             print 'write cascade_deviation[%d]:' %i
             try: 
                 self.cascade_deviation[i] = self.cascade_deviation[i]
                 print '\tok'
-            except: print '\t%r' % traceback.print_exc()
+            except:
+                print_exception(traceback.format_exc())
 
         for i in range(1,13):
             print 'read event[%d]:' % i
-            try: print '\t%r' % self.event[i]
-            except: print '\t%r' % traceback.print_exc()
+            try:
+                print '\t%r' % self.event[i]
+            except:
+                print_exception(traceback.format_exc())
             print 'write event[%d]:' %i
             try: 
                 self.event[i] = self.event[i]['current']
                 print '\tok'
-            except: print '\t%r' % traceback.print_exc()
+            except:
+                print_exception(traceback.format_exc())
 
         print 'read status:'
-        try: print '\t%r' % self.status
-        except: print '\t%r' % traceback.print_exc()
+        try:
+            print '\t%r' % self.status
+        except:
+            print_exception(traceback.format_exc())
 
         print 'read alarm_status:'
-        try: print '\t%r' % self.alarm_status
-        except: print '\t%r' % traceback.print_exc()
+        try:
+            print '\t%r' % self.alarm_status
+        except:
+            print_exception(traceback.format_exc())
 
         print 'read prgm_cur:'
-        try: print '\t%r' % self.prgm_cur
-        except: print '\t%r' % traceback.print_exc()
+        try:
+            print '\t%r' % self.prgm_cur
+        except:
+            print_exception(traceback.format_exc())
 
         print 'read prgm_cstep:'
-        try: print '\t%r' % self.prgm_cstep
-        except: print '\t%r' % traceback.print_exc()
+        try:
+            print '\t%r' % self.prgm_cstep
+        except:
+            print_exception(traceback.format_exc())
 
         print 'read prgm_cstime:'
-        try: print '\t%r' % self.prgm_cstime
-        except: print '\t%r' % traceback.print_exc()
+        try:
+            print '\t%r' % self.prgm_cstime
+        except:
+            print_exception(traceback.format_exc())
 
         print 'read prgm_time:'
-        try: print '\t%r' % self.prgm_time
-        except: print '\t%r' % traceback.print_exc()
+        try:
+            print '\t%r' % self.prgm_time
+        except:
+            print_exception(traceback.format_exc())
 
         for i in range(1,6): #do 5 programs only
             print 'read prgm_name[%d]:' % i
-            try: print '\t%r' % self.prgm_name[i]
-            except: print '\t%r' % traceback.print_exc()
+            try:
+                print '\t%r' % self.prgm_name[i]
+            except:
+                print_exception(traceback.format_exc())
 
             print 'read prgm_steps[%d]:' % i
-            try: print '\t%r' % self.prgm_steps[i]
-            except: print '\t%r' % traceback.print_exc()
+            try:
+                print '\t%r' % self.prgm_steps[i]
+            except:
+                print_exception(traceback.format_exc())
 
         print 'read prgms:'
-        try: print '\t%r' % self.prgms
-        except: print '\t%r' % traceback.print_exc()
+        try:
+            print '\t%r' % self.prgms
+        except:
+            print_exception(traceback.format_exc())
 
         print 'read prgm[1]:'
-        try: print '\t%r' % self.prgm[1]
-        except: print '\t%r' % traceback.print_exc()
+        try:
+            print '\t%r' % self.prgm[1]
+        except:
+            print_exception(traceback.format_exc())
         print 'write prgm[1]:'
         try: 
             self.prgm[1] = self.prgm[1]
             print '\tok'
-        except: print '\t%r' % traceback.print_exc()
+        except:
+            print_exception(traceback.format_exc())
 
         print 'read networkSettings:'
-        try: print '\t%r' % self.networkSettings
-        except: print '\t%r' % traceback.print_exc()
+        try:
+            print '\t%r' % self.networkSettings
+        except:
+            print_exception(traceback.format_exc())
         print 'write networkSettings:'
         try: 
             self.networkSettings = self.networkSettings
             print '\tok'
-        except: print '\t%r' % traceback.print_exc()
+        except:
+            print_exception(traceback.format_exc())
 
         print 'call const_start():'
         try:
             self.const_start()
             time.sleep(5)
             print '\tok'
-        except: print '\t%r' % traceback.print_exc()
+        except:
+            print_exception(traceback.format_exc())
 
         print 'call stop():'
         try:
             self.stop()
             time.sleep(5)
             print '\tok'
-        except: print '\t%r' % traceback.print_exc()
+        except:
+            print_exception(traceback.format_exc())
 
         print 'call prgm_start(1,1):'
         try:
             self.prgm_start(1,1)
             time.sleep(5)
             print '\tok'
-        except: print '\t%r' % traceback.print_exc()
+        except:
+            print_exception(traceback.format_exc())
 
         print 'call prgm_pause():'
         try:
             self.prgm_pause()
             time.sleep(5)
             print '\tok'
-        except: print '\t%r' % traceback.print_exc()
+        except:
+            print_exception(traceback.format_exc())
 
         print 'call prgm_resume():'
         try:
             self.prgm_resume()
             time.sleep(5)
             print '\tok'
-        except: print '\t%r' % traceback.print_exc()
+        except:
+            print_exception(traceback.format_exc())
 
         print 'call sample():'
-        try: print '\t%r' % self.sample()
-        except: print '\t%r' % traceback.print_exc()
+        try:
+            print '\t%r' % self.sample()
+        except:
+            print_exception(traceback.format_exc())
 
-        try: input("Test Done, press enter key to quit...")
-        except: pass
+        print 'Testing Complete'

@@ -551,13 +551,11 @@ class WatlowF4T(CtlrProperty):
     @exclusive
     def get_cascade_sp(self,N):
         self.range_check(N,1,self.cascades)
-        constreg = 4042+(N-1)*200
-        reg = 4042+(N-1)*200
-        cur = self.mod_to_float(self.client.readHolding(reg, 2))
-        return {'constant':self.mod_to_float(self.client.readHolding(constreg, 2)) if reg != constreg else cur,
-                'current':cur,
-                'air':self.mod_to_float(self.client.readHolding(4188+(N-1)*200, 2)),
-                'product':self.mod_to_float(self.client.readHolding(4190+(N-1)*200, 2))}
+        air = self.mod_to_float(self.client.readHolding(4188+(N-1)*200, 2))
+        prod = self.mod_to_float(self.client.readHolding(4190+(N-1)*200, 2))
+        cur = prod if self.client.readHolding(4200+(N-1)*200, 1)[0] == 62 else air
+        return {'constant':self.mod_to_float(self.client.readHolding(4042+(N-1)*200, 2)),
+                'current':cur, 'air':air, 'product':product}
 
     @exclusive
     def set_cascade_sp(self,N,value):

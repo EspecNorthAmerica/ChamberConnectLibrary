@@ -6,7 +6,12 @@ from chamberconnectlibrary.watlowF4T import WatlowF4T
 
 def main(**kwargs):
     ctlrType = kwargs.pop('controller', None)
-    ctlr = Espec(**kwargs) if ctlrType == 'Espec'  else WatlowF4T(**kwargs)
+    if ctlrType == 'Espec' or ctlrType == 'EspecP300':
+        ctlr = Espec(**kwargs)
+    elif ctlrType == 'EspecSCP220':
+        ctlr = Espec(ctlrType = 'SCP220', **kwargs)
+    else:
+        ctlr = WatlowF4T(**kwargs)
     ctlr.process_controller()
     ctlr.self_test(ctlr.loops+ctlr.cascades,ctlr.cascades)
     
@@ -23,7 +28,7 @@ if __name__ == '__main__':
 
         print '\nThe test could not be run try:'
         print '\nchamberconnectlibrary_test controller interface ipORserialport [baudrate]'
-        print '\tcontroller: "Espec" or "WatlowF4T"'
+        print '\tcontroller: "Espec"/"EspecP300" or "EspecSCP220" or "WatlowF4T"'
         print '\tinterface: "Serial": Serial connection when "controller" is "Espec".'
         print '\t           "RTU":Serial connection when "controller" is "WatlowF4T"'
         print '\t           "TCP":TCP connection'
