@@ -7,7 +7,6 @@ chamberconnectlibrary.
 :license: MIT, see LICENSE for more details.
 '''
 #pylint: disable=W0703
-
 import sys
 import traceback
 from chamberconnectlibrary.espec import Espec
@@ -19,7 +18,7 @@ def main(**kwargs):
     if ctlr_type == 'Espec' or ctlr_type == 'EspecP300':
         ctlr = Espec(**kwargs)
     elif ctlr_type == 'EspecSCP220':
-        ctlr = Espec(ctlrType='SCP220', **kwargs)
+        ctlr = Espec(ctlr_type='SCP220', **kwargs)
     else:
         ctlr = WatlowF4T(**kwargs)
     ctlr.process_controller()

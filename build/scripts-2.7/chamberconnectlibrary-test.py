@@ -1,29 +1,39 @@
 #!C:\Python27\python.exe
+'''
+A simple command line program that calls all functions supported by the
+chamberconnectlibrary.
 
-import sys, traceback
+:copyright: (C) Espec North America, INC.
+:license: MIT, see LICENSE for more details.
+'''
+#pylint: disable=W0703
+import sys
+import traceback
 from chamberconnectlibrary.espec import Espec
 from chamberconnectlibrary.watlowF4T import WatlowF4T
 
 def main(**kwargs):
-    ctlrType = kwargs.pop('controller', None)
-    if ctlrType == 'Espec' or ctlrType == 'EspecP300':
+    '''Try each command given a set of parameters'''
+    ctlr_type = kwargs.pop('controller', None)
+    if ctlr_type == 'Espec' or ctlr_type == 'EspecP300':
         ctlr = Espec(**kwargs)
-    elif ctlrType == 'EspecSCP220':
-        ctlr = Espec(ctlrType = 'SCP220', **kwargs)
+    elif ctlr_type == 'EspecSCP220':
+        ctlr = Espec(ctlr_type='SCP220', **kwargs)
     else:
         ctlr = WatlowF4T(**kwargs)
     ctlr.process_controller()
-    ctlr.self_test(ctlr.loops+ctlr.cascades,ctlr.cascades)
-    
+    ctlr.self_test(ctlr.loops+ctlr.cascades, ctlr.cascades)
+
 if __name__ == '__main__':
     try:
-        args = {'controller':sys.argv[1],
-                'interface':sys.argv[2],
-                'serialport':sys.argv[3],
-                'host':sys.argv[3],
-                'baudrate':int(sys.argv[4]) if len(sys.argv) == 5 else 9600}
-        main(**args)
-    except:
+        main(
+            controller=sys.argv[1],
+            interface=sys.argv[2],
+            serialport=sys.argv[3],
+            host=sys.argv[3],
+            baudrate=int(sys.argv[4]) if len(sys.argv) == 5 else 9600
+        )
+    except Exception:
         traceback.print_exc()
 
         print '\nThe test could not be run try:'

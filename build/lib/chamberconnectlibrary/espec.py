@@ -4,14 +4,35 @@ Upper level interface for Espec Corp. Controllers (just the P300 for now)
 :copyright: (C) Espec North America, INC.
 :license: MIT, see LICENSE for more details.
 '''
-import datetime, time
-from controllerabstract import CtlrProperty, ControllerInterfaceError, exclusive
-from p300 import *
-from scp220 import SCP220
+#pylint: disable=R0902,R0904
+import datetime
+import time
+from chamberconnectlibrary.controllerabstract import CtlrProperty, exclusive
+from chamberconnectlibrary.p300 import P300
+from chamberconnectlibrary.scp220 import SCP220
+from chamberconnectlibrary.especinteract import EspecError
 
 class Espec(CtlrProperty):
+    '''
+    A class for interfacing with Espec controllers (P300, SCP220)
+
+    Kwargs:
+        interface (str): The connection method::
+            "TCP" -- Use a Ethernet to serial adapter with raw TCP
+            "Serial" -- Use a hardware serial port
+        adr (int): The address of the controller (default=1)
+        host (str): The hostname (IP address) of the controller when interface="TCP"
+        serialport (str): The serial port to use when interface="Serial"
+        baudrate (int): The serial port's baud rate to use when interface="Serial"
+        loops (int): The number of control loops the controller has (default=1, max=2)
+        cascades (int): The number of cascade control loops the controller has (default=0, max=1)
+        lock (RLock): The locking method to use when accessing the controller (default=RLock())
+        freshness (int): The length of time (in seconds) a command is cached (default = 0)
+        ctlr_type (str): "SCP220" or "P300"
+    '''
 
     def __init__(self, **kwargs):
+        self.client, self.loops, self.cascades = None, None, None
         self.init_common(**kwargs)
         self.freshness = kwargs.get('freshness', 0)
         self.cache = {}
@@ -26,24 +47,27 @@ class Espec(CtlrProperty):
             self.temp:self.temp,
             self.humi:self.humi
         }
-        self.ctlrType = kwargs.get('ctlrType', 'P300')
-        ttp = (self.ctlrType, self.temp, self.humi)
-        self.loopExMsg = 'The %s controller only supports 2 loops (%d:temperature,%d:humidity)'%ttp
-        ttp = (self.ctlrType, self.temp)
-        self.cascEsMsg = 'The %s controller can only have loop %d as cascade' % ttp
+        self.ctlr_type = kwargs.get('ctlr_type', 'P300')
+        ttp = (self.ctlr_type, self.temp, self.humi)
+        self.lp_exmsg = 'The %s controller only supports 2 loops (%d:temperature,%d:humidity)'%ttp
+        ttp = (self.ctlr_type, self.temp)
+        self.cs_exmsg = 'The %s controller can only have loop %d as cascade' % ttp
         self.alarms = 27
         self.profiles = True
         self.events = 12
 
     def connect(self):
-        if self.ctlrType == 'P300':
+        '''
+        connect to the controller using the paramters provided on class initialization
+        '''
+        if self.ctlr_type == 'P300':
             self.client = P300(
                 self.interface,
                 serialport=self.serialport,
                 baudrate=self.baudrate,
                 host=self.host
             )
-        elif self.ctlrType == 'SCP220':
+        elif self.ctlr_type == 'SCP220':
             self.client = SCP220(
                 self.interface,
                 serialport=self.serialport,
@@ -51,108 +75,163 @@ class Espec(CtlrProperty):
                 host=self.host
             )
         else:
-            raise ValueError('"%s" is not a supported controller type' % self.ctlrType)
+            raise ValueError('"%s" is not a supported controller type' % self.ctlr_type)
 
     def close(self):
+        '''
+        close the connection to the controller
+        '''
         self.client.cleanup()
         self.client = None
 
     def cached(self, func, *args, **kwargs):
-        '''The P300 returns multiple parameters with each command. The commands responses will be
-        cached and cached responses returned if they are fresh enough (settable property)'''
+        '''
+        The P300 returns multiple parameters with each command. The commands responses will be
+        cached and cached responses returned if they are fresh enough (settable property)
+        '''
         now = time.time()
-        if func.__name__ not in self.cache or (now - self.cache[func.__name__]['timestamp'] > self.freshness):
+        incache = func.__name__ not in self.cache
+        if incache or (now - self.cache[func.__name__]['timestamp'] > self.freshness):
             self.cache[func.__name__] = {'timestamp':now, 'values':func(*args, **kwargs)}
         return self.cache[func.__name__]['values']
 
     @exclusive
     def raw(self, command):
+        '''
+        connect directly to the controller
+        '''
         try:
             return self.client.interact(command)
-        except EspecError as e:
-            emsg = str(e)
+        except EspecError as exc:
+            emsg = str(exc)
             if 'The chamber did not respond in time' in emsg:
                 return 'NA: SERIAL TIMEOUT'
-            qps = [i for i,c in enumerate(emsg) if c == '"']
+            qps = [i for i, c in enumerate(emsg) if c == '"']
             return 'NA:' + emsg[qps[len(qps)-2]+1:qps[len(qps)-1]]
 
     @exclusive
     def get_refrig(self):
+        '''
+        Get the constant settings for the refigeration system
+
+        returns:
+            {"mode":string,"setpoint":int}
+        '''
         return self.client.read_constant_ref()
 
     @exclusive
-    def set_refrig(self,value):
+    def set_refrig(self, value):
+        '''
+        Set the constant setpoints refrig mode
+
+        params:
+            mode: string,"off" or "manual" or "auto"
+            setpoint: int,20 or 50 or 100
+        '''
         self.client.write_set(**value)
 
     @exclusive
-    def directRead(self,**kwargs):
-        return self.client.interact(kwargs.get('register'))
-
-    @exclusive
-    def directWrite(self,**kwargs):
-        return self.client.interact(kwargs.get('register'))
-
-    @exclusive
-    def get_loop(self,N,type,list=None):
+    def get_loop(self, N, loop_type, param_list=None):
         '''Get a loops parameters, takes a list of values to get'''
-        loopFunctions = {'cascade':{'setpoint':self.get_cascade_sp,'setPoint':self.get_cascade_sp,'setValue':self.get_cascade_sp,
-                                    'processvalue':self.get_cascade_pv,'processValue':self.get_cascade_pv,
-                                    'range':self.get_cascade_range,
-                                    'enable':self.get_cascade_en,
-                                    'units':self.get_cascade_units,
-                                    'mode':self.get_cascade_mode,
-                                    'deviation':self.get_cascade_deviation,
-                                    'enable_cascade':self.get_cascade_ctl},
-                            'loop':{'setpoint':self.get_loop_sp,'setPoint':self.get_loop_sp,'setValue':self.get_loop_sp,
-                                    'processvalue':self.get_loop_pv,'processValue':self.get_loop_pv,
-                                    'range':self.get_loop_range,
-                                    'enable':self.get_loop_en,
-                                    'units':self.get_loop_units,
-                                    'mode':self.get_loop_mode}}
-        if list is None:
-            list = loopFunctions[type].keys()
-            list = [x for x in list if x not in ['setPoint','setValue','processValue']]
-        return {key:loopFunctions[type][key](N,exclusive=False) if key in loopFunctions[type] else 'invalid key' for key in list}
+        lpfuncs = {
+            'cascade':{
+                'setpoint':self.get_cascade_sp,
+                'setPoint':self.get_cascade_sp,
+                'setValue':self.get_cascade_sp,
+                'processvalue':self.get_cascade_pv,
+                'processValue':self.get_cascade_pv,
+                'range':self.get_cascade_range,
+                'enable':self.get_cascade_en,
+                'units':self.get_cascade_units,
+                'mode':self.get_cascade_mode,
+                'deviation':self.get_cascade_deviation,
+                'enable_cascade':self.get_cascade_ctl
+            },
+            'loop':{
+                'setpoint':self.get_loop_sp,
+                'setPoint':self.get_loop_sp,
+                'setValue':self.get_loop_sp,
+                'processvalue':self.get_loop_pv,
+                'processValue':self.get_loop_pv,
+                'range':self.get_loop_range,
+                'enable':self.get_loop_en,
+                'units':self.get_loop_units,
+                'mode':self.get_loop_mode
+            }
+        }
+        if param_list is None:
+            exclusions = ['setPoint', 'setValue', 'processValue']
+            param_list = lpfuncs[loop_type].keys()
+            param_list = [x for x in param_list if x not in exclusions]
+        fncs = lpfuncs[loop_type]
+        return {key:fncs[key](N, exclusive=False) for key in param_list if key in fncs[loop_type]}
 
     @exclusive
-    def set_loop(self,N,ltype,list):
+    def set_loop(self, N, loop_type, param_list):
         '''apply loop parameters, requires a dictionary in the format: {function:namedAgrs}
-        see loopFunctions for possible functions'''
-        loopFunctions = {'cascade':{'setpoint':self.set_cascade_sp,'setPoint':self.set_cascade_sp,'setValue':self.set_cascade_sp,
-                                    'range':self.set_cascade_range,
-                                    'enable':self.set_cascade_en,
-                                    'deviation':self.set_cascade_deviation,
-                                    'enable_cascade':self.set_cascade_ctl,
-                                    'mode': self.set_cascade_mode},
-                            'loop':{'setpoint':self.set_loop_sp,'setPoint':self.set_loop_sp,
-                                    'range':self.set_loop_range,
-                                    'enable':self.set_loop_en,
-                                    'mode':self.set_loop_mode}}
-        if ('setpoint' in list or 'setPoint' in list or 'setValue' in list) and ('enable' in list or 'mode' in list):
-            enable = list.pop('enable') if 'enable' in list else (list.pop('mode') in ['On','ON','on'])
-            if type(enable) is dict:
+        see lpfuncs for possible functions'''
+        lpfuncs = {
+            'cascade':{
+                'setpoint':self.set_cascade_sp,
+                'setPoint':self.set_cascade_sp,
+                'setValue':self.set_cascade_sp,
+                'range':self.set_cascade_range,
+                'enable':self.set_cascade_en,
+                'deviation':self.set_cascade_deviation,
+                'enable_cascade':self.set_cascade_ctl,
+                'mode': self.set_cascade_mode},
+            'loop':{
+                'setpoint':self.set_loop_sp,
+                'setPoint':self.set_loop_sp,
+                'range':self.set_loop_range,
+                'enable':self.set_loop_en,
+                'mode':self.set_loop_mode
+            }
+        }
+        spt1 = 'setpoint' in param_list
+        spt2 = 'setPoint' in param_list
+        spt3 = 'setValue' in param_list
+        if (spt1 or spt2 or spt3) and ('enable' in param_list or 'mode' in param_list):
+            if 'enable' in param_list:
+                enable = param_list.pop('enable')
+            else:
+                enable = param_list.pop('mode') in ['On', 'ON', 'on']
+            if isinstance(enable, dict):
                 enable = enable['constant']
-            sp = list.pop('setpoint') if 'setpoint' in list else list.pop('setPoint') if 'setPoint' in list else list.pop('setValue')
-            if type(sp) is dict:
-                sp = sp['constant']
-            params = {'setpoint':sp,'enable':enable['constant'] if type(enable) is dict else enable}
-            if range in list:
-                params.update(list.pop('range'))
+            if spt1:
+                spv = param_list.pop('setpoint')
+            elif spt2:
+                spv = param_list.pop('setPoint')
+            else:
+                spv = param_list.pop('setValue')
+            if isinstance(spv, dict):
+                spv = spv['constant']
+            params = {
+                'setpoint':spv,
+                'enable':enable['constant'] if isinstance(enable, dict) else enable
+            }
+            if range in param_list:
+                params.update(param_list.pop('range'))
             if self.lpd[N] == self.temp:
                 self.client.write_temp(**params)
             elif self.lpd[N] == self.humi:
                 self.client.write_humi(**params)
             else:
-                raise ValueError(self.loopExMsg)
-        if 'deviation' in list and 'enable_cascade' in list:
-            params = {'enable':list.pop('enable_cascade')['constant'] if type(list['enable_cascade']) is dict else list.pop('enable_cascade')}
-            params.update(list.pop('deviation'))
+                raise ValueError(self.lp_exmsg)
+        if 'deviation' in param_list and 'enable_cascade' in param_list:
+            if isinstance(param_list['enable_cascade'], dict):
+                params = {'enable':param_list.pop('enable_cascade')['constant']}
+            else:
+                params = {param_list.pop('enable_cascade')}
+            params.update(param_list.pop('deviation'))
             self.client.write_temp_ptc(**params)
-        for k,v in list.items():
-            params = {'value':v}
-            params.update({'exclusive':False,'N':N})
-            try: loopFunctions[ltype][k](**params)
-            except KeyError: pass
+        for key, val in param_list.items():
+            params = {'value':val}
+            params.update({'exclusive':False, 'N':N})
+            try:
+                lpfuncs[loop_type][key](**params)
+            except KeyError:
+                pass
 
     @exclusive
     def get_datetime(self):
@@ -161,202 +240,275 @@ class Espec(CtlrProperty):
         return datetime.datetime(**temp)
 
     @exclusive
-    def set_datetime(self,value):
-        weekday = ['MON','TUE','WED','THU','FRI','SAT','SUN'][value.weekday()]
+    def set_datetime(self, value):
+        weekday = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'][value.weekday()]
         self.client.write_time(value.hour, value.minute, value.second)
         self.client.write_date(value.year, value.month, value.day, weekday)
 
     @exclusive
-    def get_loop_sp(self, N):
+    def get_loop_sp(self, N, constant=None):
         if N not in self.lpd:
-            raise ValueError(self.loopExMsg)
-        cur = self.cached(self.client.read_temp)['setpoint'] if self.lpd[N] == self.temp else self.cached(self.client.read_humi)['setpoint']
-        con = self.cached(self.client.read_constant_temp)['setpoint'] if self.lpd[N] == self.temp else self.cached(self.client.read_constant_humi)['setpoint']
-        return {'constant':con,'current':cur}
+            raise ValueError(self.lp_exmsg)
+        if self.lpd[N] == self.temp:
+            cur = self.cached(self.client.read_temp)['setpoint']
+            con = self.cached(self.client.read_constant_temp)['setpoint']
+        else:
+            cur = self.cached(self.client.read_humi)['setpoint']
+            con = self.cached(self.client.read_constant_humi)['setpoint']
+        if constant is None:
+            return {'constant':con, 'current':cur}
+        elif constant:
+            return con
+        else:
+            return cur
 
     @exclusive
     def set_loop_sp(self, N, value):
-        value = value['constant'] if type(value) is dict else value
+        value = value['constant'] if isinstance(value, dict) else value
         if self.lpd[N] == self.temp:
             self.client.write_temp(setpoint=value)
         elif self.lpd[N] == self.humi:
             self.client.write_humi(setpoint=value)
         else:
-            raise ValueError(self.loopExMsg)
+            raise ValueError(self.lp_exmsg)
 
     @exclusive
-    def get_loop_pv(self,N):
-        if self.lpd[N] == self.temp: return {'air':self.cached(self.client.read_temp)['processvalue']}
-        elif self.lpd[N] == self.humi: return {'air':self.cached(self.client.read_humi)['processvalue']}
-        else: raise ValueError(self.loopExMsg)
+    def get_loop_pv(self, N, product=None):
+        if self.lpd[N] == self.temp:
+            if product is None:
+                return {'air':self.cached(self.client.read_temp)['processvalue']}
+            elif not product:
+                return self.cached(self.client.read_temp)['processvalue']
+            else:
+                ValueError('"product" must be None or False')
+        elif self.lpd[N] == self.humi:
+            if product is None:
+                return {'air':self.cached(self.client.read_humi)['processvalue']}
+            elif not product:
+                return self.cached(self.client.read_humi)['processvalue']
+            else:
+                ValueError('"product" must be None or False')
+        else:
+            raise ValueError(self.lp_exmsg)
 
     @exclusive
-    def set_loop_range(self,N,value):
+    def set_loop_range(self, N, value):
         if 'max' not in value or 'min' not in value:
             raise AttributeError('missing "max" or "min" property')
         if self.lpd[N] == self.temp:
             self.client.write_temp(min=value['min'], max=value['max'])
         elif self.lpd[N] == self.humi:
             self.client.write_humi(min=value['min'], max=value['max'])
-        else: raise ValueError(self.loopExMsg)
+        else: raise ValueError(self.lp_exmsg)
 
     @exclusive
-    def get_loop_range(self,N):
-        if self.lpd[N] == self.temp: return self.cached(self.client.read_temp)['range']
-        elif self.lpd[N] == self.humi: return self.cached(self.client.read_humi)['range']
-        else: raise ValueError(self.loopExMsg)
-
-    @exclusive
-    def get_loop_en(self,N):
-        if self.lpd[N] == self.temp: return {'constant':True,'current':True}
-        elif self.lpd[N] == self.humi: return {'current':self.cached(self.client.read_humi)['enable'],
-                                               'constant':self.cached(self.client.read_constant_humi)['enable']}
-        else: raise ValueError(self.loopExMsg)
-
-    @exclusive
-    def set_loop_en(self,N,value):
-        value = value['constant'] if type(value) is dict else value
-        if self.lpd[N] == self.temp: pass
+    def get_loop_range(self, N):
+        if self.lpd[N] == self.temp:
+            return self.cached(self.client.read_temp)['range']
         elif self.lpd[N] == self.humi:
-            if value:self.client.write_humi(setpoint=self.cached(self.client.read_constant_humi)['setpoint'])
-            else: self.client.write_humi(enable=False)
-        else: raise ValueError(self.loopExMsg)
+            return self.cached(self.client.read_humi)['range']
+        else: raise ValueError(self.lp_exmsg)
 
     @exclusive
-    def get_loop_units(self,N):
-        if self.lpd[N] == self.temp: return u'\xb0C'
-        elif self.lpd[N] == self.humi: return u'%RH'
-        else: raise ValueError(self.loopExMsg)
+    def get_loop_en(self, N):
+        if self.lpd[N] == self.temp:
+            return {'constant':True, 'current':True}
+        elif self.lpd[N] == self.humi:
+            return {'current':self.cached(self.client.read_humi)['enable'],
+                    'constant':self.cached(self.client.read_constant_humi)['enable']}
+        else: raise ValueError(self.lp_exmsg)
 
     @exclusive
-    def set_loop_mode(self,N,value):
-        if N > 2: raise ValueError(self.loopExMsg)
-        if value in ['Off','OFF','off']:
+    def set_loop_en(self, N, value):
+        value = value['constant'] if isinstance(value, dict) else value
+        if self.lpd[N] == self.temp:
+            pass
+        elif self.lpd[N] == self.humi:
+            if value:
+                self.client.write_humi(
+                    setpoint=self.cached(self.client.read_constant_humi)['setpoint']
+                )
+            else:
+                self.client.write_humi(enable=False)
+        else: raise ValueError(self.lp_exmsg)
+
+    @exclusive
+    def get_loop_units(self, N):
+        if self.lpd[N] == self.temp:
+            return u'\xb0C'
+        elif self.lpd[N] == self.humi:
+            return u'%RH'
+        else:
+            raise ValueError(self.lp_exmsg)
+
+    @exclusive
+    def set_loop_mode(self, N, value):
+        if N > 2:
+            raise ValueError(self.lp_exmsg)
+        if value in ['Off', 'OFF', 'off']:
             self.set_loop_en(N, False, exclusive=False)
-        elif value in ['On','ON','on']:
+        elif value in ['On', 'ON', 'on']:
             self.set_loop_en(N, True, exclusive=False)
         else:
             raise ValueError('Mode must be on or off, recived:' + value)
 
     @exclusive
-    def get_loop_mode(self,N):
-        if N > 2: raise ValueError(self.loopExMsg)
-        mode = self.client.read_mode() 
-        if mode in ['OFF','STANDBY']:
+    def get_loop_mode(self, N):
+        if N > 2:
+            raise ValueError(self.lp_exmsg)
+        mode = self.client.read_mode()
+        if mode in ['OFF', 'STANDBY']:
             return 'Off'
         elif self.lpd[N] == self.temp:
             return 'On'
         elif self.lpd[N] == self.humi:
             return 'On' if self.cached(self.client.read_humi)['enable'] else 'Off'
 
-    @exclusive
-    def get_cascade_sp(self,N):
-        if self.lpd[N] != self.temp: raise ValueError(self.cascEsMsg)
-        cur = self.cached(self.client.read_temp_ptc)
-        return {'constant':self.cached(self.client.read_constant_temp)['setpoint'],
-                'current':cur['setpoint']['product'] if cur['enable_cascade'] else cur['setpoint']['air'],
-                'air':cur['setpoint']['air'],'product':cur['setpoint']['product']}
+    def get_loop_power(self, N, constant=None):
+        raise NotImplementedError
+    def set_loop_power(self, N, value):
+        raise NotImplementedError
 
     @exclusive
-    def set_cascade_sp(self,N,value):
-        value = value['constant'] if type(value) is dict else value
-        if self.lpd[N] != self.temp: raise ValueError(self.cascEsMsg)
+    def get_cascade_sp(self, N):
+        if self.lpd[N] != self.temp:
+            raise ValueError(self.cs_exmsg)
+        cur = self.cached(self.client.read_temp_ptc)
+        enc = cur['enable_cascade']
+        return {
+            'constant':self.cached(self.client.read_constant_temp)['setpoint'],
+            'current':cur['setpoint']['product'] if enc else cur['setpoint']['air'],
+            'air':cur['setpoint']['air'],
+            'product':cur['setpoint']['product']
+        }
+
+    @exclusive
+    def set_cascade_sp(self, N, value):
+        value = value['constant'] if isinstance(value, dict) else value
+        if self.lpd[N] != self.temp:
+            raise ValueError(self.cs_exmsg)
         self.client.write_temp(setpoint=value)
 
     @exclusive
-    def get_cascade_pv(self,N):
-        if self.lpd[N] != self.temp: raise ValueError(self.cascEsMsg)
+    def get_cascade_pv(self, N):
+        if self.lpd[N] != self.temp:
+            raise ValueError(self.cs_exmsg)
         return self.cached(self.client.read_temp_ptc)['processvalue']
 
     @exclusive
-    def get_cascade_range(self,N):
-        if self.lpd[N] != self.temp: raise ValueError(self.cascEsMsg)
-        return self.get_loop_range(self.temp,exclusive=False)
+    def get_cascade_range(self, N):
+        if self.lpd[N] != self.temp:
+            raise ValueError(self.cs_exmsg)
+        return self.get_loop_range(self.temp, exclusive=False)
 
     @exclusive
-    def set_cascade_range(self,N,value):
-        if self.lpd[N] != self.temp: raise ValueError(self.cascEsMsg)
-        self.set_loop_range(self.temp,value,exclusive=False)
+    def set_cascade_range(self, N, value):
+        if self.lpd[N] != self.temp:
+            raise ValueError(self.cs_exmsg)
+        self.set_loop_range(self.temp, value, exclusive=False)
 
     @exclusive
-    def get_cascade_en(self,N):
-        if self.lpd[N] != self.temp: raise ValueError(self.cascEsMsg)
-        return self.get_loop_en(self.temp,exclusive=False)
+    def get_cascade_en(self, N):
+        if self.lpd[N] != self.temp:
+            raise ValueError(self.cs_exmsg)
+        return self.get_loop_en(self.temp, exclusive=False)
 
     @exclusive
-    def set_cascade_en(self,N,value):
-        value = value['constant'] if type(value) is dict else value
-        if self.lpd[N] != self.temp: raise ValueError(self.cascEsMsg)
-        return self.set_loop_en(self.temp,value,exclusive=False)
+    def set_cascade_en(self, N, value):
+        value = value['constant'] if isinstance(value, dict) else value
+        if self.lpd[N] != self.temp:
+            raise ValueError(self.cs_exmsg)
+        return self.set_loop_en(self.temp, value, exclusive=False)
 
     @exclusive
-    def get_cascade_units(self,N):
-        if self.lpd[N] != self.temp: raise ValueError(self.cascEsMsg)
-        return self.get_loop_units(self.temp,exclusive=False)
+    def get_cascade_units(self, N):
+        if self.lpd[N] != self.temp:
+            raise ValueError(self.cs_exmsg)
+        return self.get_loop_units(self.temp, exclusive=False)
 
     @exclusive
-    def set_cascade_mode(self,N,value):
-        if self.lpd[N] != self.temp: raise ValueError(self.cascEsMsg)
-        return self.set_loop_mode(N,value,exclusive=False)
+    def set_cascade_mode(self, N, value):
+        if self.lpd[N] != self.temp:
+            raise ValueError(self.cs_exmsg)
+        return self.set_loop_mode(N, value, exclusive=False)
 
     @exclusive
-    def get_cascade_mode(self,N):
-        if self.lpd[N] != self.temp: raise ValueError(self.cascEsMsg)
-        return self.get_loop_mode(self.temp,exclusive=False)
+    def get_cascade_mode(self, N):
+        if self.lpd[N] != self.temp:
+            raise ValueError(self.cs_exmsg)
+        return self.get_loop_mode(self.temp, exclusive=False)
 
     @exclusive
-    def get_cascade_ctl(self,N):
-        if self.lpd[N] != self.temp: raise ValueError(self.cascEsMsg)
-        return {'current': self.cached(self.client.read_temp_ptc)['enable_cascade'],
-                'constant': self.cached(self.client.read_constant_ptc)['enable']}
+    def get_cascade_ctl(self, N):
+        if self.lpd[N] != self.temp:
+            raise ValueError(self.cs_exmsg)
+        return {
+            'current': self.cached(self.client.read_temp_ptc)['enable_cascade'],
+            'constant': self.cached(self.client.read_constant_ptc)['enable']
+        }
 
     @exclusive
-    def set_cascade_ctl(self,N,value):
-        value = value['constant'] if type(value) is dict else value
-        if self.lpd[N] != self.temp: raise ValueError(self.cascEsMsg)
+    def set_cascade_ctl(self, N, value):
+        value = value['constant'] if isinstance(value, dict) else value
+        if self.lpd[N] != self.temp:
+            raise ValueError(self.cs_exmsg)
         params = self.cached(self.client.read_temp_ptc)
         params['deviation'].update({'enable':value})
         self.client.write_temp_ptc(**params['deviation'])
 
     @exclusive
-    def get_cascade_deviation(self,N):
-        if self.lpd[N] != self.temp: raise ValueError(self.cascEsMsg)
-        deviation = self.cached(self.client.read_constant_ptc)['deviation']
-        return deviation
+    def get_cascade_deviation(self, N):
+        if self.lpd[N] != self.temp:
+            raise ValueError(self.cs_exmsg)
+        return self.cached(self.client.read_constant_ptc)['deviation']
 
     @exclusive
-    def set_cascade_deviation(self,N,value):
-        if self.lpd[N] != self.temp: raise ValueError(self.cascEsMsg)
-        if 'positive' not in value or 'negative' not in value: raise ValueError('value must contain "positive" and "negative" keys')
-        self.client.write_temp_ptc(self.get_cascade_ctl(self.temp,exclusive=False), **value)
+    def set_cascade_deviation(self, N, value):
+        if self.lpd[N] != self.temp:
+            raise ValueError(self.cs_exmsg)
+        if 'positive' not in value or 'negative' not in value:
+            raise ValueError('value must contain "positive" and "negative" keys')
+        self.client.write_temp_ptc(self.get_cascade_ctl(self.temp, exclusive=False), **value)
+
+    def get_cascade_power(self, N, constant=None):
+        raise NotImplementedError
+
+    def set_cascade_power(self, N, value):
+        raise NotImplementedError
 
     @exclusive
-    def get_event(self,N):
-        if N >= 13: raise ValueError('There are only 12 events')
-        return {'current':self.cached(self.client.read_relay)[N-1],'constant':self.cached(self.client.read_constant_relay)[N-1]}
+    def get_event(self, N):
+        if N >= 13:
+            raise ValueError('There are only 12 events')
+        return {
+            'current':self.cached(self.client.read_relay)[N-1],
+            'constant':self.cached(self.client.read_constant_relay)[N-1]
+        }
 
     @exclusive
-    def set_event(self,N,value):
-        value = value['constant'] if type(value) is dict else value
-        if N >= 13: raise ValueError('There are only 12 events')
-        self.client.write_relay([value if i==N else None for i in range(1,13)])
+    def set_event(self, N, value):
+        value = value['constant'] if isinstance(value, dict) else value
+        if N >= 13:
+            raise ValueError('There are only 12 events')
+        self.client.write_relay([value if i == N else None for i in range(1, 13)])
 
     @exclusive
     def get_status(self):
         if self.cached(self.client.read_mon)['alarms'] > 0:
             return 'Alarm'
-        return {'OFF':'Off','STANDBY':'Standby','CONSTANT':'Constant',
-                'RUN':'Program Running','RUN PAUSE':'Program Paused',
-                'RUN END HOLD':'Program End Hold','RMT RUN':'Remote Program Running',
+        return {'OFF':'Off', 'STANDBY':'Standby', 'CONSTANT':'Constant',
+                'RUN':'Program Running', 'RUN PAUSE':'Program Paused',
+                'RUN END HOLD':'Program End Hold', 'RMT RUN':'Remote Program Running',
                 'RMT RUN PAUSE':'Remote Program Paused',
                 'RMT RUN END HOLD':'Remote Program End Hold'}[self.client.read_mode(True)]
 
     @exclusive
     def get_alarm_status(self):
         active = self.client.read_alarm()
-        alarmlist = [0,1,2,3,6,7,8,9,10,11,12,18,19,21,22,23,26,30,31,40,41,43,46,48,50,51,99]
+        alarmlist = [0, 1, 2, 3, 6, 7, 8, 9, 10, 11, 12, 18, 19, 21, 22, 23, 26,
+                     30, 31, 40, 41, 43, 46, 48, 50, 51, 99]
         inactive = [x for x in alarmlist if x not in active]
-        return {'active':active,'inactive':inactive}
+        return {'active':active, 'inactive':inactive}
 
     @exclusive
     def const_start(self):
@@ -367,8 +519,8 @@ class Espec(CtlrProperty):
         self.client.write_mode_standby()
 
     @exclusive
-    def prgm_start(self,N,step):
-        self.client.write_prgm_run(N,step)
+    def prgm_start(self, N, step):
+        self.client.write_prgm_run(N, step)
 
     @exclusive
     def prgm_pause(self):
@@ -393,95 +545,109 @@ class Espec(CtlrProperty):
     @exclusive
     def get_prgm_cstime(self):
         rtime = self.cached(self.client.read_prgm_mon)['time']
-        return '%d:%02d:00' % (rtime['hour'],rtime['minute'])
+        return '%d:%02d:00' % (rtime['hour'], rtime['minute'])
 
     @exclusive
-    def get_prgm_time(self, pgm = None):
+    def get_prgm_time(self, pgm=None):
         if pgm is None:
             pgm = self.client.read_prgm(self.cached(self.client.read_prgm_set)['number'])
         pgms = self.cached(self.client.read_prgm_mon)
 
         #counter_a must be the inner counter or the only counter
-        if (pgm['counter_a']['end'] >= pgm['counter_b']['end'] and pgm['counter_a']['start'] <= pgm['counter_b']['start']) or (pgm['counter_a']['cycles'] == 0 and pgm['counter_b']['cycles'] != 0):
-            pgm['counter_a'],pgm['counter_b'] = pgm['counter_b'],pgm['counter_a']
-            pgms['counter_a'],pgms['counter_b'] = pgms['counter_b'],pgms['counter_a']
+        if (pgm['counter_a']['end'] >= pgm['counter_b']['end'] and \
+           pgm['counter_a']['start'] <= pgm['counter_b']['start']) or \
+           pgm['counter_a']['cycles'] == 0 and pgm['counter_b']['cycles'] != 0:
+            pgm['counter_a'], pgm['counter_b'] = pgm['counter_b'], pgm['counter_a']
+            pgms['counter_a'], pgms['counter_b'] = pgms['counter_b'], pgms['counter_a']
         cap = len(pgm['steps'])
         cap = cap*(pgm['counter_a']['cycles'] + 2) if pgm['counter_a']['cycles'] else cap
         cap = cap*(pgm['counter_b']['cycles'] + 2) if pgm['counter_b']['cycles'] else cap
         cap += 2
 
-        cA = pgms['counter_a']
-        cB = pgms['counter_b']
-        cS = pgms['pgmstep']-1
+        cnta = pgms['counter_a']
+        cntb = pgms['counter_b']
+        cstp = pgms['pgmstep']-1
         tminutes = pgms['time']['hour']*60 + pgms['time']['minute']
-        pB = cB
-        while cS < len(pgm['steps']) and cap:
+        pcntb = cntb
+        while cstp < len(pgm['steps']) and cap:
             cap -= 1
-            if pgm['counter_a']['start'] == pgm['counter_b']['start'] and pgm['counter_a']['cycles'] and pgm['counter_b']['cycles'] and cS == pgm['counter_b']['start']-1:
-                if pB != cB:
-                    cA = pgm['counter_a']['cycles']
-            elif cS == pgm['counter_b']['start']-1 and pgm['counter_b']['cycles']:
-                cA = pgm['counter_a']['cycles']
-            if cS == pgm['counter_a']['end']-1 and pgm['counter_a']['cycles'] and cA:
-                cS = pgm['counter_a']['start']-1
-                cA -= 1
-            elif cS == pgm['counter_b']['end']-1 and pgm['counter_b']['cycles'] and cB:
-                cS = pgm['counter_b']['start']-1
-                pB = cB
-                cB -= 1
+            if pgm['counter_a']['start'] == pgm['counter_b']['start'] and \
+               pgm['counter_a']['cycles'] and pgm['counter_b']['cycles'] and \
+               cstp == pgm['counter_b']['start']-1:
+                if pcntb != cntb:
+                    cnta = pgm['counter_a']['cycles']
+            elif cstp == pgm['counter_b']['start']-1 and pgm['counter_b']['cycles']:
+                cnta = pgm['counter_a']['cycles']
+            if cstp == pgm['counter_a']['end']-1 and pgm['counter_a']['cycles'] and cnta:
+                cstp = pgm['counter_a']['start']-1
+                cnta -= 1
+            elif cstp == pgm['counter_b']['end']-1 and pgm['counter_b']['cycles'] and cntb:
+                cstp = pgm['counter_b']['start']-1
+                pcntb = cntb
+                cntb -= 1
             else:
-                pB = cB
-                cS += 1
-            if cS < len(pgm['steps']):
-                tminutes += pgm['steps'][cS]['time']['hour']*60 + pgm['steps'][cS]['time']['minute']
+                pcntb = cntb
+                cstp += 1
+            if cstp < len(pgm['steps']):
+                tminutes += pgm['steps'][cstp]['time']['hour']*60 + \
+                            pgm['steps'][cstp]['time']['minute']
         if cap == 0:
-            raise RuntimeError('Calculating the total program time remaining looks like it would run forever and was terminated.')
+            raise RuntimeError('Calculating the total program time remaining aborted.')
         return "%d:%02d:00" % (int(tminutes/60), tminutes%60)
 
     @exclusive
-    def get_prgm_name(self,N):
-        return self.cached(self.client.read_prgm_data,N)['name']
+    def get_prgm_name(self, N):
+        return self.cached(self.client.read_prgm_data, N)['name']
+
+    def set_prgm_name(self, N, value):
+        raise NotImplementedError
 
     @exclusive
-    def get_prgm_steps(self,N):
+    def get_prgm_steps(self, N):
         return self.client.read_prgm_data(N)['steps']
 
     @exclusive
     def get_prgms(self):
         names = []
-        for i in range(1,41):
+        for i in range(1, 41):
             try:
-                names.append({'number':i,'name':self.client.read_prgm_use_num(i)['name']})
+                names.append({'number':i, 'name':self.client.read_prgm_use_num(i)['name']})
             except EspecError:
-                names.append({'number':i,'name':''})
+                names.append({'number':i, 'name':''})
         return names
 
     @exclusive
     def get_prgm(self, N):
         return self.client.read_prgm(N, self.cascades > 0)
-        # try:
-        #     return self.client.read_prgm(N, self.cascades > 0)
-        # except EspecError:
-        #     raise ControllerInterfaceError('Profile %d does not exist' % N)
 
     @exclusive
-    def set_prgm(self,N,prgm):
-        self.client.write_prgm(N,prgm)
+    def set_prgm(self, N, prgm):
+        self.client.write_prgm(N, prgm)
 
     @exclusive
-    def prgm_delete(self,N):
+    def prgm_delete(self, N):
         self.client.write_prgm_erase(N)
 
     @exclusive
     def sample(self, lookup=None):
-        type = 'cascade' if self.cascades > 0 else 'loop'
-        items = ['setpoint','processvalue','enable'] if type == 'loop' else ['setpoint','processvalue','enable','enable_cascade']
-        loops = [self.get_loop(1,type,items,exclusive=False)]
-        if lookup: loops[0].update(lookup[type][0])
+        ltype = 'cascade' if self.cascades > 0 else 'loop'
+        if ltype == 'loop':
+            items = ['setpoint', 'processvalue', 'enable']
+        else:
+            items = ['setpoint', 'processvalue', 'enable', 'enable_cascade']
+        loops = [self.get_loop(1, ltype, items, exclusive=False)]
+        if lookup:
+            loops[0].update(lookup[ltype][0])
         if self.loops + self.cascades > 1:
-            loops.append(self.get_loop(2,'loop',['setpoint','processvalue','enable'],exclusive=False))
-            if lookup: loops[1].update(lookup['loop'][0 if type=='cascade' else 1])
-        return {'datetime':self.get_datetime(exclusive=False),'loops':loops,'status':self.get_status(exclusive=False)} 
+            tlst = ['setpoint', 'processvalue', 'enable']
+            loops.append(self.get_loop(2, 'loop', tlst, exclusive=False))
+            if lookup:
+                loops[1].update(lookup['loop'][0 if ltype == 'cascade' else 1])
+        return {
+            'datetime':self.get_datetime(exclusive=False),
+            'loops':loops,
+            'status':self.get_status(exclusive=False)
+        }
 
     @exclusive
     def process_controller(self, update=True):
@@ -509,19 +675,13 @@ class Espec(CtlrProperty):
     @exclusive
     def get_networkSettings(self):
         ret = self.client.read_ip_set()
-        ret.update({'message':'','host':''})
+        ret.update({'message':'', 'host':''})
         return ret
 
     @exclusive
-    def set_networkSettings(self,value):
+    def set_networkSettings(self, value):
         if value:
-            self.client.write_ip_set(value.get('address','0.0.0.0'),value.get('mask','0.0.0.0'),value.get('gateway','0.0.0.0'))
+            self.client.write_ip_set(value.get('address', '0.0.0.0'),
+                                     value.get('mask', '0.0.0.0'), value.get('gateway', '0.0.0.0'))
         else:
-            self.client.write_ip_set('0.0.0.0','0.0.0.0','0.0.0.0')
-
-
-if __name__ == '__main__':
-    print 'running self test:'
-    ctlr = Espec(interface='Serial',serialport='\\.\COM3',baudrate=19200)
-    ctlr.process_controller()
-    ctlr.self_test(ctlr.loops+ctlr.cascades,ctlr.cascades)
+            self.client.write_ip_set('0.0.0.0', '0.0.0.0', '0.0.0.0')

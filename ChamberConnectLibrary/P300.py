@@ -359,10 +359,12 @@ class P300(object):
         return {'setpoint':float(rsp[0]), 'enable':rsp[1] == 'ON'}
 
     def read_constant_ref(self):
-        '''Get the constant settings for the refigeration system
+        '''
+        Get the constant settings for the refigeration system
+
         returns:
             {"mode":string,"setpoint":int}
-            '''
+        '''
         rsp = self.ctlr.interact('CONSTANT SET?,REF')
         try:
             return {'mode':'manual', 'setpoint':float(rsp)}
@@ -849,10 +851,13 @@ class P300(object):
                 self.ctlr.interact('HUMI, H%0.1f' % maximum)
 
     def write_set(self, mode, setpoint=0):
-        '''Set the constant setpoints refrig mode
+        '''
+        Set the constant setpoints refrig mode
+
         params:
             mode: string,"off" or "manual" or "auto"
-            setpoint: int,20 or 50 or 100'''
+            setpoint: int,20 or 50 or 100
+        '''
         self.ctlr.interact('SET,%s' % self.encode_refrig(mode, setpoint))
 
     def write_relay(self, relays):
@@ -1052,7 +1057,7 @@ class P300(object):
         ttp = ('ON' if enable else 'OFF', positive, negative)
         self.ctlr.interact('TEMP PTC, PTC%s, DEVP%0.1f, DEVN%0.1f' % ttp)
 
-    def write_ptc(self, range, p, filter, i, **kwargs):
+    def write_ptc(self, op_range, pid_p, pid_filter, pid_i, **kwargs):
         '''write product temp control parameters to controller
         params:
             range: {"max":float,"min":float}, allowable range of operation
@@ -1061,7 +1066,7 @@ class P300(object):
             filter: float, filter value
             opt1,opt2 not used set to 0.0'''
         opt1, opt2 = kwargs.get('opt1', 0), kwargs.get('opt2', 0)
-        ttp = (range['max'], range['min'], p, filter, i, opt1, opt2)
+        ttp = (op_range['max'], op_range['min'], pid_p, pid_filter, pid_i, opt1, opt2)
         self.ctlr.interact('PTC,%0.1f,%0.1f,%0.1f,%0.1f,%0.1f,%0.1f,%0.1f' % ttp)
 
     def write_ip_set(self, address, mask, gateway):

@@ -4,14 +4,15 @@ A direct implimentation of the P300's communication interface.
 :copyright: (C) Espec North America, INC.
 :license: MIT, see LICENSE for more details.
 '''
-from especinteract import *
+#pylint: disable=W0703
 import re
+from especinteract import EspecSerial, EspecTCP
 
 def tryfloat(val, default):
     '''Convert a value to a float, if its not valid return default'''
     try:
         return float(val)
-    except:
+    except Exception:
         return default
 
 class P300(object):
@@ -147,10 +148,8 @@ class P300(object):
             "pgmnum" and "step" only present when "mode"=="RUN"
             "days" only present when "repeat"=="weekly"'''
         rsp = self.ctlr.interact('TIMER LIST?,1')
-        parsed = re.search(
-            r'1,MODE(\d)(?:,(\d+).(\d+)/(\d+))?(?:,([A-Z/]+))?,(\d+):(\d+),(\w+)(?:,R[AO]M:(\d+),STEP(\d+))?',
-            rsp
-        )
+        parsed = re.search(r'1,MODE(\d)(?:,(\d+).(\d+)/(\d+))?(?:,([A-Z/]+))?,(\d+):(\d+),'
+                           r'(\w+)(?:,R[AO]M:(\d+),STEP(\d+))?', rsp)
         ret = {
             'repeat':['once', 'weekly', 'daily'][int(parsed.group(1))-1],
             'time':{'hour':int(parsed.group(6)), 'minute':int(parsed.group(7))},
@@ -183,10 +182,8 @@ class P300(object):
             "date" only present when "repeat"=="once"
             "days" only present when "repeat"=="weekly"'''
         rsp = self.ctlr.interact('TIMER LIST?,2')
-        parsed = re.search(
-            r'2,MODE(\d)(?:,(\d+).(\d+)/(\d+))?(?:,([A-Z]+))?,(\d+):(\d+),(\w+)',
-            rsp
-        )
+        parsed = re.search(r'2,MODE(\d)(?:,(\d+).(\d+)/(\d+))?(?:,([A-Z]+))?,(\d+):(\d+),(\w+)',
+                           rsp)
         ret = {
             'repeat':['once', 'weekly', 'daily'][int(parsed.group(1))-1],
             'time':{'hour':int(parsed.group(6)), 'minute':int(parsed.group(7))},
@@ -362,10 +359,12 @@ class P300(object):
         return {'setpoint':float(rsp[0]), 'enable':rsp[1] == 'ON'}
 
     def read_constant_ref(self):
-        '''Get the constant settings for the refigeration system
+        '''
+        Get the constant settings for the refigeration system
+
         returns:
             {"mode":string,"setpoint":int}
-            '''
+        '''
         rsp = self.ctlr.interact('CONSTANT SET?,REF')
         try:
             return {'mode':'manual', 'setpoint':float(rsp)}
@@ -682,10 +681,8 @@ class P300(object):
             {"temperature":{"start":float,"end":float},"humidity":{"start":float,"end":float},
              "time":{"hours":int,"minutes":int},"refrig":{"mode":string,"setpoint":}}'''
         rsp = self.ctlr.interact('RUN PRGM?')
-        parsed = re.search(
-            r'TEMP([0-9.-]+) GOTEMP([0-9.-]+)(?: HUMI(\d+) GOHUMI(\d+))? TIME(\d+):(\d+) (\w+)(?: RELAYON,([0-9,]+))?',
-            rsp
-        )
+        parsed = re.search(r'TEMP([0-9.-]+) GOTEMP([0-9.-]+)(?: HUMI(\d+) GOHUMI(\d+))? TIME(\d+):'
+                           r'(\d+) (\w+)(?: RELAYON,([0-9,]+))?', rsp)
         ret = {
             'temperature':{'start':float(parsed.group(1)), 'end':float(parsed.group(2))},
             'time':{'hours':int(parsed.group(5)), 'minutes':int(parsed.group(6))},
@@ -747,7 +744,7 @@ class P300(object):
             cmd = '%s,%s:%d,STEP%d' % (cmd, self.rom_pgm(pgmnum), pgmnum, pgmstep)
         self.ctlr.interact(cmd)
 
-    def write_timer_start(self, repeat, time, mode, date=None, days=None, pgmnum=None, pgmstep=None):
+    def write_timer_start(self, repeat, time, mode, **kwargs):
         '''write the start timer parameters to the controller (timer 1)
         params:
             repeat: string, "once" or "weekly" or "daily"
@@ -757,6 +754,8 @@ class P300(object):
             days: [string], the day to start the chamber on when repeat=="weekly" i.e. "WED"
             pgmnum: int,
             pgmstep: int, only present when "mode"=="RUN"'''
+        date, days, pgmnum = kwargs.get('date'), kwargs.get('days'), kwargs.get('pgmnum')
+        pgmstep = kwargs.get('pgmstep')
         cmd = 'TIMER WRITE,NO1,MODE%d' % {'once':1, 'weekly':2, 'daily':3}[repeat]
         if repeat == 'once':
             cmd = '%s,%d.%d/%d' % (cmd, date['year']-2000, date['month'], date['day'])
@@ -803,11 +802,11 @@ class P300(object):
             enable: boolean True=protection on, False=protection off'''
         self.ctlr.interact('KEYPROTECT,%s' % ('ON' if enable else 'off'))
 
-    def write_power(self, on):
+    def write_power(self, start):
         '''turn on the chamber power
         params:
-            on: boolean True=start constant1, False=Turn contoller off)'''
-        self.ctlr.interact('POWER,%s' % ('ON' if on else 'off'))
+            start: boolean True=start constant1, False=Turn contoller off)'''
+        self.ctlr.interact('POWER,%s' % ('ON' if start else 'off'))
 
     def write_temp(self, **kwargs):
         '''update the temperature parameters
@@ -852,10 +851,13 @@ class P300(object):
                 self.ctlr.interact('HUMI, H%0.1f' % maximum)
 
     def write_set(self, mode, setpoint=0):
-        '''Set the constant setpoints refrig mode
+        '''
+        Set the constant setpoints refrig mode
+
         params:
             mode: string,"off" or "manual" or "auto"
-            setpoint: int,20 or 50 or 100'''
+            setpoint: int,20 or 50 or 100
+        '''
         self.ctlr.interact('SET,%s' % self.encode_refrig(mode, setpoint))
 
     def write_relay(self, relays):
@@ -1055,7 +1057,7 @@ class P300(object):
         ttp = ('ON' if enable else 'OFF', positive, negative)
         self.ctlr.interact('TEMP PTC, PTC%s, DEVP%0.1f, DEVN%0.1f' % ttp)
 
-    def write_ptc(self, range, p, filter, i, opt1=0, opt2=0):
+    def write_ptc(self, op_range, pid_p, pid_filter, pid_i, **kwargs):
         '''write product temp control parameters to controller
         params:
             range: {"max":float,"min":float}, allowable range of operation
@@ -1063,7 +1065,8 @@ class P300(object):
             i: float, I parameter of PID
             filter: float, filter value
             opt1,opt2 not used set to 0.0'''
-        ttp = (range['max'], range['min'], p, filter, i, opt1, opt2)
+        opt1, opt2 = kwargs.get('opt1', 0), kwargs.get('opt2', 0)
+        ttp = (op_range['max'], op_range['min'], pid_p, pid_filter, pid_i, opt1, opt2)
         self.ctlr.interact('PTC,%0.1f,%0.1f,%0.1f,%0.1f,%0.1f,%0.1f,%0.1f' % ttp)
 
     def write_ip_set(self, address, mask, gateway):
@@ -1072,7 +1075,11 @@ class P300(object):
 
     # --- helpers etc --- helpers etc --- helpers etc --- helpers etc -- helpers etc -- helpers etc
     def parse_prgm_data_step(self, arg):
-        parsed = re.search(r'(\d+),TEMP([0-9.-]+),TEMP RAMP (\w+)(?:,PTC (\w+))?(?:,HUMI([^,]+)(?:,HUMI RAMP (\w+))?)?,TIME(\d+):(\d+),GRANTY (\w+),(\w+)(?:,RELAY ON([0-9.]+))?,PAUSE (\w+)(?:,DEVP([0-9.-]+),DEVN([0-9.-]+))?', arg)
+        '''Parse a program step'''
+        parsed = re.search(r'(\d+),TEMP([0-9.-]+),TEMP RAMP (\w+)(?:,PTC (\w+))?(?:,HUMI([^,]+)'
+                           r'(?:,HUMI RAMP (\w+))?)?,TIME(\d+):(\d+),GRANTY (\w+),(\w+)'
+                           r'(?:,RELAY ON([0-9.]+))?,PAUSE (\w+)(?:,DEVP([0-9.-]+)'
+                           r',DEVN([0-9.-]+))?', arg)
         base = {'number':int(parsed.group(1)),
                 'time':{'hour':int(parsed.group(7)),
                         'minute':int(parsed.group(8))},
@@ -1103,7 +1110,9 @@ class P300(object):
         return base
 
     def parse_prgm_data_detail(self, arg):
-        parsed = re.search(r'([0-9.-]+),([0-9.-]+),(?:(\d+),(\d+),)?TEMP(\w+)(?:,([0-9.-]+))?(?:,HUMI(\w+)(?:,(\d+))?)?',arg)
+        '''Parse the program data command with details flag'''
+        parsed = re.search(r'([0-9.-]+),([0-9.-]+),(?:(\d+),(\d+),)?TEMP(\w+)(?:,([0-9.-]+))?'
+                           r'(?:,HUMI(\w+)(?:,(\d+))?)?', arg)
         ret = {
             'tempDetail':{
                 'range':{'max':float(parsed.group(1)), 'min':float(parsed.group(2))},
@@ -1121,7 +1130,9 @@ class P300(object):
 
     #currently not parsing the patern number on endmode run
     def parse_prgm_data(self, arg):
-        parsed = re.search(r'(\d+),<([^,;]+)>,COUNT,A\((\d+).(\d+).(\d+)\),B\((\d+).(\d+).(\d+)\),END\(([a-zA-Z0-9:]+)\)',arg)
+        '''Parse the program data command'''
+        parsed = re.search(r'(\d+),<([^,;]+)>,COUNT,A\((\d+).(\d+).(\d+)\),B\((\d+).(\d+).(\d+)\)'
+                           r',END\(([a-zA-Z0-9:]+)\)', arg)
         return {
             'steps':int(parsed.group(1)),
             'name':parsed.group(2),
@@ -1139,11 +1150,11 @@ class P300(object):
             }
         }
 
-    def read_prgm(self, pgmnum, withPtc=False):
+    def read_prgm(self, pgmnum, with_ptc=False):
         '''read an entire program helper method'''
         if pgmnum > 0 and pgmnum <= 40:
-            pgm = self.read_prgm_data_ptc(pgmnum) if withPtc else self.read_prgm_data(pgmnum)
-            if withPtc:
+            pgm = self.read_prgm_data_ptc(pgmnum) if with_ptc else self.read_prgm_data(pgmnum)
+            if with_ptc:
                 try:
                     pgm.update(self.read_prgm_data_ptc_detail(pgmnum))
                 except NotImplementedError:
@@ -1176,7 +1187,7 @@ class P300(object):
                     }
                 ]
             }
-            if withPtc:
+            if with_ptc:
                 pgm['steps'][0]['temperature'].update({
                     'deviation':self.read_temp_ptc()['deviation'],
                     'enable_cascade':False
@@ -1208,6 +1219,7 @@ class P300(object):
             raise
 
     def encode_refrig(self, mode, setpoint):
+        '''Convert refig mode dict to string'''
         if mode in ['off', 'Off']:
             act = 'REF0'
         elif mode in ['auto', 'Auto']:
@@ -1228,6 +1240,7 @@ class P300(object):
         return act
 
     def parse_relays(self, relays):
+        '''handle relays'''
         ret = {'on':[], 'off':[]}
         for i, val in enumerate(relays):
             if val is not None:

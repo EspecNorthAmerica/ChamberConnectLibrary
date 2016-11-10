@@ -4,7 +4,7 @@ Common interface for all All ChamberConnectLibrary upper level interfaces
 :copyright: (C) Espec North America, INC.
 :license: MIT, see LICENSE for more details.
 '''
-#pylint: disable=W0703,W0201,R0902,W0232,R0904
+#pylint: disable=W0703,W0201,R0902,W0232,R0904,C0103
 from abc import ABCMeta, abstractmethod
 from threading import RLock
 import traceback
@@ -141,37 +141,124 @@ class CtlrProperty:
         pass
 
     @abstractmethod
-    def get_loop_sp(self, N):
+    def get_refrig(self):
         '''
-        Get the setpoint of a loop
+        Get the constant settings for the refigeration system
+
+        returns:
+            {"mode":string,"setpoint":int}
+        '''
+        pass
+
+    @abstractmethod
+    def set_refrig(self, value):
+        '''
+        Set the constant setpoints refrig mode
+
+        params:
+            mode: string,"off" or "manual" or "auto"
+            setpoint: int,20 or 50 or 100
+        '''
+        pass
+
+    @abstractmethod
+    def get_loop(self, N, loop_type, param_list=None):
+        '''
+        Get all parameters for a loop from a given list.
 
         Args:
-            N (int): The number of the loop
+            N (int): The loop number (1-4).
+            loop_type (str): The loop type::
+                "cascade" -- A cascade control loop.
+                "loop" -- A standard control loop.
+            param_list (list(str)): The list of parameters to read defaults::
+                "setpoint" -- The target temp/humi/altitude/etc of the control loop
+                "processvalue" -- The current conditions inside the chamber
+                "range" -- The settable range for the "setpoint"
+                "enable" -- Weather the loop is on or off
+                "units" -- The units of the "setpoint" or "processvalue" parameters
+                "mode" -- The current control status of the loop
+                "power" -- The current output power of the loop
+                "deviation" -- (type="cascade" only) The allowable difference between air/prod.
+                "enable_cascade" -- (type="cascade" only) Enable or disable cascade type control
         Returns:
-            float
+            dict. The dictionary contains a key for each item in the list argument::
+                "setpoint" -- {"constant":float,"current":float}
+                "processvalue" -- {"air":float,"product":float} ("product" only w/ type="cascade")
+                "range" -- {"min":float,"max":float}
+                "enable" -- {"constant":bool,"current":bool}
+                "units" -- str
+                "mode" -- str('Off' or 'Auto' or 'Manual')
+                "deviation" -- {"positive": float, "negative": float}
+                "enable_cascade" -- {"constant":bool,"current":bool}
+                "power" -- {"constant": float, "current": float}
+        '''
+        pass
+
+    @abstractmethod
+    def set_loop(self, N, loop_type, param_list):
+        '''
+        Set all parameters for a loop from a given list.
+
+        Args:
+            N (int): The loop number (1-4).
+            loop_type (str): The loop type::
+                "cascade" -- A cascade control loop.
+                "loop" -- A standard control loop.
+            param_list (dict(dict)): The possible keys and there values::
+                "setpoint" -- The target temp/humi/altitude/etc of the control loop
+                "range" -- The settable range for the "setpoint"
+                "enable" -- turn the control loop on or off
+                "power" -- set the manual power of the control loop
+                "deviation" -- (type="cascade" only) The allowable difference between air/prod.
+                "enable_cascade" -- (type="cascade" only) Enable or disable cascade type control
+        '''
+        pass
+
+    @abstractmethod
+    def get_loop_sp(self, N, constant=None):
+        '''
+        Get the setpoint of a control loop.
+
+        Args:
+            N (int): The number for the control loop
+            constant (bool): Read the constant or current setpoint, None=Both (default=None)
+        Returns:
+            dict(float): constant=None
+            float: constant=bool
+        Raises:
+            ValueError
         '''
         pass
 
     @abstractmethod
     def set_loop_sp(self, N, value):
         '''
-        Set the setpoint of a loop
+        Set the setpoint of the control loop.
 
         Args:
-            N (int): The number of the loop
+            N (int): The number for the control loop
             value (float): The new setpoint
+        Returns:
+            None
+        Raises:
+            ValueError
         '''
         pass
 
     @abstractmethod
-    def get_loop_pv(self, N):
+    def get_loop_pv(self, N, product=None):
         '''
-        Get the process value of a loop
+        Get the process value of a loop.
 
         Args:
-            N (int): The number of the loop
+            N (int): The number for the control loop
+            product (bool): True=(not valid), False=air temp, None=both (default=None)
         Returns:
-            float
+            dict(float). product=None
+            float. product=bool
+        Raises:
+            ValueError
         '''
         pass
 
@@ -194,7 +281,7 @@ class CtlrProperty:
 
         Args:
             N (int): The number of the loop
-            value: {"min": float, "max": float}
+            value: ({"min": float, "max": float}): The range
         '''
         pass
 
@@ -206,7 +293,7 @@ class CtlrProperty:
         Args:
             N (int): The number of the loop
         Returns:
-            bool: True = loop is running
+            {"constant": bool, "current": bool}
         '''
         pass
 
@@ -222,7 +309,7 @@ class CtlrProperty:
         pass
 
     @abstractmethod
-    def get_loop_units(self, N): 
+    def get_loop_units(self, N):
         '''
         Get the units for a loop
 
@@ -256,26 +343,28 @@ class CtlrProperty:
         '''
         pass
 
-    def get_loop_power(self, N):
+    @abstractmethod
+    def get_loop_power(self, N, constant=None):
         '''
-        Get the output power for a loop
+        Get the output power(%) for a loop
 
         Args:
             N (int): The number of the loop
         Returns:
-            float: The output power
+            {"constant": float, "current": float}
         '''
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def set_loop_power(self, N, value):
         '''
-        Set the output power for a loop
+        Set the output power(%) for a loop
 
         Args:
             N (int): The number of the loop
             value (float): The output power
         '''
-        raise NotImplementedError
+        pass
 
     @abstractmethod
     def get_cascade_sp(self, N):
@@ -285,7 +374,7 @@ class CtlrProperty:
         Args:
             N (int): The number of the loop
         Returns:
-            float: The setpoint
+            {"constant":float, "current":float, "air":float, "product":float}
         '''
         pass
 
@@ -308,7 +397,7 @@ class CtlrProperty:
         Args:
             N (int): The number of the loop
         Returns:
-            float: The process value
+            {"product":float, "air":float}
         '''
         pass
 
@@ -320,7 +409,7 @@ class CtlrProperty:
         Args:
             N (int): The number of the loop
         Returns:
-            {"min":float, "max":float}: The range
+            {"min":float, "max":float}
         '''
         pass
 
@@ -343,7 +432,7 @@ class CtlrProperty:
         Args:
             N (int): The number of the loop
         Returns:
-            bool: True = loop running
+            {"constant":bool, "current":bool}
         '''
         pass
 
@@ -401,7 +490,7 @@ class CtlrProperty:
         Args:
             N (int): The number of the loop
         Returns:
-            bool: True = when cascade mode is enabled
+            {"constant":bool, "current":bool}
         '''
         pass
 
@@ -424,7 +513,7 @@ class CtlrProperty:
         Args:
             N (int): The number of the loop
         Returns:
-            {"positive": float, "negative": float}
+            {"positive":float, "negative":float}
         '''
         pass
 
@@ -439,17 +528,19 @@ class CtlrProperty:
         '''
         pass
 
-    def get_cascade_power(self, N):
+    @abstractmethod
+    def get_cascade_power(self, N, constant=None):
         '''
         Get the output power for a cascade loop
 
         Args:
             N (int): The number of the loop
         Returns:
-            float: The output power %
+            {"constant":float, "current":float}
         '''
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def set_cascade_power(self, N, value):
         '''
         Set the output power for a cascade loop
@@ -458,7 +549,7 @@ class CtlrProperty:
             N (int): The number of the loop
             value (float): The output power %
         '''
-        raise NotImplementedError
+        pass
 
     @abstractmethod
     def get_event(self, N):
@@ -468,7 +559,7 @@ class CtlrProperty:
         Args:
             N (int): The number of the output
         Returns:
-            bool: the output state True = on
+            {"constant":float, "current":float}
         '''
         pass
 
@@ -496,10 +587,10 @@ class CtlrProperty:
     @abstractmethod
     def get_alarm_status(self):
         '''
-        Get the active alarms status.
+        Get the chamber alarms status.
 
         Returns:
-            tbd.
+            {"active":[int], "inactive":[int]}
         '''
         pass
 
@@ -584,6 +675,8 @@ class CtlrProperty:
         '''
         Get the time until the running program ends.
 
+        Args:
+            pgm (dict): The current program cache (optional,speeds up some controllers)
         Returns:
             str: HH:MM
         '''
@@ -601,7 +694,7 @@ class CtlrProperty:
         '''
         pass
 
-    #@abstractmethod #not all controllers can support this
+    @abstractmethod
     def set_prgm_name(self, N, value):
         '''
         Set the name of a givem program
@@ -610,7 +703,7 @@ class CtlrProperty:
             N (int): The program to set the name of
             value (str): The new name for the program
         '''
-        raise NotImplementedError
+        pass
 
     @abstractmethod
     def get_prgm_steps(self, N):
@@ -630,7 +723,7 @@ class CtlrProperty:
         Get a list of all programs on the chamber.
 
         Returns:
-            dict: tbd
+            [{"number":int, "name":str}]
         '''
         pass
 
@@ -642,7 +735,7 @@ class CtlrProperty:
         Args:
             N (int): The program number
         Returns:
-            dict: tbd
+            dict (format varies from controller to controller)
         '''
         pass
 
@@ -668,20 +761,22 @@ class CtlrProperty:
         pass
 
     @abstractmethod
-    def sample(self):
+    def sample(self, lookup=None):
         '''
         Take a sample for data logging, gets datetime, mode, and sp/pv on all loops
 
         Returns:
-            dict: tbd
+            {"datetime":datetime.datetime, "loops":[{varies}], "status":str}
         '''
         pass
 
     @abstractmethod
-    def process_controller(self):
+    def process_controller(self, update=True):
         '''
         Read the controllers "part number" and setup the class as best as possible using it.
 
+        Args:
+            update (bool): When true update the classes configuration (default=True)
         Returns:
             str: The "part number"
         '''
@@ -690,20 +785,20 @@ class CtlrProperty:
     @abstractmethod
     def get_networkSettings(self):
         '''
-        Get the network settings from the controller (if applicable)
+        Get the network settings from the controller (if controller supports)
 
         Returns:
-            dict: tbd
+            {"address":str, "mask":str, "gateway":str, "message":str, "host":str}
         '''
         pass
 
     @abstractmethod
     def set_networkSettings(self, value):
         '''
-        Set the network settings of the controller (if applicable)
+        Set the network settings of the controller (if controller supports)
 
         Args:
-            value (dict): the network settings
+            value ({"address":str, "mask":str, "gateway":str, "message":str, "host":str}): Settings
         '''
         pass
 
