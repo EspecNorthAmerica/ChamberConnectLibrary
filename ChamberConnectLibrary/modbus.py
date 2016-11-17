@@ -9,6 +9,7 @@ import socket
 import struct
 import time
 import serial
+import collections
 
 class ModbusError(Exception):
     '''Generic Modbus exception.'''
@@ -92,8 +93,8 @@ class Modbus(object):
             register (int): register(s) to write to
             value (int or list(int)): value(s) to write,
         '''
-        packetlen = 16 if isinstance(value, list) or isinstance(value, tuple) else 6
-        packet = self.make_packet(packetlen, register, value)
+        packettype = 16 if isinstance(value, collections.Iterable) else 6
+        packet = self.make_packet(packettype, register, value)
         rval = self.interact(packet)
         self.decode_packet(rval, packet)
 
@@ -105,7 +106,7 @@ class Modbus(object):
             register (int): first register to write to, 2 float value will be written.
             value (float or list(float)): vlaue(s) to write to
         '''
-        if isinstance(value, list) or isinstance(value, tuple):
+        if isinstance(value, collections.Iterable):
             packval = ''.join([struct.unpack('HH', struct.pack('f', val)) for val in value])
         else:
             packval = struct.unpack('HH', struct.pack('f', value))

@@ -148,8 +148,11 @@ class P300(object):
             "pgmnum" and "step" only present when "mode"=="RUN"
             "days" only present when "repeat"=="weekly"'''
         rsp = self.ctlr.interact('TIMER LIST?,1')
-        parsed = re.search(r'1,MODE(\d)(?:,(\d+).(\d+)/(\d+))?(?:,([A-Z/]+))?,(\d+):(\d+),'
-                           r'(\w+)(?:,R[AO]M:(\d+),STEP(\d+))?', rsp)
+        parsed = re.search(
+            r'1,MODE(\d)(?:,(\d+).(\d+)/(\d+))?(?:,([A-Z/]+))?,(\d+):(\d+),(\w+)'
+            r'(?:,R[AO]M:(\d+),STEP(\d+))?',
+            rsp
+        )
         ret = {
             'repeat':['once', 'weekly', 'daily'][int(parsed.group(1))-1],
             'time':{'hour':int(parsed.group(6)), 'minute':int(parsed.group(7))},
@@ -182,8 +185,10 @@ class P300(object):
             "date" only present when "repeat"=="once"
             "days" only present when "repeat"=="weekly"'''
         rsp = self.ctlr.interact('TIMER LIST?,2')
-        parsed = re.search(r'2,MODE(\d)(?:,(\d+).(\d+)/(\d+))?(?:,([A-Z]+))?,(\d+):(\d+),(\w+)',
-                           rsp)
+        parsed = re.search(
+            r'2,MODE(\d)(?:,(\d+).(\d+)/(\d+))?(?:,([A-Z]+))?,(\d+):(\d+),(\w+)',
+            rsp
+        )
         ret = {
             'repeat':['once', 'weekly', 'daily'][int(parsed.group(1))-1],
             'time':{'hour':int(parsed.group(6)), 'minute':int(parsed.group(7))},
@@ -681,8 +686,11 @@ class P300(object):
             {"temperature":{"start":float,"end":float},"humidity":{"start":float,"end":float},
              "time":{"hours":int,"minutes":int},"refrig":{"mode":string,"setpoint":}}'''
         rsp = self.ctlr.interact('RUN PRGM?')
-        parsed = re.search(r'TEMP([0-9.-]+) GOTEMP([0-9.-]+)(?: HUMI(\d+) GOHUMI(\d+))? TIME(\d+):'
-                           r'(\d+) (\w+)(?: RELAYON,([0-9,]+))?', rsp)
+        parsed = re.search(
+            r'TEMP([0-9.-]+) GOTEMP([0-9.-]+)(?: HUMI(\d+) GOHUMI(\d+))? TIME(\d+):(\d+) (\w+)'
+            r'(?: RELAYON,([0-9,]+))?',
+            rsp
+        )
         ret = {
             'temperature':{'start':float(parsed.group(1)), 'end':float(parsed.group(2))},
             'time':{'hours':int(parsed.group(5)), 'minutes':int(parsed.group(6))},
@@ -1076,10 +1084,12 @@ class P300(object):
     # --- helpers etc --- helpers etc --- helpers etc --- helpers etc -- helpers etc -- helpers etc
     def parse_prgm_data_step(self, arg):
         '''Parse a program step'''
-        parsed = re.search(r'(\d+),TEMP([0-9.-]+),TEMP RAMP (\w+)(?:,PTC (\w+))?(?:,HUMI([^,]+)'
-                           r'(?:,HUMI RAMP (\w+))?)?,TIME(\d+):(\d+),GRANTY (\w+),(\w+)'
-                           r'(?:,RELAY ON([0-9.]+))?,PAUSE (\w+)(?:,DEVP([0-9.-]+)'
-                           r',DEVN([0-9.-]+))?', arg)
+        parsed = re.search(
+            r'(\d+),TEMP([0-9.-]+),TEMP RAMP (\w+)(?:,PTC (\w+))?(?:,HUMI([^,]+)'
+            r'(?:,HUMI RAMP (\w+))?)?,TIME(\d+):(\d+),GRANTY (\w+),REF(\w+)'
+            r'(?:,RELAY ON([0-9.]+))?(?:,PAUSE (\w+))?(?:,DEVP([0-9.-]+),DEVN([0-9.-]+))?',
+            arg
+        )
         base = {'number':int(parsed.group(1)),
                 'time':{'hour':int(parsed.group(7)),
                         'minute':int(parsed.group(8))},
@@ -1111,8 +1121,11 @@ class P300(object):
 
     def parse_prgm_data_detail(self, arg):
         '''Parse the program data command with details flag'''
-        parsed = re.search(r'([0-9.-]+),([0-9.-]+),(?:(\d+),(\d+),)?TEMP(\w+)(?:,([0-9.-]+))?'
-                           r'(?:,HUMI(\w+)(?:,(\d+))?)?', arg)
+        parsed = re.search(
+            r'([0-9.-]+),([0-9.-]+),(?:(\d+),(\d+),)?TEMP(\w+)'
+            r'(?:,([0-9.-]+))?(?:,HUMI(\w+)(?:,(\d+))?)?',
+            arg
+        )
         ret = {
             'tempDetail':{
                 'range':{'max':float(parsed.group(1)), 'min':float(parsed.group(2))},
@@ -1131,8 +1144,11 @@ class P300(object):
     #currently not parsing the patern number on endmode run
     def parse_prgm_data(self, arg):
         '''Parse the program data command'''
-        parsed = re.search(r'(\d+),<([^,;]+)>,COUNT,A\((\d+).(\d+).(\d+)\),B\((\d+).(\d+).(\d+)\)'
-                           r',END\(([a-zA-Z0-9:]+)\)', arg)
+        parsed = re.search(
+            r'(\d+),<([^,;]+)>,COUNT,A\((\d+).(\d+).(\d+)\),B\((\d+).(\d+).(\d+)\),'
+            r'END\(([a-zA-Z0-9:]+)\)',
+            arg
+        )
         return {
             'steps':int(parsed.group(1)),
             'name':parsed.group(2),

@@ -13,15 +13,15 @@ class EspecError(Exception):
 
 class EspecSerial(object):
     '''handles low level communication to espec corp controllers via serial (RS232/485)'''
-    def __init__(self, port, **kwargs):
+    def __init__(self, **kwargs):
         self.address = kwargs.get('address', None)
         self.delimeter = kwargs.get('delimeter', '\r\n')
         self.serial = serial.Serial(
-            port=port,
+            port=kwargs.get('port'),
             baudrate=kwargs.get('baud', 9600),
             bytesize=kwargs.get('databits', 8),
             parity=kwargs.get('parity', 'N'),
-            stopbits=kwargs.get('stopbits', 8),
+            stopbits=kwargs.get('stopbits', 1),
             timeout=kwargs.get('timeout', 1)
         )
 
@@ -48,6 +48,8 @@ class EspecSerial(object):
             self.serial.write('%d,%s%s'%(self.address, message, self.delimeter))
         else:
             self.serial.write('%s%s' % (message, self.delimeter))
+        raise ValueError('stupid')
+        print message + '\n'
         recv = ''
         while recv[0-len(self.delimeter):] != self.delimeter:
             rbuff = self.serial.read(1)
@@ -63,10 +65,10 @@ class EspecSerial(object):
 
 class EspecTCP(object):
     '''handles low level communication to espec corp controllers via serial TCP'''
-    def __init__(self, host, **kwargs):
+    def __init__(self, **kwargs):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.setblocking(True)
-        self.socket.connect((host, kwargs.get('port', 10001)))
+        self.socket.connect((kwargs.get('host'), kwargs.get('port', 10001)))
         self.address = kwargs.get('address', None)
         self.delimeter = kwargs.get('delimeter', '\r\n')
 

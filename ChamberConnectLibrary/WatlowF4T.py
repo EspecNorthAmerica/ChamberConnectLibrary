@@ -292,9 +292,9 @@ class WatlowF4T(CtlrProperty):
         }
         if param_list is None:
             param_list = loop_functions[loop_type].keys()
-            param_list = [x for x in list if x not in ['setPoint', 'setValue', 'processValue']]
-        return {key:loop_functions[loop_type][key](N, exclusive=False)
-                for key in list if key in loop_functions[loop_type]}
+            param_list = [x for x in param_list if x not in ['setPoint', 'setValue', 'processValue']]
+        fncs = loop_functions[loop_type]
+        return {key:fncs[key](N, exclusive=False) for key in param_list if key in fncs}
 
     @exclusive
     def set_loop(self, N, loop_type, param_list):
@@ -350,28 +350,20 @@ class WatlowF4T(CtlrProperty):
                 pass
 
     @exclusive
-    def get_loop_sp(self, N, constant=None):
+    def get_loop_sp(self, N):
         '''
         Get the setpoint of a control loop.
 
         Args:
             N (int): The number for the control loop
-            constant (bool): Read the constant or current setpoint, None=Both (default=None)
         Returns:
-            dict(float): constant=None
-            float: constant=bool
+            {"constant":float, "current":float}
         Raises:
             ValueError
         '''
         self.__range_check(N, 1, self.loops)
-        if constant is None:
-            return {'constant': self.client.read_holding_float(2782+(N-1)*160),
-                    'current': self.client.read_holding_float(2810+(N-1)*160)}
-        if constant is True:
-            return self.client.read_holding_float(2782+(N-1)*160)
-        if constant is False:
-            return self.client.read_holding_float(2810+(N-1)*160)
-        raise ValueError('constant must be a bool or None')
+        return {'constant': self.client.read_holding_float(2782+(N-1)*160)[0],
+                'current': self.client.read_holding_float(2810+(N-1)*160)[0]}
 
     @exclusive
     def set_loop_sp(self, N, value):
@@ -388,30 +380,23 @@ class WatlowF4T(CtlrProperty):
         '''
         value = value['constant'] if isinstance(value, dict) else value
         self.__range_check(N, 1, self.loops)
-        constreg = 2782+(N-1)*160
-        self.client.write_holding_float(constreg, value)
+        self.client.write_holding_float(2782+(N-1)*160, value)
 
     @exclusive
-    def get_loop_pv(self, N, product=None):
+    def get_loop_pv(self, N):
         '''
         Get the process value of a loop.
 
         Args:
             N (int): The number for the control loop
-            product (bool): True=(not valid), False=air temp, None=both (default=None)
         Returns:
-            dict(float). product=None
-            float. product=bool
+            {"air":float}
         Raises:
             ValueError
         '''
         reg = 2820+(N-1)*160
         self.__range_check(N, 1, self.loops)
-        if product is None:
-            return {'air': self.client.read_holding_float(reg)}
-        if product is False:
-            return self.client.read_holding_float(reg)
-        return ValueError('product must be None or False.')
+        return {'air': self.client.read_holding_float(reg)[0]}
 
     @exclusive
     def set_loop_range(self, N, value):
@@ -422,8 +407,8 @@ class WatlowF4T(CtlrProperty):
     @exclusive
     def get_loop_range(self, N):
         self.__range_check(N, 1, self.loops)
-        return {'max':self.client.read_holding_float(2776+(N-1)*160),
-                'min':self.client.read_holding_float(2774+(N-1)*160)}
+        return {'max':self.client.read_holding_float(2776+(N-1)*160)[0],
+                'min':self.client.read_holding_float(2774+(N-1)*160)[0]}
 
     @exclusive
     def get_loop_en(self, N):
@@ -455,6 +440,7 @@ class WatlowF4T(CtlrProperty):
     @exclusive
     def set_loop_mode(self, N, value):
         self.__range_check(N, 1, self.loops)
+        value = value['constant'] if isinstance(value, dict) else value
         if value in ['Off', 'OFF', 'off']:
             self.set_loop_en(N, False, exclusive=False)
         elif value in ['On', 'ON', 'on']:
@@ -472,23 +458,23 @@ class WatlowF4T(CtlrProperty):
     def get_loop_mode(self, N):
         '''Returns loop state'''
         self.__range_check(N, 1, self.loops)
-        if self.get_loop_en(N, exclusive=False)['constant']:
-            tdict = {62:'Off', 10:'Auto', 54:'Manual'}
-            return tdict[self.client.read_holding(2730+(N-1)*160, 1)[0]]
+        tdict = {62:'Off', 10:'Auto', 54:'Manual'}
+        lpen = self.get_loop_en(N, exclusive=False)
+        if lpen['constant']:
+            con = tdict[self.client.read_holding(2730+(N-1)*160, 1)[0]]
         else:
-            return 'Off'
+            con = 'Off'
+        if lpen['current']:
+            cur = tdict[self.client.read_holding(2814+(N-1)*160, 1)[0]]
+        else:
+            cur = 'Off'
+        return {'current': cur, 'constant': con}
 
     @exclusive
-    def get_loop_power(self, N, constant=None):
+    def get_loop_power(self, N):
         self.__range_check(N, 1, self.loops)
-        if constant is None:
-            return {'constant':self.client.read_holding_float(2784+(N-1)*160),
-                    'current':self.client.read_holding_float(2808+(N-1)*160)}
-        elif constant is True:
-            return self.client.read_holding_float(2784+(N-1)*160)
-        elif constant is False:
-            return self.client.read_holding_float(2808+(N-1)*160)
-        raise ValueError('constant must be a bool or None')
+        return {'constant':self.client.read_holding_float(2784+(N-1)*160)[0],
+                'current':self.client.read_holding_float(2808+(N-1)*160)[0]}
 
     @exclusive
     def set_loop_power(self, N, value):
@@ -501,13 +487,11 @@ class WatlowF4T(CtlrProperty):
     @exclusive
     def get_cascade_sp(self, N):
         self.__range_check(N, 1, self.cascades)
-        constreg = 4042+(N-1)*200
-        reg = 4042+(N-1)*200
-        cur = self.client.read_holding_float(reg)
-        return {'constant':self.client.read_holding_float(constreg) if reg != constreg else cur,
+        cur = self.client.read_holding_float(4042+(N-1)*200)[0]
+        return {'constant':cur,
                 'current':cur,
-                'air':self.client.read_holding_float(4188+(N-1)*200),
-                'product':self.client.read_holding_float(4190+(N-1)*200)}
+                'air':self.client.read_holding_float(4188+(N-1)*200)[0],
+                'product':self.client.read_holding_float(4190+(N-1)*200)[0]}
 
     @exclusive
     def set_cascade_sp(self, N, value):
@@ -520,14 +504,14 @@ class WatlowF4T(CtlrProperty):
     def get_cascade_pv(self, N):
         '''Read the process values of the loop, product=outer, air=inner'''
         self.__range_check(N, 1, self.cascades)
-        return {'product': self.client.read_holding_float(4180+(N-1)*200),
-                'air': self.client.read_holding_float(4182+(N-1)*200)}
+        return {'product': self.client.read_holding_float(4180+(N-1)*200)[0],
+                'air': self.client.read_holding_float(4182+(N-1)*200)[0]}
 
     @exclusive
     def get_cascade_range(self, N):
         self.__range_check(N, 1, self.cascades)
-        return {'max':self.client.read_holding_float(4036+(N-1)*200),
-                'min':self.client.read_holding_float(4038+(N-1)*200)}
+        return {'max':self.client.read_holding_float(4036+(N-1)*200)[0],
+                'min':self.client.read_holding_float(4038+(N-1)*200)[0]}
 
     @exclusive
     def set_cascade_range(self, N, value):
@@ -565,6 +549,7 @@ class WatlowF4T(CtlrProperty):
     @exclusive
     def set_cascade_mode(self, N, value):
         self.__range_check(N, 1, self.cascades)
+        value = value['constant'] if isinstance(value, dict) else value
         if value in ['Off', 'OFF', 'off']:
             self.set_cascade_en(N, False, exclusive=False)
         elif value in ['On', 'ON', 'on']:
@@ -582,11 +567,17 @@ class WatlowF4T(CtlrProperty):
     def get_cascade_mode(self, N):
         '''Returns loop state'''
         self.__range_check(N, 1, self.cascades)
-        if self.get_cascade_en(N, exclusive=False):
-            tdict = {62:'Off', 10:'Auto', 54:'Manual'}
-            return tdict[self.client.read_holding(4010+(N-1)*200, 1)[0]]
+        tdict = {62:'Off', 10:'Auto', 54:'Manual'}
+        lpen = self.get_cascade_en(N, exclusive=False)
+        if lpen['current']:
+            cur = tdict[self.client.read_holding(4012+(N-1)*200, 1)[0]]
         else:
-            return 'Off'
+            cur = 'Off'
+        if lpen['constant']:
+            con = tdict[self.client.read_holding(4010+(N-1)*200, 1)[0]]
+        else:
+            con = 'Off'
+        return {'current':cur, 'constant':con}
 
     @exclusive
     def get_cascade_ctl(self, N):
@@ -610,8 +601,8 @@ class WatlowF4T(CtlrProperty):
     @exclusive
     def get_cascade_deviation(self, N):
         self.__range_check(N, 1, self.cascades)
-        return {'positive': self.client.read_holding_float(4170+(N-1)*200),
-                'negative': self.client.read_holding_float(4168+(N-1)*200)}
+        return {'positive': self.client.read_holding_float(4170+(N-1)*200)[0],
+                'negative': self.client.read_holding_float(4168+(N-1)*200)[0]}
 
     @exclusive
     def set_cascade_deviation(self, N, value):
@@ -620,16 +611,10 @@ class WatlowF4T(CtlrProperty):
         self.client.write_holding_float(4170+(N-1)*200, value['positive'])
 
     @exclusive
-    def get_cascade_power(self, N, constant=None):
+    def get_cascade_power(self, N):
         self.__range_check(N, 1, self.cascades)
-        if constant is None:
-            return {'constant':self.client.read_holding_float(4044+(N-1)*200),
-                    'current':self.client.read_holding_float(4178+(N-1)*200)}
-        elif constant is True:
-            return self.client.read_holding_float(4044+(N-1)*200)
-        elif constant is False:
-            return self.client.read_holding_float(4178+(N-1)*200)
-        raise ValueError('constant must be a bool or None')
+        return {'constant':self.client.read_holding_float(4044+(N-1)*200),
+                'current':self.client.read_holding_float(4178+(N-1)*200)}
 
     @exclusive
     def set_cascade_power(self, N, value):
@@ -805,6 +790,9 @@ class WatlowF4T(CtlrProperty):
         self.client.write_holding(18888, N)
         return self.client.read_holding(18920, 1)[0]
 
+    def set_prgm_name(self, N, value):
+        raise NotImplementedError
+
     @exclusive
     def get_prgms(self):
         '''Get a list of all programs on the controller [number,name,steps]'''
@@ -838,7 +826,7 @@ class WatlowF4T(CtlrProperty):
         ranges, gsd, steps = [], [], []
         for i in range(self.loops + self.cascades):
             tmap = self.profile_loop_map[i]
-            gsd.append({'value':self.client.read_holding_float(19086+i*2)})
+            gsd.append({'value':self.client.read_holding_float(19086+i*2)[0]})
             if tmap['type'] == 'loop':
                 ranges.append(self.get_loop_range(tmap['num'], exclusive=False))
             else:
@@ -945,7 +933,6 @@ class WatlowF4T(CtlrProperty):
             #step type
             self.client.write_holding(19094+offset, self.inv_watlow_val_dict(stp['type']))
             for val in stp['events']:
-                print 'step:%d, event#:%d, state:%s' % (stnm, val['number'], val['value'])
                 event_number(val['number'], val['value'])
             if stp['type'] == 'jump':
                 self.client.write_holding(19102+offset, stp['jstep']) #jump step target

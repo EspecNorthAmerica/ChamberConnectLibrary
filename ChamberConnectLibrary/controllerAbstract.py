@@ -216,7 +216,7 @@ class CtlrProperty:
         pass
 
     @abstractmethod
-    def get_loop_sp(self, N, constant=None):
+    def get_loop_sp(self, N):
         '''
         Get the setpoint of a control loop.
 
@@ -224,8 +224,7 @@ class CtlrProperty:
             N (int): The number for the control loop
             constant (bool): Read the constant or current setpoint, None=Both (default=None)
         Returns:
-            dict(float): constant=None
-            float: constant=bool
+            {"constant":float, "current":float}
         Raises:
             ValueError
         '''
@@ -247,7 +246,7 @@ class CtlrProperty:
         pass
 
     @abstractmethod
-    def get_loop_pv(self, N, product=None):
+    def get_loop_pv(self, N):
         '''
         Get the process value of a loop.
 
@@ -344,7 +343,7 @@ class CtlrProperty:
         pass
 
     @abstractmethod
-    def get_loop_power(self, N, constant=None):
+    def get_loop_power(self, N):
         '''
         Get the output power(%) for a loop
 
@@ -529,7 +528,7 @@ class CtlrProperty:
         pass
 
     @abstractmethod
-    def get_cascade_power(self, N, constant=None):
+    def get_cascade_power(self, N):
         '''
         Get the output power for a cascade loop
 
@@ -823,6 +822,9 @@ class CtlrProperty:
     loop_mode = ItemProperty(lambda self, N: self.get_loop_mode(N),
                              lambda self, N, value: self.set_loop_mode(N, value),
                              doc='get the mode of the specified loop')
+    loop_power = ItemProperty(lambda self, N: self.get_loop_power(N),
+                              lambda self, N, value: self.set_loop_power(N, value),
+                              doc='get/set the output power of a secified loop')
 
     cascade_sp = ItemProperty(lambda self, N: self.get_cascade_sp(N),
                               lambda self, N, value: self.set_cascade_sp(N, value),
@@ -840,6 +842,9 @@ class CtlrProperty:
     cascade_mode = ItemProperty(lambda self, N: self.get_cascade_mode(N),
                                 lambda self, N, value: self.set_cascade_mode(N, value),
                                 doc='get the mode of the cascade(PTCON) loop')
+    cascade_power = ItemProperty(lambda self, N: self.get_cascade_power(N),
+                                 lambda self, N, value: self.set_cascade_power(N, value),
+                                 doc='get/set the output power of a cascade(PTCON) loop')
     cascade_ctl = ItemProperty(lambda self, N: self.get_cascade_ctl(N),
                                lambda self, N, value: self.set_cascade_ctl(N, value),
                                doc='enable/disable signal for cascade(PTCON) control mode')
@@ -964,6 +969,12 @@ class CtlrProperty:
             print 'read loop_mode[%d]:' % i
             try:
                 print '\t%r' % self.loop_mode[i]
+            except Exception:
+                print_exception(traceback.format_exc())
+
+            print 'read loop_power[%d]:' % i
+            try:
+                print '\t%r' % self.loop_power[i]
             except Exception:
                 print_exception(traceback.format_exc())
 

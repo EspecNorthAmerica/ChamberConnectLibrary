@@ -22,13 +22,13 @@ class Espec(CtlrProperty):
             "Serial" -- Use a hardware serial port
         adr (int): The address of the controller (default=1)
         host (str): The hostname (IP address) of the controller when interface="TCP"
-        serialport (str): The serial port to use when interface="Serial"
-        baudrate (int): The serial port's baud rate to use when interface="Serial"
+        serialport (str): The serial port to use when interface="Serial" (default=3(COM4))
+        baudrate (int): The serial port's baud rate to use when interface="Serial" (default=9600)
         loops (int): The number of control loops the controller has (default=1, max=2)
         cascades (int): The number of cascade control loops the controller has (default=0, max=1)
         lock (RLock): The locking method to use when accessing the controller (default=RLock())
         freshness (int): The length of time (in seconds) a command is cached (default = 0)
-        ctlr_type (str): "SCP220" or "P300"
+        ctlr_type (str): "SCP220" or "P300" (default = "P300")
     '''
 
     def __init__(self, **kwargs):
@@ -164,7 +164,7 @@ class Espec(CtlrProperty):
             param_list = lpfuncs[loop_type].keys()
             param_list = [x for x in param_list if x not in exclusions]
         fncs = lpfuncs[loop_type]
-        return {key:fncs[key](N, exclusive=False) for key in param_list if key in fncs[loop_type]}
+        return {key:fncs[key](N, exclusive=False) for key in param_list if key in fncs}
 
     @exclusive
     def set_loop(self, N, loop_type, param_list):
@@ -246,7 +246,7 @@ class Espec(CtlrProperty):
         self.client.write_date(value.year, value.month, value.day, weekday)
 
     @exclusive
-    def get_loop_sp(self, N, constant=None):
+    def get_loop_sp(self, N):
         if N not in self.lpd:
             raise ValueError(self.lp_exmsg)
         if self.lpd[N] == self.temp:
@@ -255,12 +255,7 @@ class Espec(CtlrProperty):
         else:
             cur = self.cached(self.client.read_humi)['setpoint']
             con = self.cached(self.client.read_constant_humi)['setpoint']
-        if constant is None:
-            return {'constant':con, 'current':cur}
-        elif constant:
-            return con
-        else:
-            return cur
+        return {'constant':con, 'current':cur}
 
     @exclusive
     def set_loop_sp(self, N, value):
@@ -273,21 +268,11 @@ class Espec(CtlrProperty):
             raise ValueError(self.lp_exmsg)
 
     @exclusive
-    def get_loop_pv(self, N, product=None):
+    def get_loop_pv(self, N):
         if self.lpd[N] == self.temp:
-            if product is None:
-                return {'air':self.cached(self.client.read_temp)['processvalue']}
-            elif not product:
-                return self.cached(self.client.read_temp)['processvalue']
-            else:
-                ValueError('"product" must be None or False')
+            return {'air':self.cached(self.client.read_temp)['processvalue']}
         elif self.lpd[N] == self.humi:
-            if product is None:
-                return {'air':self.cached(self.client.read_humi)['processvalue']}
-            elif not product:
-                return self.cached(self.client.read_humi)['processvalue']
-            else:
-                ValueError('"product" must be None or False')
+            return {'air':self.cached(self.client.read_humi)['processvalue']}
         else:
             raise ValueError(self.lp_exmsg)
 
@@ -343,6 +328,7 @@ class Espec(CtlrProperty):
 
     @exclusive
     def set_loop_mode(self, N, value):
+        value = value['constant'] if isinstance(value, dict) else value
         if N > 2:
             raise ValueError(self.lp_exmsg)
         if value in ['Off', 'OFF', 'off']:
@@ -356,15 +342,17 @@ class Espec(CtlrProperty):
     def get_loop_mode(self, N):
         if N > 2:
             raise ValueError(self.lp_exmsg)
-        mode = self.client.read_mode()
-        if mode in ['OFF', 'STANDBY']:
-            return 'Off'
-        elif self.lpd[N] == self.temp:
-            return 'On'
+        if self.lpd[N] == self.temp:
+            cur = 'On'
+            con = 'On'
         elif self.lpd[N] == self.humi:
-            return 'On' if self.cached(self.client.read_humi)['enable'] else 'Off'
+            cur = 'On' if self.cached(self.client.read_humi)['enable'] else 'Off'
+            con = 'On' if self.cached(self.client.read_constant_humi)['enable'] else 'Off'
+        if self.client.read_mode() in ['OFF', 'STANDBY']:
+            cur = 'Off'
+        return {"current": cur, "constant": con}
 
-    def get_loop_power(self, N, constant=None):
+    def get_loop_power(self, N):
         raise NotImplementedError
     def set_loop_power(self, N, value):
         raise NotImplementedError
@@ -428,6 +416,7 @@ class Espec(CtlrProperty):
 
     @exclusive
     def set_cascade_mode(self, N, value):
+        value = value['constant'] if isinstance(value, dict) else value
         if self.lpd[N] != self.temp:
             raise ValueError(self.cs_exmsg)
         return self.set_loop_mode(N, value, exclusive=False)
@@ -470,7 +459,7 @@ class Espec(CtlrProperty):
             raise ValueError('value must contain "positive" and "negative" keys')
         self.client.write_temp_ptc(self.get_cascade_ctl(self.temp, exclusive=False), **value)
 
-    def get_cascade_power(self, N, constant=None):
+    def get_cascade_power(self, N):
         raise NotImplementedError
 
     def set_cascade_power(self, N, value):
