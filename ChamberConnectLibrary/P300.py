@@ -20,6 +20,14 @@ def tryfloat(val, default):
 class P300(object):
     '''
     P300 communications basic implimentation
+
+    Args:
+        interface (str): The interface type to connect to: "Serial" or "TCP"
+    Kwargs:
+        serialport (str/int): The serial port to connect to when interface="Serial"
+        baudrate (int): The baud rate to connect at when interface="Serial"
+        address (int): The RS485 address of the chamber to connect to.
+        host (str): The IP address or hostname of the chamber when interface="TCP"
     '''
 
     def __init__(self, interface, **kwargs):

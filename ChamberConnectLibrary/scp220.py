@@ -7,7 +7,17 @@ A direct implimentation of the SCP220's communication interface.
 from p300 import P300
 
 class SCP220(P300):
-    '''SCP220 communication basic implimentation'''
+    '''
+    SCP220 communication basic implimentation
+
+    Args:
+        interface (str): The interface type to connect to: "Serial" or "TCP"
+    Kwargs:
+        serialport (str/int): The serial port to connect to when interface="Serial"
+        baudrate (int): The baud rate to connect at when interface="Serial"
+        address (int): The RS485 address of the chamber to connect to.
+        host (str): The IP address or hostname of the chamber when interface="TCP"
+    '''
 
     def __init__(self, interface, **kwargs):
         super(SCP220, self).__init__(interface, **kwargs)
