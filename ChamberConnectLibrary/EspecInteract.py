@@ -4,6 +4,7 @@ Handle the actual communication with Espec Corp. Controllers
 :copyright: (C) Espec North America, INC.
 :license: MIT, see LICENSE for more details.
 '''
+#pylint: disable=W0703
 import socket
 import serial
 

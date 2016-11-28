@@ -8,8 +8,8 @@ Partial modbus implimantation for communicating with watlow controllers (holding
 import socket
 import struct
 import time
-import serial
 import collections
+import serial
 
 class ModbusError(Exception):
     '''Generic Modbus exception.'''
@@ -211,7 +211,7 @@ class ModbusRTU(Modbus):
         crc = 0xFFFF
         for i in data:
             crc = crc ^ ord(i)
-            for j in xrange(8):
+            for _ in xrange(8):
                 tmp = crc & 1
                 crc = crc >> 1
                 if tmp:
@@ -264,7 +264,7 @@ class ModbusTCP(Modbus):
     16: Write Multiple Holding Registers
     '''
 
-    def __init__(self, address, host, port=502, timeout=5):
+    def __init__(self, address, host, port=502):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         #self.socket.settimeout(timeout)
         self.socket.setblocking(True)
@@ -301,5 +301,5 @@ class ModbusTCP(Modbus):
         if mbap[0] != self.packet_id:
             ttp = (self.packet_id, mbap[0], mbap_raw)
             raise ModbusError("MBAP id error; expected:%r, got:%r (%r)" % ttp)
-        #self.packet_id = self.packet_id + 1 if self.packet_id < 65536 else 0
+        #self.packet_id = self.packet_id + 1 if self.packet_id < 65535 else 0
         return body

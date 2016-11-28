@@ -331,7 +331,7 @@ class P300(object):
             "mode": see read_mode for valid parameters (with and without detail flag).
         '''
         rsp = self.ctlr.interact('MON?%s' % (',DETAIL' if detail else '')).split(',')
-        if len(rsp) == 4:
+        if rsp[1]:
             return {
                 'temperature':float(rsp[0]),
                 'humidity':float(rsp[1]),
@@ -341,8 +341,8 @@ class P300(object):
         else:
             return {
                 'temperature':float(rsp[0]),
-                'mode':rsp[1],
-                'alarms':int(rsp[2])
+                'mode':rsp[2],
+                'alarms':int(rsp[3])
             }
 
     def read_temp(self):
