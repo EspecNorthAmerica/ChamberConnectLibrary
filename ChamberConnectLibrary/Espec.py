@@ -8,6 +8,7 @@ Upper level interface for Espec Corp. Controllers (just the P300 for now)
 import datetime
 import time
 from chamberconnectlibrary.controllerabstract import CtlrProperty, exclusive
+from chamberconnectlibrary.controllerabstract import ControllerInterfaceError
 from chamberconnectlibrary.p300 import P300
 from chamberconnectlibrary.scp220 import SCP220
 from chamberconnectlibrary.especinteract import EspecError
@@ -610,7 +611,10 @@ class Espec(CtlrProperty):
 
     @exclusive
     def get_prgm(self, N):
-        return self.client.read_prgm(N, self.cascades > 0)
+        try:
+            return self.client.read_prgm(N, self.cascades > 0)
+        except EspecError:
+            raise ControllerInterfaceError('Could not read program from chamber controller.')
 
     @exclusive
     def set_prgm(self, N, prgm):

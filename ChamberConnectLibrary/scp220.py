@@ -75,3 +75,11 @@ class SCP220(P300):
 
     def write_temp_ptc(self, enable, positive, negative):
         super(SCP220, self).write_temp_ptc(enable, positive, abs(negative))
+
+    def read_prgm(self, pgmnum, with_ptc=False):
+        if pgmnum > 30:
+            raise ValueError('pgmnum must be 0-30')
+        tmp = super(SCP220, self).read_prgm(pgmnum, with_ptc)
+        tmp.pop('tempDetail', None)
+        tmp.pop('humiDetail', None)
+        return tmp

@@ -1424,8 +1424,7 @@ class P300(object):
         '''
         read an entire program helper method
         '''
-        max_read = 40 if self.ramprgms == 40 else 30 #SCP220 has 30 programs P300 40
-        if pgmnum > 0 and pgmnum <= max_read:
+        if pgmnum > 0 and pgmnum <= 40:
             pgm = self.read_prgm_data_ptc(pgmnum) if with_ptc else self.read_prgm_data(pgmnum)
             if with_ptc:
                 try:
@@ -1475,7 +1474,7 @@ class P300(object):
             except Exception:
                 pass
         else:
-            raise ValueError('pgmnum must be 0-%d' % max_read)
+            raise ValueError('pgmnum must be 0-40')
         return pgm
 
     def write_prgm(self, pgmnum, program):
@@ -1487,9 +1486,14 @@ class P300(object):
             raise ValueError('Program #%d is readonly and connot be saved over.' % pgmnum)
         self.write_prgm_data_edit(pgmnum, 'START')
         try:
+            set_humi = False
             for num, step in enumerate(program['steps']):
                 step['number'] = num+1 #ensure the step number is sequential
                 self.write_prgm_data_step(pgmnum, **step)
+                if step.get('humidity', {'enable':False})['enable']:
+                    set_humi = True
+            if not set_humi and 'humiDetail' in program:
+                program['humiDetail'].pop('range', None)
             self.write_prgm_data_details(pgmnum, **program)
             self.write_prgm_data_edit(pgmnum, 'END')
         except:
