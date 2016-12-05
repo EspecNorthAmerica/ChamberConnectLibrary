@@ -487,11 +487,12 @@ class WatlowF4T(CtlrProperty):
     @exclusive
     def get_cascade_sp(self, N):
         self.__range_check(N, 1, self.cascades)
-        cur = self.client.read_holding_float(4042+(N-1)*200)[0]
-        return {'constant':cur,
-                'current':cur,
-                'air':self.client.read_holding_float(4188+(N-1)*200)[0],
-                'product':self.client.read_holding_float(4190+(N-1)*200)[0]}
+        air = self.client.read_holding_float(4188+(N-1)*200)[0]
+        prod = self.client.read_holding_float(4190+(N-1)*200)[0]
+        return {'constant':self.client.read_holding_float(4042+(N-1)*200)[0],
+                'current':prod if self.get_cascade_ctl(N, exclusive=False)['current'] else air,
+                'air':air,
+                'product':prod}
 
     @exclusive
     def set_cascade_sp(self, N, value):
@@ -613,8 +614,8 @@ class WatlowF4T(CtlrProperty):
     @exclusive
     def get_cascade_power(self, N):
         self.__range_check(N, 1, self.cascades)
-        return {'constant':self.client.read_holding_float(4044+(N-1)*200),
-                'current':self.client.read_holding_float(4178+(N-1)*200)}
+        return {'constant':self.client.read_holding_float(4044+(N-1)*200)[0],
+                'current':self.client.read_holding_float(4178+(N-1)*200)[0]}
 
     @exclusive
     def set_cascade_power(self, N, value):
@@ -708,8 +709,10 @@ class WatlowF4T(CtlrProperty):
             self.set_event(self.cond_event, True, exclusive=False)
 
         #we can be "running" while in standby (standby only means loop 1 active mode is off)
-        if "Standby" in status:
+        if "Standby" in status and self.cascades == 0:
             self.set_loop_en(1, True, exclusive=False)
+        elif "Standby" in status:
+            self.set_cascade_en(1, True, exclusive=False)
 
     @exclusive
     def stop(self):
