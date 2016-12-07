@@ -414,10 +414,16 @@ class WatlowF4T(CtlrProperty):
     def get_loop_en(self, N):
         self.__range_check(N, 1, self.loops)
         cmd = self.watlow_val_dict[self.client.read_holding(2814+(N-1)*160, 1)[0]] != 'off'
-        eve = True
         if self.loop_event[N-1] != 0:
             eve = self.get_event(self.loop_event[N-1], exclusive=False)['constant']
-        return {'constant': eve, 'current': cmd}
+            if self.run_module:
+                running = self.__read_io(self.run_module, self.run_io, exclusive=False)
+            else:
+                running = False
+            return {'constant': eve, 'current': eve if running else cmd}
+        else:
+            return {'constant': True, 'current': cmd}
+
 
     @exclusive
     def set_loop_en(self, N, value):
@@ -465,7 +471,8 @@ class WatlowF4T(CtlrProperty):
         else:
             con = 'Off'
         if lpen['current']:
-            cur = tdict[self.client.read_holding(2814+(N-1)*160, 1)[0]]
+            curmode = tdict[self.client.read_holding(2814+(N-1)*160, 1)[0]]
+            cur = curmode if curmode != 'Off' else 'Auto'
         else:
             cur = 'Off'
         return {'current': cur, 'constant': con}
@@ -523,11 +530,16 @@ class WatlowF4T(CtlrProperty):
     @exclusive
     def get_cascade_en(self, N):
         self.__range_check(N, 1, self.cascades)
-        cmod = self.watlow_val_dict[self.client.read_holding(4012+(N-1)*200, 1)[0]] != 'off'
-        eve = True
+        cmd = self.watlow_val_dict[self.client.read_holding(4012+(N-1)*200, 1)[0]] != 'off'
         if self.cascade_event[N-1] != 0:
-            eve = self.get_event(self.cascade_event[N-1], exclusive=False)
-        return {'constant': eve, 'current': cmod}
+            eve = self.get_event(self.cascade_event[N-1], exclusive=False)['constant']
+            if self.run_module:
+                running = self.__read_io(self.run_module, self.run_io, exclusive=False)
+            else:
+                running = False
+            return {'constant': eve, 'current': eve if running else cmd}
+        else:
+            return {'constant': True, 'current': cmd}
 
     @exclusive
     def set_cascade_en(self, N, value):
@@ -570,14 +582,15 @@ class WatlowF4T(CtlrProperty):
         self.__range_check(N, 1, self.cascades)
         tdict = {62:'Off', 10:'Auto', 54:'Manual'}
         lpen = self.get_cascade_en(N, exclusive=False)
-        if lpen['current']:
-            cur = tdict[self.client.read_holding(4012+(N-1)*200, 1)[0]]
-        else:
-            cur = 'Off'
         if lpen['constant']:
             con = tdict[self.client.read_holding(4010+(N-1)*200, 1)[0]]
         else:
             con = 'Off'
+        if lpen['current']:
+            curmode = tdict[self.client.read_holding(4012+(N-1)*200, 1)[0]]
+            cur = curmode if curmode != 'Off' else 'Auto'
+        else:
+            cur = 'Off'
         return {'current':cur, 'constant':con}
 
     @exclusive
