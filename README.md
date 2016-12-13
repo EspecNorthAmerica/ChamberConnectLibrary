@@ -1,5 +1,5 @@
 # ChamberConnectLibrary
-Python library for interfacing with Espec North America chambers with P300 &amp; SCP-220 &amp; Watlow F4T controllers.
+Python library for interfacing with Espec North America chambers with P300, SCP-220 &amp; Watlow F4T controllers.
 
 ## Requirements
 python 2.7.x
