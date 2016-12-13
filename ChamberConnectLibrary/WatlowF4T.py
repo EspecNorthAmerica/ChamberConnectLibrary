@@ -1099,11 +1099,11 @@ class WatlowF4T(CtlrProperty):
         return prtnum
 
     @exclusive
-    def get_networkSettings(self):
+    def get_network_settings(self):
         raise NotImplementedError
 
     @exclusive
-    def set_networkSettings(self, value):
+    def set_network_settings(self, value):
         if value:
             self.__set_message(1, value.get('message', 'Espec Server Hosted:'), exclusive=False)
             self.__set_message(2, value.get('host', 'NO_HOST_SPECIFIED!'), exclusive=False)

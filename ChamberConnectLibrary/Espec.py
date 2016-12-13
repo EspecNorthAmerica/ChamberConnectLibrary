@@ -669,13 +669,13 @@ class Espec(CtlrProperty):
         return msg
 
     @exclusive
-    def get_networkSettings(self):
+    def get_network_settings(self):
         ret = self.client.read_ip_set()
         ret.update({'message':'', 'host':''})
         return ret
 
     @exclusive
-    def set_networkSettings(self, value):
+    def set_network_settings(self, value):
         if value:
             self.client.write_ip_set(value.get('address', '0.0.0.0'),
                                      value.get('mask', '0.0.0.0'), value.get('gateway', '0.0.0.0'))

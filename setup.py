@@ -5,7 +5,7 @@ def readme():
         return f.read()
 
 setup(name='chamberconnectlibrary',
-      version='0.1.6',
+      version='1.0.0',
       description='A library for interfacing with Espec North America chambers',
       long_description=readme(),
       url='https://github.com/EspecNorthAmerica/ChamberConnectLibrary',
@@ -15,6 +15,6 @@ setup(name='chamberconnectlibrary',
       packages=['chamberconnectlibrary'],
       install_requires=['pyserial'],
       zip_safe=False,
-      keywords='Espec P300 F4T',
+      keywords='Espec P300 SCP220 F4T',
       include_package_data=True,
       scripts=['bin/chamberconnectlibrary-test.py'])

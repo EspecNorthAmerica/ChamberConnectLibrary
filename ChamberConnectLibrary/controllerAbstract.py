@@ -42,68 +42,6 @@ def exclusive(func):
             return func(self, *args, **kwargs)
     return wrapper
 
-class ItemProperty(object):
-    '''copyright Ian Kelly, MIT licensed from
-    http://code.activestate.com/recipes/577703-item-properties/
-    an implimentation of the python property class with support for index/keys'''
-    def __init__(self, fget=None, fset=None, fdel=None, doc=None):
-        if doc is None and fget is not None and hasattr(fget, "__doc__"):
-            doc = fget.__doc__
-        self._get = fget
-        self._set = fset
-        self._del = fdel
-        self.__doc__ = doc
-
-    def __get__(self, instance, owner):
-        if instance is None:
-            return self
-        else:
-            return BoundItemProperty(self, instance)
-
-    def __set__(self, instance, value):
-        raise AttributeError("can't set attribute")
-
-    def __delete__(self, instance):
-        raise AttributeError("can't delete attribute")
-
-    def getter(self, fget):
-        '''Call the getter function'''
-        return ItemProperty(fget, self._set, self._del, self.__doc__)
-
-    def setter(self, fset):
-        '''Call the settier function'''
-        return ItemProperty(self._get, fset, self._del, self.__doc__)
-
-    def deleter(self, fdel):
-        '''Call the deleter'''
-        return ItemProperty(self._get, self._set, fdel, self.__doc__)
-
-
-class BoundItemProperty(object):
-    '''copyright Ian Kelly, MIT licensed from
-    http://code.activestate.com/recipes/577703-item-properties/'''
-    def __init__(self, item_property, instance):
-        self.__item_property = item_property
-        self.__instance = instance
-
-    def __getitem__(self, key):
-        fget = self.__item_property._get
-        if fget is None:
-            raise AttributeError("unreadable attribute item")
-        return fget(self.__instance, key)
-
-    def __setitem__(self, key, value):
-        fset = self.__item_property._set
-        if fset is None:
-            raise AttributeError("can't set attribute item")
-        fset(self.__instance, key, value)
-
-    def __delitem__(self, key):
-        fdel = self.__item_property._del
-        if fdel is None:
-            raise AttributeError("can't delete attribute item")
-        fdel(self.__instance, key)
-
 class CtlrProperty:
     '''Abstract class for a controller implimentation of the chamberconnectlibrary'''
     __metaclass__ = ABCMeta
@@ -782,7 +720,7 @@ class CtlrProperty:
         pass
 
     @abstractmethod
-    def get_networkSettings(self):
+    def get_network_settings(self):
         '''
         Get the network settings from the controller (if controller supports)
 
@@ -792,7 +730,7 @@ class CtlrProperty:
         pass
 
     @abstractmethod
-    def set_networkSettings(self, value):
+    def set_network_settings(self, value):
         '''
         Set the network settings of the controller (if controller supports)
 
@@ -800,88 +738,6 @@ class CtlrProperty:
             value ({"address":str, "mask":str, "gateway":str, "message":str, "host":str}): Settings
         '''
         pass
-
-    #properties
-    datetime = property(lambda self: self.get_datetime(),
-                        lambda self, value: self.set_datetime(value),
-                        doc='datetime object representing the datetime of the controller')
-
-    loop_sp = ItemProperty(lambda self, N: self.get_loop_sp(N),
-                           lambda self, N, value: self.set_loop_sp(N, value),
-                           doc='setpoint of the specified loop')
-    loop_pv = ItemProperty(lambda self, N: self.get_loop_pv(N),
-                           doc='process value of the loop')
-    loop_range = ItemProperty(lambda self, N: self.get_loop_range(N),
-                              lambda self, N, value: self.set_loop_range(N, value),
-                              doc='allowable operation range of the specified loop')
-    loop_en = ItemProperty(lambda self, N: self.get_loop_en(N),
-                           lambda self, N, value: self.set_loop_en(N, value),
-                           doc='enable/disable signal of the specified loop')
-    loop_units = ItemProperty(lambda self, N: self.get_loop_units(N),
-                              doc='units of the specified loop')
-    loop_mode = ItemProperty(lambda self, N: self.get_loop_mode(N),
-                             lambda self, N, value: self.set_loop_mode(N, value),
-                             doc='get the mode of the specified loop')
-    loop_power = ItemProperty(lambda self, N: self.get_loop_power(N),
-                              lambda self, N, value: self.set_loop_power(N, value),
-                              doc='get/set the output power of a secified loop')
-
-    cascade_sp = ItemProperty(lambda self, N: self.get_cascade_sp(N),
-                              lambda self, N, value: self.set_cascade_sp(N, value),
-                              doc='setpoint of the specified cascade(PTCON) loop')
-    cascade_pv = ItemProperty(lambda self, N: self.get_cascade_pv(N),
-                              doc='process value of the cascade(PTCON) loop')
-    cascade_range = ItemProperty(lambda self, N: self.get_cascade_range(N),
-                                 lambda self, N, value: self.set_cascade_range(N, value),
-                                 doc='allowable setpoint range of the cascade(PTCON) loop')
-    cascade_en = ItemProperty(lambda self, N: self.get_cascade_en(N),
-                              lambda self, N, value: self.set_cascade_en(N, value),
-                              doc='enable/disable signal of the cascade(PTCON) loop')
-    cascade_units = ItemProperty(lambda self, N: self.get_cascade_units(N),
-                                 doc='units of the cascade(PTCON) loop')
-    cascade_mode = ItemProperty(lambda self, N: self.get_cascade_mode(N),
-                                lambda self, N, value: self.set_cascade_mode(N, value),
-                                doc='get the mode of the cascade(PTCON) loop')
-    cascade_power = ItemProperty(lambda self, N: self.get_cascade_power(N),
-                                 lambda self, N, value: self.set_cascade_power(N, value),
-                                 doc='get/set the output power of a cascade(PTCON) loop')
-    cascade_ctl = ItemProperty(lambda self, N: self.get_cascade_ctl(N),
-                               lambda self, N, value: self.set_cascade_ctl(N, value),
-                               doc='enable/disable signal for cascade(PTCON) control mode')
-    cascade_deviation = ItemProperty(lambda self, N: self.get_cascade_deviation(N),
-                                     lambda self, N, value: self.set_cascade_deviation(N, value),
-                                     doc='over/under temp range when cascade(PTCON) is operating')
-
-    event = ItemProperty(lambda self, N: self.get_event(N),
-                         lambda self, N, value: self.set_event(N, value),
-                         doc='Time signal/relay/event status/enable/disable')
-    status = property(lambda self: self.get_status(),
-                      doc='The controller run status')
-    alarm_status = property(lambda self: self.get_alarm_status(),
-                            doc='get a list of active alarms by code')
-
-    prgm_cur = property(lambda self: self.get_prgm_cur(),
-                        doc='Get the number of the currently executing program')
-    prgm_cstep = property(lambda self: self.get_prgm_cstep(),
-                          doc='Get the current step of the currently executing program')
-    prgm_cstime = property(lambda self: self.get_prgm_cstime(),
-                           doc='Get the time remaing of the current step of the current program')
-    prgm_time = property(lambda self: self.get_prgm_time(),
-                         doc='Get remaining execution time of the current program')
-    prgm_name = ItemProperty(lambda self, N: self.get_prgm_name(N),
-                             lambda self, N, value: self.set_prgm_name(N, value),
-                             doc='The name of the given program')
-    prgm_steps = ItemProperty(lambda self, N: self.get_prgm_steps(N),
-                              doc='Get the number of steps in a program')
-    prgms = property(lambda self: self.get_prgms(),
-                     doc='A list of all programs and there names')
-    prgm = ItemProperty(lambda self, N: self.get_prgm(N),
-                        lambda self, N, value: self.set_prgm(N, value),
-                        doc='programs on the controller')
-
-    networkSettings = property(lambda self: self.get_networkSettings(),
-                               lambda self, value: self.set_networkSettings(value),
-                               doc='network settings displayed by the controller')
 
     def self_test(self, loops, cascades):
         '''
@@ -898,253 +754,253 @@ class CtlrProperty:
             '''
             print '\n'.join(['\t' + l for l in trce.split('\n')])
 
-        print 'call process_controller():'
+        print 'process_controller():'
         try:
             print '\t%r' % self.process_controller()
         except Exception:
             print_exception(traceback.format_exc())
 
-        print 'read datetime:'
+        print 'get_datetime:'
         try:
-            print '\t%r' % self.datetime
+            print '\t%r' % self.get_datetime()
         except Exception:
             print_exception(traceback.format_exc())
 
-        print 'write datetime:'
+        print 'set_datetime:'
         try:
-            self.datetime = self.datetime
+            self.set_datetime(self.get_datetime)
             print '\tok'
         except Exception:
             print_exception(traceback.format_exc())
 
         for i in range(1, loops+1):
-            print 'read loop_sp[%d]:' % i
+            print 'get_loop_sp(%d):' % i
             try:
-                print '\t%r' % self.loop_sp[i]
+                print '\t%r' % self.get_loop_sp(i)
             except Exception:
                 print_exception(traceback.format_exc())
-            print 'write loop_sp[%d]:' %i
+            print 'set_loop_sp(%d):' %i
             try:
-                self.loop_sp[i] = self.loop_sp[i]['constant']
+                self.set_loop_sp(i, self.get_loop_sp(i)['constant'])
                 print '\tok'
             except Exception:
                 print_exception(traceback.format_exc())
 
-            print 'read loop_pv[%d]:' % i
+            print 'get_loop_pv(%d):' % i
             try:
-                print '\t%r' % self.loop_pv[i]
+                print '\t%r' % self.get_loop_pv(i)
             except Exception:
                 print_exception(traceback.format_exc())
 
-            print 'read loop_range[%d]:' % i
+            print 'get_loop_range(%d):' % i
             try:
-                print '\t%r' % self.loop_range[i]
+                print '\t%r' % self.get_loop_range(i)
             except Exception:
                 print_exception(traceback.format_exc())
-            print 'write loop_range[%d]:' %i
+            print 'set_loop_range(%d):' %i
             try:
-                self.loop_range[i] = self.loop_range[i]
+                self.set_loop_range(i, self.get_loop_range(i))
                 print '\tok'
             except Exception:
                 print_exception(traceback.format_exc())
 
-            print 'read loop_en[%d]:' % i
+            print 'get_loop_en(%d):' % i
             try:
-                print '\t%r' % self.loop_en[i]
+                print '\t%r' % self.get_loop_en(i)
             except Exception:
                 print_exception(traceback.format_exc())
-            print 'write loop_en[%d]:' %i
+            print 'set_loop_en(%d):' %i
             try:
-                self.loop_en[i] = self.loop_en[i]['constant']
+                self.set_loop_en(i, self.get_loop_en(i)['constant'])
                 print '\tok'
             except Exception:
                 print_exception(traceback.format_exc())
 
-            print 'read loop_units[%d]:' % i
+            print 'get_loop_units(%d):' % i
             try:
-                print '\t%r' % self.loop_units[i]
+                print '\t%r' % self.get_loop_units(i)
             except Exception:
                 print_exception(traceback.format_exc())
 
-            print 'read loop_mode[%d]:' % i
+            print 'get_loop_mode(%d):' % i
             try:
-                print '\t%r' % self.loop_mode[i]
+                print '\t%r' % self.get_loop_mode(i)
             except Exception:
                 print_exception(traceback.format_exc())
 
-            print 'read loop_power[%d]:' % i
+            print 'read get_loop_power(%d):' % i
             try:
-                print '\t%r' % self.loop_power[i]
+                print '\t%r' % self.get_loop_power(i)
             except Exception:
                 print_exception(traceback.format_exc())
 
         for i in range(1, cascades+1):
-            print 'read cascade_sp[%d]:' % i
+            print 'get_cascade_sp[%d]:' % i
             try:
-                print '\t%r' % self.cascade_sp[i]
+                print '\t%r' % self.get_cascade_sp(i)
             except Exception:
                 print_exception(traceback.format_exc())
-            print 'write cascade_sp[%d]:' %i
+            print 'set_cascade_sp(%d):' %i
             try:
-                self.cascade_sp[i] = self.cascade_sp[i]['constant']
+                self.set_cascade_sp(i, self.get_cascade_sp(i)['constant'])
                 print '\tok'
             except Exception:
                 print_exception(traceback.format_exc())
 
-            print 'read cascade_pv[%d]:' % i
+            print 'get_cascade_pv(%d):' % i
             try:
-                print '\t%r' % self.cascade_pv[i]
+                print '\t%r' % self.get_cascade_pv(i)
             except Exception:
                 print_exception(traceback.format_exc())
 
-            print 'read cascade_range[%d]:' % i
+            print 'get_cascade_range(%d):' % i
             try:
-                print '\t%r' % self.cascade_range[i]
+                print '\t%r' % self.get_cascade_range(i)
             except Exception:
                 print_exception(traceback.format_exc())
-            print 'write cascade_range[%d]:' %i
+            print 'set_cascade_range[%d]:' %i
             try:
-                self.cascade_range[i] = self.cascade_range[i]
+                self.set_cascade_range(i, self.get_cascade_range(i))
                 print '\tok'
             except Exception:
                 print_exception(traceback.format_exc())
 
-            print 'read cascade_en[%d]:' % i
+            print 'get_cascade_en[%d]:' % i
             try:
-                print '\t%r' % self.cascade_en[i]
+                print '\t%r' % self.get_cascade_en(i)
             except Exception:
                 print_exception(traceback.format_exc())
-            print 'write cascade_en[%d]:' %i
+            print 'set_cascade_en(%d):' %i
             try:
-                self.cascade_en[i] = self.cascade_en[i]['constant']
+                self.set_cascade_en(i, self.get_cascade_en(i)['constant'])
                 print '\tok'
             except Exception:
                 print_exception(traceback.format_exc())
 
-            print 'read cascade_units[%d]:' % i
+            print 'get_cascade_units(%d):' % i
             try:
-                print '\t%r' % self.cascade_units[i]
+                print '\t%r' % self.get_cascade_units(i)
             except Exception:
                 print_exception(traceback.format_exc())
 
-            print 'read cascade_mode[%d]:' % i
+            print 'get_cascade_mode(%d):' % i
             try:
-                print '\t%r' % self.cascade_mode[i]
+                print '\t%r' % self.get_cascade_mode(i)
             except Exception:
                 print_exception(traceback.format_exc())
 
-            print 'read cascade_ctl[%d]:' % i
+            print 'get_cascade_ctl(%d):' % i
             try:
-                print '\t%r' % self.cascade_ctl[i]
+                print '\t%r' % self.get_cascade_ctl(i)
             except Exception:
                 print_exception(traceback.format_exc())
-            print 'write cascade_ctl[%d]:' %i
+            print 'set_cascade_ctl(%d):' %i
             try:
-                self.cascade_ctl[i] = self.cascade_ctl[i]
+                self.set_cascade_ctl(i, self.get_cascade_ctl(i))
                 print '\tok'
             except Exception:
                 print_exception(traceback.format_exc())
 
-            print 'read cascade_deviation[%d]:' % i
+            print 'get_cascade_deviation(%d):' % i
             try:
-                print '\t%r' % self.cascade_deviation[i]
+                print '\t%r' % self.get_cascade_deviation(i)
             except Exception:
                 print_exception(traceback.format_exc())
-            print 'write cascade_deviation[%d]:' %i
+            print 'set_cascade_deviation(%d):' %i
             try:
-                self.cascade_deviation[i] = self.cascade_deviation[i]
+                self.set_cascade_deviation(i, self.get_cascade_deviation(i))
                 print '\tok'
             except Exception:
                 print_exception(traceback.format_exc())
 
         for i in range(1, 13):
-            print 'read event[%d]:' % i
+            print 'get_event(%d):' % i
             try:
-                print '\t%r' % self.event[i]
+                print '\t%r' % self.get_event[i]
             except Exception:
                 print_exception(traceback.format_exc())
-            print 'write event[%d]:' %i
+            print 'set_event[%d]:' %i
             try:
-                self.event[i] = self.event[i]['current']
+                self.set_event(i, self.get_event(i)['current'])
                 print '\tok'
             except Exception:
                 print_exception(traceback.format_exc())
 
-        print 'read status:'
+        print 'get_status:'
         try:
-            print '\t%r' % self.status
+            print '\t%r' % self.get_status()
         except Exception:
             print_exception(traceback.format_exc())
 
-        print 'read alarm_status:'
+        print 'get_alarm_status:'
         try:
-            print '\t%r' % self.alarm_status
+            print '\t%r' % self.get_alarm_status()
         except Exception:
             print_exception(traceback.format_exc())
 
-        print 'read prgm_cur:'
+        print 'get_prgm_cur:'
         try:
-            print '\t%r' % self.prgm_cur
+            print '\t%r' % self.get_prgm_cur()
         except Exception:
             print_exception(traceback.format_exc())
 
-        print 'read prgm_cstep:'
+        print 'get_prgm_cstep:'
         try:
-            print '\t%r' % self.prgm_cstep
+            print '\t%r' % self.get_prgm_cstep()
         except Exception:
             print_exception(traceback.format_exc())
 
-        print 'read prgm_cstime:'
+        print 'get_prgm_cstime:'
         try:
-            print '\t%r' % self.prgm_cstime
+            print '\t%r' % self.get_prgm_cstime()
         except Exception:
             print_exception(traceback.format_exc())
 
-        print 'read prgm_time:'
+        print 'get_prgm_time:'
         try:
-            print '\t%r' % self.prgm_time
+            print '\t%r' % self.get_prgm_time()
         except Exception:
             print_exception(traceback.format_exc())
 
         for i in range(1, 6): #do 5 programs only
-            print 'read prgm_name[%d]:' % i
+            print 'get_prgm_name(%d):' % i
             try:
-                print '\t%r' % self.prgm_name[i]
+                print '\t%r' % self.get_prgm_name(i)
             except Exception:
                 print_exception(traceback.format_exc())
 
-            print 'read prgm_steps[%d]:' % i
+            print 'get_prgm_steps(%d):' % i
             try:
-                print '\t%r' % self.prgm_steps[i]
+                print '\t%r' % self.get_prgm_steps(i)
             except Exception:
                 print_exception(traceback.format_exc())
 
-        print 'read prgms:'
+        print 'get_prgms:'
         try:
-            print '\t%r' % self.prgms
+            print '\t%r' % self.get_prgms()
         except Exception:
             print_exception(traceback.format_exc())
 
-        print 'read prgm[1]:'
+        print 'get_prgm(1):'
         try:
-            print '\t%r' % self.prgm[1]
+            print '\t%r' % self.get_prgm(1)
         except Exception:
             print_exception(traceback.format_exc())
-        print 'write prgm[1]:'
+        print 'set_prgm(1):'
         try:
-            self.prgm[1] = self.prgm[1]
+            self.set_prgm(1, self.get_prgm(1))
             print '\tok'
         except Exception:
             print_exception(traceback.format_exc())
 
-        print 'read networkSettings:'
+        print 'get_network_settings:'
         try:
-            print '\t%r' % self.networkSettings
+            print '\t%r' % self.get_network_settings()
         except Exception:
             print_exception(traceback.format_exc())
-        print 'write networkSettings:'
+        print 'set_network_settings:'
         try:
-            self.networkSettings = self.networkSettings
+            self.set_network_settings(self.get_network_settings)
             print '\tok'
         except Exception:
             print_exception(traceback.format_exc())

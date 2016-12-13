@@ -13,7 +13,10 @@ To test run chamberconnectlibrary-test.py(on windows using COM port #3, test scr
 
 P300: ```chamberconnectlibrary-test.py Espec Serial \\.\COM3 19200```
 
-Watlow F4T: ```chamberconnectlibrary-test.py Espec Serial \\.\COM3 38400```
+SCP-220: ```chamberconnectlibrary-test.py EspecSCP220 Serial \\.\COM3 9600```
+
+Watlow F4T: ```chamberconnectlibrary-test.py WatlowF4T RTU \\.\COM3 38400```
 
 ## Documentation
-To be added to the GitHub wiki when development status is more firm.
+Documentation to be added to github wiki as time permits.
+For now see [controllerabstract.py](https://github.com/EspecNorthAmerica/ChamberConnectLibrary/blob/master/ChamberConnectLibrary/controllerAbstract.py)
