@@ -126,10 +126,10 @@ class CtlrProperty:
                 "range" -- {"min":float,"max":float}
                 "enable" -- {"constant":bool,"current":bool}
                 "units" -- str
-                "mode" -- str('Off' or 'Auto' or 'Manual')
+                "mode" -- {"constant": str, "current": str} (valid str='Off'/'On'/'Auto'/'Manual')
                 "deviation" -- {"positive": float, "negative": float}
-                "enable_cascade" -- {"constant":bool,"current":bool}
-                "power" -- {"constant": float, "current": float}
+                "enable_cascade" -- {"constant":bool,"current":bool} (type="cascade" only)
+                "power" -- {"constant": float, "current": float} (type="cascade" only)
         '''
         pass
 
@@ -270,6 +270,17 @@ class CtlrProperty:
         pass
 
     @abstractmethod
+    def get_loop_modes(self, N):
+        '''
+        Get the available modes for a loop
+
+        Args:
+            N (int): The number of the loop
+        Returns:
+            string: list of control modes
+        '''
+
+    @abstractmethod
     def set_loop_mode(self, N, value):
         '''
         Get the control mode for a loop
@@ -407,6 +418,17 @@ class CtlrProperty:
             str: The control mode
         '''
         pass
+
+    @abstractmethod
+    def get_cascade_modes(self, N):
+        '''
+        Get the available modes for a cascade loop
+
+        Args:
+            N (int): The number of the loop
+        Returns:
+            string: list of control modes
+        '''
 
     @abstractmethod
     def set_cascade_mode(self, N, value):

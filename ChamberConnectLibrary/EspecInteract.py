@@ -105,10 +105,13 @@ class EspecTCP(object):
         raises:
             EspecError
         '''
-        if self.address:
-            self.socket.send('%d,%s%s'%(self.address, message, self.delimeter))
-        else:
-            self.socket.send('%s%s'%(message, self.delimeter))
+        message = message.encode('ascii', 'ignore')
+        # TCP forwarder doesnt handle address properly so we are ignoring it.
+        # if self.address:
+        #     self.socket.send('%d,%s%s'%(self.address, message, self.delimeter))
+        # else:
+        #     self.socket.send('%s%s'%(message, self.delimeter))
+        self.socket.send('%s%s'%(message, self.delimeter))
         recv = ''
         while recv[0-len(self.delimeter):] != self.delimeter:
             recv += self.socket.recv(1)

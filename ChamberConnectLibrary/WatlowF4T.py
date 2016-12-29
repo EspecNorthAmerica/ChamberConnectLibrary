@@ -53,7 +53,7 @@ class WatlowF4T(CtlrProperty):
         self.limits = kwargs.get('limits', [5])
 
         #list of events that may enable or disable a loop index 0=loop1, events=1-8 0=not used
-        self.loop_event = kwargs.get('loop_event', [0, 2, 0, 0])
+        self.loop_event = kwargs.get('loop_event', [0, 0, 0, 0])
 
         #list of events that may enable or disable a cascade loop
         self.cascade_event = kwargs.get('cascade_event', [0, 0, 0, 0])
@@ -477,6 +477,13 @@ class WatlowF4T(CtlrProperty):
             cur = 'Off'
         return {'current': cur, 'constant': con}
 
+    def get_loop_modes(self, N):
+        self.__range_check(N, 1, self.loops)
+        if self.loop_event[N-1] != 0:
+            return ['Off', 'Auto', 'Manual']
+        else:
+            return ['Auto', 'Manual']
+
     @exclusive
     def get_loop_power(self, N):
         self.__range_check(N, 1, self.loops)
@@ -592,6 +599,13 @@ class WatlowF4T(CtlrProperty):
         else:
             cur = 'Off'
         return {'current':cur, 'constant':con}
+
+    def get_cascade_modes(self, N):
+        self.__range_check(N, 1, self.cascades)
+        if self.cascade_event[N-1] != 0:
+            return ['Off', 'Auto', 'Manual']
+        else:
+            return ['Auto', 'Manual']
 
     @exclusive
     def get_cascade_ctl(self, N):

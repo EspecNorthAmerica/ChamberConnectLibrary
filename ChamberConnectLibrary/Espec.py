@@ -315,6 +315,7 @@ class Espec(CtlrProperty):
         elif self.lpd[N] == self.humi:
             if value:
                 self.client.write_humi(
+                    enable=True,
                     setpoint=self.cached(self.client.read_constant_humi)['setpoint']
                 )
             else:
@@ -355,6 +356,14 @@ class Espec(CtlrProperty):
         if self.client.read_mode() in ['OFF', 'STANDBY']:
             cur = 'Off'
         return {"current": cur, "constant": con}
+
+    def get_loop_modes(self, N):
+        if N == 1:
+            return ['On']
+        elif N == 2:
+            return ['Off', 'On']
+        else:
+            raise ValueError(self.lp_exmsg)
 
     def get_loop_power(self, N):
         raise NotImplementedError
@@ -430,6 +439,9 @@ class Espec(CtlrProperty):
         if self.lpd[N] != self.temp:
             raise ValueError(self.cs_exmsg)
         return self.get_loop_mode(self.temp, exclusive=False)
+
+    def get_cascade_modes(self, N):
+        return self.get_loop_modes(N)
 
     @exclusive
     def get_cascade_ctl(self, N):
