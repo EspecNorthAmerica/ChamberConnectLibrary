@@ -8,10 +8,11 @@ Upper level interface for the Watlow F4T controller
 import time
 import datetime
 import struct
-from modbus import ModbusError, ModbusRTU, ModbusTCP
-from controllerabstract import CtlrProperty, ControllerInterfaceError, exclusive
+from chamberconnectlibrary.modbus import ModbusError, ModbusRTU, ModbusTCP
+from chamberconnectlibrary.controllerinterface import ControllerInterface, exclusive
+from chamberconnectlibrary.controllerinterface import ControllerInterfaceError
 
-class WatlowF4T(CtlrProperty):
+class WatlowF4T(ControllerInterface):
     '''
     A class for interfacing with Watlow F4T
 
@@ -177,7 +178,11 @@ class WatlowF4T(CtlrProperty):
         '''
         close the connection to the controller
         '''
-        self.client.close()
+        try:
+            self.client.close()
+        except AttributeError:
+            pass
+        self.client = None
 
     @exclusive
     def raw(self, command):

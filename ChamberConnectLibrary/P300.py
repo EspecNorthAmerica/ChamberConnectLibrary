@@ -52,9 +52,9 @@ class P300(object):
             )
 
     def __del__(self):
-        self.cleanup()
+        self.close()
 
-    def cleanup(self):
+    def close(self):
         '''
         Close the physical interface
         '''

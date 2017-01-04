@@ -7,6 +7,7 @@ Handle the actual communication with Espec Corp. Controllers
 #pylint: disable=W0703
 import socket
 import serial
+import time
 
 class EspecError(Exception):
     '''
@@ -93,6 +94,7 @@ class EspecTCP(object):
         Close the connection the the chamber
         '''
         self.socket.close()
+        time.sleep(0.1)
 
     def interact(self, message):
         '''

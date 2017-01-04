@@ -18,20 +18,17 @@ def exclusive(func):
     '''Lock the physical interface for the function call'''
     def wrapper(self, *args, **kwargs):
         '''Lock the physical interface for the function call'''
-        if kwargs.get('exclusive', True):
+        if kwargs.pop('exclusive', True):
             with self.lock:
+                auto_connect = self.client is None
                 try:
-                    try:
-                        del kwargs['exclusive']
-                    except Exception:
-                        pass
-                    self.connect()
+                    if auto_connect:
+                        self.connect()
                     return func(self, *args, **kwargs)
                 finally:
                     try:
-                        self.close()
-                        if self.interface == "TCP":
-                            time.sleep(0.1) #forcefully slow down connection cycles
+                        if auto_connect:
+                            self.close()
                     except Exception:
                         pass
         else:
@@ -42,7 +39,7 @@ def exclusive(func):
             return func(self, *args, **kwargs)
     return wrapper
 
-class CtlrProperty:
+class ControllerInterface:
     '''Abstract class for a controller implimentation of the chamberconnectlibrary'''
     __metaclass__ = ABCMeta
 
@@ -129,7 +126,7 @@ class CtlrProperty:
                 "mode" -- {"constant": str, "current": str} (valid str='Off'/'On'/'Auto'/'Manual')
                 "deviation" -- {"positive": float, "negative": float}
                 "enable_cascade" -- {"constant":bool,"current":bool} (type="cascade" only)
-                "power" -- {"constant": float, "current": float} (type="cascade" only)
+                "power" -- {"constant": float, "current": float}
         '''
         pass
 
@@ -790,7 +787,7 @@ class CtlrProperty:
 
         print 'set_datetime:'
         try:
-            self.set_datetime(self.get_datetime)
+            self.set_datetime(self.get_datetime())
             print '\tok'
         except Exception:
             print_exception(traceback.format_exc())
@@ -938,10 +935,10 @@ class CtlrProperty:
         for i in range(1, 13):
             print 'get_event(%d):' % i
             try:
-                print '\t%r' % self.get_event[i]
+                print '\t%r' % self.get_event(i)
             except Exception:
                 print_exception(traceback.format_exc())
-            print 'set_event[%d]:' %i
+            print 'set_event(%d):' %i
             try:
                 self.set_event(i, self.get_event(i)['current'])
                 print '\tok'
@@ -1022,7 +1019,7 @@ class CtlrProperty:
             print_exception(traceback.format_exc())
         print 'set_network_settings:'
         try:
-            self.set_network_settings(self.get_network_settings)
+            self.set_network_settings(self.get_network_settings())
             print '\tok'
         except Exception:
             print_exception(traceback.format_exc())

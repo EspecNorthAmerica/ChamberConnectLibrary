@@ -271,6 +271,7 @@ class ModbusTCP(Modbus):
         self.socket.connect((host, port))
         self.packet_id = 1
         self.address = address
+        time.sleep(0.1)
 
     def __del__(self):
         self.close()
@@ -280,6 +281,7 @@ class ModbusTCP(Modbus):
         Close the tcp socket.
         '''
         self.socket.close()
+        time.sleep(0.1)
 
     def __make_mbap(self, length):
         '''
@@ -288,7 +290,9 @@ class ModbusTCP(Modbus):
         return struct.pack(">3H", self.packet_id, 0, length)
 
     def interact(self, packet):
-        #self.shex = ":".join(["{:02x}".format(ord(c)) for c in packet])
+        '''
+        interact with the slave device
+        '''
         self.socket.send(self.__make_mbap(len(packet)) + packet)
         mbap_raw = self.socket.recv(6)
         if len(mbap_raw) == 0:

@@ -7,13 +7,13 @@ Upper level interface for Espec Corp. Controllers (just the P300 for now)
 #pylint: disable=R0902,R0904
 import datetime
 import time
-from chamberconnectlibrary.controllerabstract import CtlrProperty, exclusive
-from chamberconnectlibrary.controllerabstract import ControllerInterfaceError
+from chamberconnectlibrary.controllerinterface import ControllerInterface, exclusive
+from chamberconnectlibrary.controllerinterface import ControllerInterfaceError
 from chamberconnectlibrary.p300 import P300
 from chamberconnectlibrary.scp220 import SCP220
 from chamberconnectlibrary.especinteract import EspecError
 
-class Espec(CtlrProperty):
+class Espec(ControllerInterface):
     '''
     A class for interfacing with Espec controllers (P300, SCP220)
 
@@ -62,22 +62,12 @@ class Espec(CtlrProperty):
         '''
         connect to the controller using the paramters provided on class initialization
         '''
+        args = {'serialport':self.serialport, 'baudrate':self.baudrate, 'host':self.host,
+                'address':self.adr}
         if self.ctlr_type == 'P300':
-            self.client = P300(
-                self.interface,
-                serialport=self.serialport,
-                baudrate=self.baudrate,
-                host=self.host,
-                address=self.adr
-            )
+            self.client = P300(self.interface, **args)
         elif self.ctlr_type == 'SCP220':
-            self.client = SCP220(
-                self.interface,
-                serialport=self.serialport,
-                baudrate=self.baudrate,
-                host=self.host,
-                address=self.adr
-            )
+            self.client = SCP220(self.interface, **args)
         else:
             raise ValueError('"%s" is not a supported controller type' % self.ctlr_type)
 
@@ -85,7 +75,10 @@ class Espec(CtlrProperty):
         '''
         close the connection to the controller
         '''
-        self.client.cleanup()
+        try:
+            self.client.close()
+        except AttributeError:
+            pass
         self.client = None
 
     def cached(self, func, *args, **kwargs):
