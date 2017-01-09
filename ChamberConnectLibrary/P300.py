@@ -1033,8 +1033,10 @@ class P300(object):
         '''
         setpoint, maximum, minimum = kwargs.get('setpoint'), kwargs.get('max'), kwargs.get('min')
         enable = kwargs.get('enable')
-        if enable is not None or setpoint is not None:
-            spstr = (' S%0.1f' % setpoint) if enable else 'SOFF'
+        if setpoint is not None:
+            spstr = ' S%0.1f' % setpoint
+        elif enable is False:
+            spstr = 'SOFF'
         else:
             spstr = None
         if spstr is not None and minimum is not None and maximum is not None:
