@@ -19,4 +19,4 @@ Watlow F4T: ```chamberconnectlibrary-test.py WatlowF4T RTU \\.\COM3 38400```
 
 ## Documentation
 Documentation to be added to github wiki as time permits.
-For now see [controllerabstract.py](https://github.com/EspecNorthAmerica/ChamberConnectLibrary/blob/master/ChamberConnectLibrary/controllerAbstract.py)
+For now see [controllerinterface.py](https://github.com/EspecNorthAmerica/ChamberConnectLibrary/blob/master/ChamberConnectLibrary/controllerinterface.py)
