@@ -96,7 +96,7 @@ class ControllerInterface:
         '''
         pass
 
-    @abstractmethod
+    @exclusive
     def get_loop(self, N, loop_type, param_list=None):
         '''
         Get all parameters for a loop from a given list.
@@ -123,14 +123,46 @@ class ControllerInterface:
                 "range" -- {"min":float,"max":float}
                 "enable" -- {"constant":bool,"current":bool}
                 "units" -- str
-                "mode" -- {"constant": str, "current": str} (valid str='Off'/'On'/'Auto'/'Manual')
+                "mode" -- str('Off' or 'Auto' or 'Manual')
                 "deviation" -- {"positive": float, "negative": float}
-                "enable_cascade" -- {"constant":bool,"current":bool} (type="cascade" only)
+                "enable_cascade" -- {"constant":bool,"current":bool}
                 "power" -- {"constant": float, "current": float}
         '''
-        pass
+        loop_functions = {
+            'cascade':{
+                'setpoint':self.get_cascade_sp,
+                'setPoint':self.get_cascade_sp,
+                'setValue':self.get_cascade_sp,
+                'processvalue':self.get_cascade_pv,
+                'processValue':self.get_cascade_pv,
+                'range':self.get_cascade_range,
+                'enable':self.get_cascade_en,
+                'units':self.get_cascade_units,
+                'mode':self.get_cascade_mode,
+                'deviation':self.get_cascade_deviation,
+                'enable_cascade':self.get_cascade_ctl,
+                'power': self.get_cascade_power
+            },
+            'loop':{
+                'setpoint':self.get_loop_sp,
+                'setPoint':self.get_loop_sp,
+                'setValue':self.get_loop_sp,
+                'processvalue':self.get_loop_pv,
+                'processValue':self.get_loop_pv,
+                'range':self.get_loop_range,
+                'enable':self.get_loop_en,
+                'units':self.get_loop_units,
+                'mode':self.get_loop_mode,
+                'power':self.get_loop_power
+            }
+        }
+        if param_list is None:
+            param_list = loop_functions[loop_type].keys()
+            param_list = [x for x in param_list if x not in ['setPoint', 'setValue', 'processValue']]
+        fncs = loop_functions[loop_type]
+        return {key:fncs[key](N, exclusive=False) for key in param_list if key in fncs}
 
-    @abstractmethod
+    @exclusive
     def set_loop(self, N, loop_type, param_list):
         '''
         Set all parameters for a loop from a given list.
@@ -147,8 +179,41 @@ class ControllerInterface:
                 "power" -- set the manual power of the control loop
                 "deviation" -- (type="cascade" only) The allowable difference between air/prod.
                 "enable_cascade" -- (type="cascade" only) Enable or disable cascade type control
+        Returns:
+            None
+        Raises:
+            ModbusError
         '''
-        pass
+        loop_functions = {
+            'cascade':{
+                'setpoint':self.set_cascade_sp,
+                'setPoint':self.set_cascade_sp,
+                'setValue':self.set_cascade_sp,
+                'range':self.set_cascade_range,
+                'enable':self.set_cascade_en,
+                'deviation':self.set_cascade_deviation,
+                'enable_cascade':self.set_cascade_ctl,
+                'mode':self.set_cascade_mode,
+                'power':self.set_cascade_power
+            },
+            'loop':{
+                'setpoint':self.set_loop_sp,
+                'setPoint':self.set_loop_sp,
+                'setValue':self.set_loop_sp,
+                'range':self.set_loop_range,
+                'enable':self.set_loop_en,
+                'mode':self.set_loop_mode,
+                'power':self.set_loop_power
+            }
+        }
+        #mode must be done first
+        if 'mode' in param_list:
+            loop_functions[loop_type]['mode'](exclusive=False, N=N, value=param_list.pop('mode'))
+        for key, val in param_list.items():
+            try:
+                loop_functions[loop_type][key](exclusive=False, N=N, value=val)
+            except KeyError:
+                pass
 
     @abstractmethod
     def get_loop_sp(self, N):
@@ -276,6 +341,7 @@ class ControllerInterface:
         Returns:
             string: list of control modes
         '''
+        pass
 
     @abstractmethod
     def set_loop_mode(self, N, value):
@@ -426,6 +492,7 @@ class ControllerInterface:
         Returns:
             string: list of control modes
         '''
+        pass
 
     @abstractmethod
     def set_cascade_mode(self, N, value):
@@ -792,7 +859,8 @@ class ControllerInterface:
         except Exception:
             print_exception(traceback.format_exc())
 
-        for i in range(1, loops+1):
+        for lpi in range(loops):
+            i = lpi + 1
             print 'get_loop_sp(%d):' % i
             try:
                 print '\t%r' % self.get_loop_sp(i)
@@ -853,7 +921,8 @@ class ControllerInterface:
             except Exception:
                 print_exception(traceback.format_exc())
 
-        for i in range(1, cascades+1):
+        for csi in range(cascades):
+            i = csi + 1
             print 'get_cascade_sp[%d]:' % i
             try:
                 print '\t%r' % self.get_cascade_sp(i)

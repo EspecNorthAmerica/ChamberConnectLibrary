@@ -46,11 +46,25 @@ class Modbus(object):
             count (int): The number of modbus registers to read (default=1)
 
         Returns:
-            list. 16bit integers
+            list. unsigned 16bit integers
         '''
         packet = self.make_packet(3, register, count)
         rval = self.interact(packet)
         return self.decode_packet(rval, packet)
+
+    def read_holding_signed(self, register, count=1):
+        '''
+        Read some signed short(s)
+
+        Args:
+            register (int): The modbus register to read
+            count (int): The number of modbus registers to read (default=1)
+
+        Returns:
+            list. signed 16bit integers
+        '''
+        vals = self.read_holding(register, count)
+        return [struct.unpack('h', struct.pack('H', val))[0] for val in vals]
 
     def read_holding_float(self, register, count=1):
         '''
@@ -87,7 +101,7 @@ class Modbus(object):
 
     def write_holding(self, register, value):
         '''
-        Write to holding register(s), accepts single values or lists of values
+        Write to holding 16bit register(s), accepts single values or lists of values
 
         Args:
             register (int): register(s) to write to
@@ -97,6 +111,20 @@ class Modbus(object):
         packet = self.make_packet(packettype, register, value)
         rval = self.interact(packet)
         self.decode_packet(rval, packet)
+
+    def write_holding_signed(self, register, value):
+        '''
+        Write to signed 16bit holding register(s), accepts single values or lists of values
+
+        Args:
+            register (int): register(s) to write to
+            value (int or list(int)): value(s) to write,
+        '''
+        if isinstance(value, collections.Iterable):
+            value = [0xFFFF & val for val in value]
+        else:
+            value = 0xFFFF & value #trim to 16bit signed int
+        self.write_holding(register, value)
 
     def write_holding_float(self, register, value):
         '''
