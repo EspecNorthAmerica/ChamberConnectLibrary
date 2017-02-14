@@ -10,7 +10,7 @@ chamberconnectlibrary.
 import sys
 import traceback
 from chamberconnectlibrary.espec import Espec
-from chamberconnectlibrary.watlowF4T import WatlowF4T
+from chamberconnectlibrary.watlowf4t import WatlowF4T
 
 def main(**kwargs):
     '''Try each command given a set of parameters'''
