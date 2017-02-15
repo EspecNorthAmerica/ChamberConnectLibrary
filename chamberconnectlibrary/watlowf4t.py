@@ -73,7 +73,7 @@ class WatlowF4T(ControllerInterface):
         self.alarms = kwargs.get('alarms', 6)
         self.profiles = kwargs.get('profiles', False)
 
-        self.update_profile_loop_map()
+        self.__update_loop_map()
         self.watlow_val_dict = {
             1:'2', 2:'3', 3:'50Hz', 4:'60Hz', 9:'ambientError',
             10:'auto', 11:'b', 13: 'both', 15:u'C', 17:'closeOnAlarm',
@@ -134,12 +134,12 @@ class WatlowF4T(ControllerInterface):
             self.iwatlow_val_dict = {v: k for k, v in self.watlow_val_dict.items()}
             return self.iwatlow_val_dict[key]
 
-    def update_profile_loop_map(self):
+    def __update_loop_map(self):
         '''
         update the loop map.
         '''
-        self.profile_loop_map = [{'type':'cascade', 'num':j+1} for j in range(self.cascades)]
-        self.profile_loop_map += [{'type':'loop', 'num':j+1} for j in range(self.loops)]
+        self.loop_map = [{'type':'cascade', 'num':j+1} for j in range(self.cascades)]
+        self.loop_map += [{'type':'loop', 'num':j+1} for j in range(self.loops)]
 
     def __range_check(self, val, minimum, maximum):
         '''
@@ -281,7 +281,7 @@ class WatlowF4T(ControllerInterface):
     def get_loop_units(self, N):
         self.__range_check(N, 1, self.loops)
         try:
-            act_num = self.profile_loop_map.index({'type':'loop', 'num':N}) + 1
+            act_num = self.loop_map.index({'type':'loop', 'num':N}) + 1
             return self.__profile_units(act_num, exclusive=False)
         except ControllerInterfaceError:
             return "ERROR"
@@ -402,7 +402,7 @@ class WatlowF4T(ControllerInterface):
     def get_cascade_units(self, N):
         self.__range_check(N, 1, self.cascades)
         try:
-            act_num = self.profile_loop_map.index({'type':'cascade', 'num':N}) + 1
+            act_num = self.loop_map.index({'type':'cascade', 'num':N}) + 1
             return self.__profile_units(act_num, exclusive=False)
         except ControllerInterfaceError:
             return "ERROR"
@@ -678,7 +678,7 @@ class WatlowF4T(ControllerInterface):
         prgm_dict['hasenables'] = sum(self.loop_event + self.cascade_event) > 0
         ranges, gsd, steps = [], [], []
         for i in range(self.loops + self.cascades):
-            tmap = self.profile_loop_map[i]
+            tmap = self.loop_map[i]
             gsd.append({'value':self.client.read_holding_float(19086+i*2)[0]})
             if tmap['type'] == 'loop':
                 ranges.append(self.get_loop_range(tmap['num'], exclusive=False))
@@ -708,7 +708,7 @@ class WatlowF4T(ControllerInterface):
             gse_event = self.client.read_holding(19138+170*i, 32)
 
             for j in range(self.cascades + self.loops):
-                tmap = self.profile_loop_map[j]
+                tmap = self.loop_map[j]
                 if tmap['type'] == 'loop':
                     enable_event = self.loop_event[tmap['num']-1]
                 else:
@@ -798,7 +798,7 @@ class WatlowF4T(ControllerInterface):
                     self.client.write_holding_float(19124+offset+(cwt['number']-1)*4, cwt['value'])
             if stp['type'] in ['soak', 'instant', 'ramptime', 'ramprate', 'end']:
                 for i, clp in enumerate(stp['loops']):
-                    cmap = self.profile_loop_map[i]
+                    cmap = self.loop_map[i]
                     if stp['type'] == 'ramprate': #write ramp rate
                         self.client.write_holding_float(19106+offset+i*2, clp['rate'])
                     if stp['type'] in ['ramprate', 'ramptime', 'instant']: #write target value
@@ -853,8 +853,8 @@ class WatlowF4T(ControllerInterface):
     @exclusive
     def sample(self, lookup=None):
         loops = []
-        for tmap in self.profile_loop_map:
-            items = ['setpoint', 'processvalue', 'enable']
+        for tmap in self.loop_map:
+            items = ['setpoint', 'processvalue', 'enable', 'mode', 'power']
             if tmap['type'] == 'cascade':
                 items.append('enable_cascade')
             lpdata = lookup[tmap['type']][tmap['num']-1].copy() if lookup else {}
@@ -927,7 +927,7 @@ class WatlowF4T(ControllerInterface):
             else: #(pn[11] == '1')
                 self.loops = 1
                 self.cascades = 0
-            self.update_profile_loop_map()
+            self.__update_loop_map()
             self.limits = []
             for i in range(6):
                 try:
@@ -1023,8 +1023,8 @@ class WatlowF4T(ControllerInterface):
             gsd.append({'value':3.0})
         for j in range(self.loops + self.cascades):
             lpdata = {'target':0, 'rate':0, 'mode':'', 'gsoak': False, 'cascade': False,
-                      'isCascade': self.profile_loop_map[j]['type'] == 'cascade'}
-            if self.profile_loop_map[j]['type'] == 'cascade':
+                      'isCascade': self.loop_map[j]['type'] == 'cascade'}
+            if self.loop_map[j]['type'] == 'cascade':
                 lpdata.update({
                     'enable': self.cascade_event[j] == 0,
                     'showEnable': self.cascade_event[j] != 0

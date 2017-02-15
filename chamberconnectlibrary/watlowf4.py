@@ -61,6 +61,7 @@ class WatlowF4(ControllerInterface):
         self.alarms = kwargs.get('alarms', 6)
         self.profiles = kwargs.get('profiles', False)
         self.scalar = [None, None, None]
+        self.__update_loop_map()
 
 
     def __range_check(self, val, minimum, maximum):
@@ -78,6 +79,17 @@ class WatlowF4(ControllerInterface):
         '''
         if maximum < minimum or val < minimum or val > maximum:
             raise ValueError("Index is not within bounds or bounds are not valid")
+
+    def __update_loop_map(self):
+        '''
+        update the loop map.
+        '''
+        if self.cascades > 0:
+            self.loop_map = [{'type':'cascade', 'num':1}]
+        else:
+            self.loop_map = [{'type':'loop', 'num':1}]
+        if self.cascades + self.loops > 1:
+            self.loop_map += [{'type':'loop', 'num':2}]
 
     def __get_scalar(self, N):
         '''
@@ -373,13 +385,9 @@ class WatlowF4(ControllerInterface):
     @exclusive
     def get_loop_power(self, N):
         self.__range_check(N, 1, self.loops + self.cascades)
-        outa = self.client.read_holding([103, 111][N-1])[0]
-        outb = self.client.read_holding([107, 115][N-1])[0]
-        if self.client.read_holding([700, 734][N-1])[0] == 3:
-            outa = 0 - outa
-        if self.client.read_holding([717, 751][N-1])[0] == 3:
-            outb = 0 - outb
-        combined = float(outa + outb)
+        outa = self.client.read_holding_signed([103, 111][N-1])[0] / 100.0
+        outb = self.client.read_holding_signed([107, 115][N-1])[0] / 100.0
+        combined = outa + outb
         return {'constant':combined, 'current':combined}
 
     @exclusive
@@ -467,7 +475,10 @@ class WatlowF4(ControllerInterface):
     @exclusive
     def set_cascade_deviation(self, N, value):
         self.__range_check(N, 1, self.cascades)
-        vals = [value['negative']/self.__get_scalar(1), value['positive']/self.__get_scalar(1)]
+        vals = [
+            int(value['negative']/self.__get_scalar(1)),
+            int(value['positive']/self.__get_scalar(1))
+        ]
         self.client.write_holding_signed(1926, vals)
 
     @exclusive
@@ -561,6 +572,7 @@ class WatlowF4(ControllerInterface):
 
     @exclusive
     def get_prgm_time(self, pgm=None):
+        return ''
         if pgm is None:
             pgm = self.get_prgm(self.get_prgm_cur(exclusive=False), exclusive=False)
         while True:
@@ -717,24 +729,6 @@ class WatlowF4(ControllerInterface):
         self.client.write_holding(25, 0) #save changes to profiles
 
     @exclusive
-    def sample(self, lookup=None):
-        loops = []
-        params = ['setpoint', 'processvalue', 'enable']
-        for i in range(self.loops):
-            ldata = lookup['loop'][i].copy() if lookup else {}
-            ldata.update(self.get_loop(i+1, 'loop', params, exclusive=False))
-            loops.append(ldata)
-        for i in range(self.cascades):
-            ldata = lookup['cascade'][i].copy() if lookup else {}
-            ldata.update(self.get_loop(i+1, 'cascade', params + ['cascade'], exclusive=False))
-            loops.append(ldata)
-        return {
-            'datetime':self.get_datetime(exclusive=False),
-            'loops':loops,
-            'status':self.get_status(exclusive=False)
-        }
-
-    @exclusive
     def process_controller(self, update=True):
         part_no = 'Watlow F4'
         if update:
@@ -755,6 +749,7 @@ class WatlowF4(ControllerInterface):
                     self.cascades = 1
         except Exception:
             pass
+        self.__update_loop_map()
         return part_no
 
     @exclusive

@@ -57,6 +57,15 @@ class Espec(ControllerInterface):
         self.profiles = True
         self.events = 12
         self.total_programs = 40 if self.ctlr_type == 'P300' else 30
+        self.__update_loop_map()
+
+
+    def __update_loop_map(self):
+        '''
+        update the loop map.
+        '''
+        self.loop_map = [{'type':'cascade', 'num':j+1} for j in range(self.cascades)]
+        self.loop_map += [{'type':'loop', 'num':j+1} for j in range(self.loops)]
 
     def connect(self):
         '''
@@ -309,7 +318,14 @@ class Espec(ControllerInterface):
             raise ValueError(self.lp_exmsg)
 
     def get_loop_power(self, N):
-        raise NotImplementedError
+        if self.lpd[N] == self.temp:
+            val = self.cached(self.client.read_htr['dry'])
+        elif self.lpd[N] == self.humi:
+            val = self.cached(self.client.read_htr['wet'])
+        else:
+            raise ValueError(self.lp_exmsg)
+        return {'current':val, 'constant':val}
+
     def set_loop_power(self, N, value):
         raise NotImplementedError
 
@@ -419,7 +435,9 @@ class Espec(ControllerInterface):
         self.client.write_temp_ptc(self.get_cascade_ctl(self.temp, exclusive=False), **value)
 
     def get_cascade_power(self, N):
-        raise NotImplementedError
+        if self.lpd[N] != self.temp:
+            raise ValueError(self.cs_exmsg)
+        return self.get_loop_power(self.temp, exclusive=False)
 
     def set_cascade_power(self, N, value):
         raise NotImplementedError
@@ -621,6 +639,7 @@ class Espec(ControllerInterface):
             msg += 'W/Humidity'
         except EspecError:
             pass
+        self.__update_loop_map()
         return msg
 
     @exclusive
