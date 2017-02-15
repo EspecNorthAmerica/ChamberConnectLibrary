@@ -476,7 +476,9 @@ class Espec(ControllerInterface):
         self.client.write_temp_ptc(self.get_cascade_ctl(self.temp, exclusive=False), **value)
 
     def get_cascade_power(self, N):
-        raise NotImplementedError
+        if self.lpd[N] != self.temp:
+            raise ValueError(self.cs_exmsg)
+        return self.get_loop_power(self.temp, exclusive=False)
 
     def set_cascade_power(self, N, value):
         raise NotImplementedError
