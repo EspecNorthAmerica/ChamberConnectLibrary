@@ -217,7 +217,7 @@ class ModbusRTU(Modbus):
             bytesize=databits,
             parity=kwargs.get('parity', 'N'),
             stopbits=stopbits,
-            timeout=kwargs.get('timeout', 1)
+            timeout=kwargs.get('timeout', 2)
         )
 
     def __del__(self):
