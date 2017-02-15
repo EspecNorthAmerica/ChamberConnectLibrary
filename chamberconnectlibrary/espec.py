@@ -359,7 +359,14 @@ class Espec(ControllerInterface):
             raise ValueError(self.lp_exmsg)
 
     def get_loop_power(self, N):
-        raise NotImplementedError
+        if self.lpd[N] == self.temp:
+            val = self.cached(self.client.read_htr['dry'])
+        elif self.lpd[N] == self.humi:
+            val = self.cached(self.client.read_htr['wet'])
+        else:
+            raise ValueError(self.lp_exmsg)
+        return {'current':val, 'constant':val}
+
     def set_loop_power(self, N, value):
         raise NotImplementedError
 
@@ -633,9 +640,9 @@ class Espec(ControllerInterface):
     def sample(self, lookup=None):
         ltype = 'cascade' if self.cascades > 0 else 'loop'
         if ltype == 'loop':
-            items = ['setpoint', 'processvalue', 'enable']
+            items = ['setpoint', 'processvalue', 'enable', 'mode', 'power']
         else:
-            items = ['setpoint', 'processvalue', 'enable', 'enable_cascade']
+            items = ['setpoint', 'processvalue', 'enable', 'enable_cascade', 'mode', 'power']
         loops = [self.get_loop(1, ltype, items, exclusive=False)]
         if lookup:
             loops[0].update(lookup[ltype][0])

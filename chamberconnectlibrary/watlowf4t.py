@@ -418,7 +418,7 @@ class WatlowF4T(ControllerInterface):
     @exclusive
     def get_loop_en(self, N):
         self.__range_check(N, 1, self.loops)
-        cmd = self.watlow_val_dict[self.client.read_holding(2814+(N-1)*160, 1)[0]] == 'auto'
+        cmd = self.watlow_val_dict[self.client.read_holding(2814+(N-1)*160, 1)[0]] != 'off'
         if self.loop_event[N-1] != 0:
             eve = self.get_event(self.loop_event[N-1], exclusive=False)['constant']
             if self.run_module:
@@ -542,7 +542,7 @@ class WatlowF4T(ControllerInterface):
     @exclusive
     def get_cascade_en(self, N):
         self.__range_check(N, 1, self.cascades)
-        cmd = self.watlow_val_dict[self.client.read_holding(4012+(N-1)*200, 1)[0]] == 'auto'
+        cmd = self.watlow_val_dict[self.client.read_holding(4012+(N-1)*200, 1)[0]] != 'off'
         if self.cascade_event[N-1] != 0:
             eve = self.get_event(self.cascade_event[N-1], exclusive=False)['constant']
             if self.run_module:
@@ -1037,7 +1037,7 @@ class WatlowF4T(ControllerInterface):
     def sample(self, lookup=None):
         loops = []
         for tmap in self.profile_loop_map:
-            items = ['setpoint', 'processvalue', 'enable']
+            items = ['setpoint', 'processvalue', 'enable', 'mode', 'power']
             if tmap['type'] == 'cascade':
                 items.append('enable_cascade')
             lpdata = lookup[tmap['type']][tmap['num']-1].copy() if lookup else {}
