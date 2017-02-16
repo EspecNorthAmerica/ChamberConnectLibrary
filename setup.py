@@ -5,7 +5,7 @@ def readme():
         return f.read()
 
 setup(name='chamberconnectlibrary',
-      version='1.1.3',
+      version='1.1.4',
       description='A library for interfacing with Espec North America chambers',
       long_description=readme(),
       url='https://github.com/EspecNorthAmerica/ChamberConnectLibrary',
