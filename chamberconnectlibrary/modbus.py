@@ -35,6 +35,7 @@ class Modbus(object):
         11:'Gateway Target Device Failed To Respond'
     }
     address = 1
+    retry = False
 
 
     def read_holding(self, register, count=1):
@@ -219,6 +220,7 @@ class ModbusRTU(Modbus):
 
     def __init__(self, address, port, **kwargs):
         self.address = address
+        self.retry = kwargs.get('retry', True)
         #watlow suggests using 0.012 char send time for buads greater than 19200
         databits, stopbits = kwargs.get('databits', 8), kwargs.get('stopbits', 1)
         baud = kwargs.get('baud', 9600)
