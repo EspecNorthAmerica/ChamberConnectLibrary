@@ -140,7 +140,7 @@ class Modbus(object):
             packval = struct.unpack('HH', struct.pack('f', value))
         self.write_holding(register, packval)
 
-    def write_holding_string(self, register, value, length=20):
+    def write_holding_string(self, register, value, length=20, padder=0):
         '''
         Write a string to the controller
 
@@ -153,7 +153,7 @@ class Modbus(object):
             None
         '''
         mods = [ord(c) for c in value]
-        mods.extend([0]*length)
+        mods.extend([padder]*length)
         self.write_holding(register, mods[0:length])
 
     def interact(self, packet):

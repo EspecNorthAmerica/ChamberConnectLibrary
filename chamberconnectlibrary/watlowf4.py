@@ -134,14 +134,15 @@ class WatlowF4(ControllerInterface):
             self.client.write_holding(4004, 1)
             self.client.write_holding(4008, daylookup.index(step['time']['day']))
         else:
-            self.client.write_holding(4004, 0)
             date = [0, step['date']['month'], step['date']['day'], step['date']['year']]
-            self.client.write_holding(4005, date)
+            self.client.write_holding(4004, date)
         time = [step['time']['hours'], step['time']['minutes'], step['time']['seconds']]
         self.client.write_holding(4009, time)
 
     def __edit_prgm_step_rampsoak(self, step):
         eventlookup = ['disable', 'off', 'on']
+        stypes = {'ramptime':1, 'ramprate':2, 'soak':3}
+        self.client.write_holding(4003, stypes[step['type']])
         if step['waits']['waits']:
             self.client.write_holding(4012, 1)
             for event in step['waits']['events']:
@@ -155,7 +156,7 @@ class WatlowF4(ControllerInterface):
                 else:
                     self.client.write_holding(4021+(analog['number']-1)*2, 0)
         else:
-            self.client.write_holding(4012, 1)
+            self.client.write_holding(4012, 0)
         for event in step['events']:
             self.client.write_holding(4030+event['number']-1, 1 if event['value'] else 0)
         if step['type'] != 'ramprate':
@@ -166,10 +167,10 @@ class WatlowF4(ControllerInterface):
         for i, loop in enumerate(step['loops']):
             target = int(loop['target'] * self.__get_scalar(i+1))
             self.client.write_holding_signed(4044+i, target)#setpoint
-            self.client.write_holding(4046+i, loop['pidset'] - 5*i)#pid set
+            self.client.write_holding(4046+i, loop['pidset'] - 5*i - 1)#pid set
             self.client.write_holding(4048+i, 1 if loop['gsoak'] else 0) #guarrneteed soak
-            if self.cond_event[i] > 0:
-                reg = 4030+self.cond_event[i]-1
+            if self.loop_event[i]:
+                reg = 4030+self.loop_event[i]-1
                 self.client.write_holding(reg, 1 if loop['enable'] else 0)
         if self.cond_event: #if we have a condition event force it on for the profile
             self.client.write_holding(4030+self.cond_event-1, 1)
@@ -207,16 +208,19 @@ class WatlowF4(ControllerInterface):
             self.__edit_prgm_step_end(step)
         else:
             raise ValueError('invalid step type')
-        self.client.write_holding(25, 0) #save the step
+        #self.client.write_holding(25, 0) #save the step
 
     def __create_prgm(self, value):
         '''create a new program return its number'''
         self.client.write_holding(4002, 1)
-        num = self.client.read_holding(4000)
+        num = self.client.read_holding(4000)[0]
         if re.match("^[A-Z0-9]*$", value['name']):
-            self.client.write_holding_string(3500+10*(num-1), value['name'], 10)
+            self.client.write_holding_string(3500+10*(num-1), value['name'], 10, 32)
         for i, step in enumerate(value['steps']):
-            self.client.write_holding(4001, [i+1, 2])
+            if step['type'] != 'end':
+                self.client.write_holding(4001, [i+1, 2])
+            else:
+                self.client.write_holding(4001, i+1)
             self.__edit_prgm_step(step)
         return num
 
@@ -224,13 +228,13 @@ class WatlowF4(ControllerInterface):
         '''Edit an existing program'''
         self.client.write_holding(4000, num)
         if re.match("^[A-Z0-9]*$", value['name']):
-            self.client.write_holding_string(3500+10*(num-1), value['name'], 10)
+            self.client.write_holding_string(3500+10*(num-1), value['name'], 10, 32)
         for i in range(1, 256): #delete all steps but the end step
-            self.client.write_holding(4001, i+1)
-            if self.client.read_holding(4003) == 5:
+            self.client.write_holding(4001, 1)
+            if self.client.read_holding(4003)[0] == 5:
                 break #is end step stop looping.
             self.client.write_holding(4002, 4) #delete this step
-            self.client.write_holding(25, 0)
+
         for i, step in enumerate(value['steps']):
             if step['type'] != 'end': #insert a new step
                 self.client.write_holding(4001, [i+1, 2])
@@ -247,9 +251,9 @@ class WatlowF4(ControllerInterface):
         connect to the controller using the paramters provided on class initialization
         '''
         if self.interface == "RTU":
-            self.client = ModbusRTU(address=self.adr, port=self.serialport, baud=self.baudrate)
+            self.client = ModbusRTU(address=self.adr, port=self.serialport, baud=self.baudrate, timeout=10.0)
         else:
-            self.client = ModbusTCP(self.adr, self.host)
+            self.client = ModbusTCP(self.adr, self.host, timeout=10.0)
 
     def close(self):
         '''
@@ -590,7 +594,7 @@ class WatlowF4(ControllerInterface):
     @exclusive
     def set_prgm_name(self, N, value):
         if re.match("^[A-Z0-9]*$", value):
-            self.client.write_holding_string(3500+10*(N-1), value, 10)
+            self.client.write_holding_string(3500+10*(N-1), value, 10, 32)
             self.client.write_holding(25, 0) #save changes to profiles
         else:
             raise ValueError('Name must be uppercase letters and numbers only.')
