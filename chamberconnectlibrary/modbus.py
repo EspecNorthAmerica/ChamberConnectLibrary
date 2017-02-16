@@ -49,7 +49,13 @@ class Modbus(object):
             list. unsigned 16bit integers
         '''
         packet = self.make_packet(3, register, count)
-        rval = self.interact(packet)
+        try:
+            rval = self.interact(packet)
+        except ModbusError:
+            if self.retry:
+                rval = self.interact(packet)
+            else:
+                raise
         return self.decode_packet(rval, packet)
 
     def read_holding_signed(self, register, count=1):
@@ -109,7 +115,13 @@ class Modbus(object):
         '''
         packettype = 16 if isinstance(value, collections.Iterable) else 6
         packet = self.make_packet(packettype, register, value)
-        rval = self.interact(packet)
+        try:
+            rval = self.interact(packet)
+        except ModbusError:
+            if self.retry:
+                rval = self.interact(packet)
+            else:
+                raise
         self.decode_packet(rval, packet)
 
     def write_holding_signed(self, register, value):
@@ -210,14 +222,16 @@ class ModbusRTU(Modbus):
         #watlow suggests using 0.012 char send time for buads greater than 19200
         databits, stopbits = kwargs.get('databits', 8), kwargs.get('stopbits', 1)
         baud = kwargs.get('baud', 9600)
-        self.pause = 3.5 * (((databits + stopbits + 2)/ baud) if baud < 19200 else 0.012)
+        # calculated pause time does not work on the Watlow F4T, using watlow recomended delay...
+        #self.pause = 3.5 * (((databits + stopbits + 2)/ baud) if baud < 19200 else 0.012)
+        self.pause = 0.03
         self.serial = serial.Serial(
             port=port,
             baudrate=baud,
             bytesize=databits,
             parity=kwargs.get('parity', 'N'),
             stopbits=stopbits,
-            timeout=kwargs.get('timeout', 2)
+            timeout=kwargs.get('timeout', 3)
         )
 
     def __del__(self):
