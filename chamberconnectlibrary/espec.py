@@ -191,10 +191,13 @@ class Espec(ControllerInterface):
         if (spt1 or spt2 or spt3) and ('enable' in param_list or 'mode' in param_list):
             if 'enable' in param_list:
                 enable = param_list.pop('enable')
+                if isinstance(enable, dict):
+                    enable = enable['constant']
             else:
-                enable = param_list.pop('mode') in ['On', 'ON', 'on']
-            if isinstance(enable, dict):
-                enable = enable['constant']
+                my_mode = param_list.pop('mode')
+                if isinstance(my_mode, dict):
+                    my_mode = my_mode['constant']
+                enable = my_mode in ['On', 'ON', 'on']
             if spt1:
                 spv = param_list.pop('setpoint')
             elif spt2:
@@ -203,10 +206,7 @@ class Espec(ControllerInterface):
                 spv = param_list.pop('setValue')
             if isinstance(spv, dict):
                 spv = spv['constant']
-            params = {
-                'setpoint':spv,
-                'enable':enable['constant'] if isinstance(enable, dict) else enable
-            }
+            params = {'setpoint':spv, 'enable':enable}
             if range in param_list:
                 params.update(param_list.pop('range'))
             if self.lpd[N] == self.temp:
