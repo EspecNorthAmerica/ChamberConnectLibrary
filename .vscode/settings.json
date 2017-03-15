@@ -4,5 +4,6 @@
     "python.autoComplete.extraPaths": [
         "${env.SPARK_HOME}\\python",
         "${env.SPARK_HOME}\\python\\pyspark"
-    ]
+    ],
+    "python.linting.pylintPath": "c:/Python27/Scripts/pylint.exe"
 }

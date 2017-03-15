@@ -146,14 +146,17 @@ Examples on setting up the instantiating the correct class for a chamber.
 Functions used to retrieve information from the controller.
 
 
-## get_loop(N, loop_type, param_list=None)
+## get_loop(N, loop_type, &ast;param_list=None)
 Get parameters for a loop from a given list (or all if no list is provided)
 * **Arguments**:
     * **N** (int): The loop number (1-4)
     * **loop_type** (str): The loop type, possible values:
         * `"cascade"`: A cascade control loop
         * `"loop"`: A standard control loop.
-    * **param_list** ([str])): The list of parameters to read defaults, possible list elements:
+    * **&ast;param_list** (list(str) or list(list(str))): The list of parameters to read,
+    it may be positional arguments or a single list ie:  
+    `get_loop_byname('temp', ['setpoint', 'range'])` == `get_loop_byname('temp', 'setpoint', 'range')`  
+    valid items:  
         * `"setpoint"`: The target temp/humi/altitude/etc of the control loop
         * `"processvalue"`: The current conditions inside the chamber
         * `"range"`: The settable range for the "setpoint"
@@ -183,6 +186,44 @@ Get parameters for a loop from a given list (or all if no list is provided)
 
 * **Example**:  
     `controller.get_loop(1, 'loop')`
+
+## get_loop_byname(name, &ast;param_list)
+Get parameters for a loop from a given list (or all if no list is provided)
+* **Arguments**:
+    * **name** (str): name of the loop setup during init
+    * ***param_list** (list(str) or list(list(str))): The list of parameters to read,
+    it may be positional arguments or a single list ie:  
+    `get_loop_byname('temp', ['setpoint', 'range'])` == `get_loop_byname('temp', 'setpoint', 'range')`  
+    valid items:
+        * `"setpoint"`: The target temp/humi/altitude/etc of the control loop
+        * `"processvalue"`: The current conditions inside the chamber
+        * `"range"`: The settable range for the "setpoint"
+        * `"enable"`: Weather the loop is on or off
+        * `"units"`: The units of the "setpoint" or "processvalue" parameters
+        * `"mode"`: The current control status of the loop
+        * `"power"`: The current output power of the loop
+        * `"deviation"`: (type="cascade" only) The allowable difference between air/prod.
+        * `"enable_cascade"`: (type="cascade" only) Enable or disable cascade type control
+* **Returns**:  
+    A dictionary containing a key for each item in the `param_list` argument.  
+    Example return value for when `param_list=None`:
+
+    ```python
+    {
+        "setpoint":{"constant":float, "current":float, "air":float, "product":float}, # "product"/"air" only w/ type="cascade"
+        "processvalue":{"air":float, "product":float}, # "product" only w/ type="cascade"
+        "range":{"min":float, "max":float},
+        "enable":{"constant":bool, "current":bool},
+        "units":str,
+        "mode":str,
+        "power":{"constant": float, "current": float},
+        "deviation":{"positive": float, "negative": float}, # only w/ type="cascade"
+        "enable_cascade":{"constant":bool, "current":bool}, # only w/ type="cascade"
+    }
+    ```
+
+* **Example**:  
+    `controller.get_loop('temp')`
 
 ## get_operation(pgm=None)
 Get the complete operation status of the chamber.
@@ -289,26 +330,109 @@ Get the state of a programmable output.
 # Setter Functions  
 Functions used to write information to the controller.
 
-## get_program(N)
-Read an entire program from the controller.
+## set_loop(N, loop_type, param_list=None, &ast;&ast;kwargs)
+Set the parameters for control loop.
 * **Arguments**:
-* **Returns**:
-* **Example**:
+    * **N** (int): The loop number (1-4).
+    * **loop_type** (str): The loop type, acceptible values:
+        * `cascade` A cascade control loop.
+        * `loop` A standard control loop.
+    * **param_list** (dict(dict)): The items to set.  
+    Keys other than the ones shown below will be ignored.
+    Where a param_list is `{'my_key':{'constant':my_value}}` then `{'my_key':my_value}` is also valid.  
+    
+    ```python
+    {
+        'setpoint': {'constant':double},
+        'range': {'min': float, 'max': float},
+        'enable': {'constant':bool},
+        'power': {'constant':double},
+        'deviation': {'positive':float, 'negative':float},
+        'enable_cascade': {'constant':bool}
+    }
+    ```
+    * **&ast;&ast;kwargs**: list of items to set (same as param_list)
+* **Returns**: None
+* **Example**:  
+    `controller.set_loop(1, 'loop', {'setpoint':50.0})`
 
-## get_program(N)
-Read an entire program from the controller.
+## set_loop_byname(name, param_list=None, &ast;&ast;kwargs)
+Set the parameters for a named control loop.
 * **Arguments**:
-* **Returns**:
-* **Example**:
+    * **name** (int): name of the loop to read.
+    * **param_list** (dict(dict)): The items to set.  
+    Keys other than the ones shown below will be ignored.
+    Where a param_list is `{'my_key':{'constant':my_value}}` then `{'my_key':my_value}` is also valid.  
+    
+    ```python
+    {
+        'setpoint': {'constant':double},
+        'range': {'min': float, 'max': float},
+        'enable': {'constant':bool},
+        'power': {'constant':double},
+        'deviation': {'positive':float, 'negative':float},
+        'enable_cascade': {'constant':bool}
+    }
+    ```
+    * **&ast;&ast;kwargs**: list of items to set (same as param_list)
+* **Returns**: None
+* **Example**:  
+    `controller.set_loop_byname('temp', 'setpoint'=50.0)`
 
-## get_program(N)
-Read an entire program from the controller.
+## set_operation(mode, **kwargs)
+Change to operation mode of the chamber (start a program/run constant/pause or resume a program/stop)
 * **Arguments**:
-* **Returns**:
-* **Example**:
+    * **mode** (str): The mode to run, possible values:
+        * `standby`: Stop the chamber from running.
+        * `off`: Stop the chamber from running.
+        * `constant`: Start the configured constant mode
+        * `program`: Run a program.
+        * `program_pause`: Pause the running program.
+        * `program_resume`: Resume the paused program.
+        * `program_advance`: Force the program to the next step.
+    * **kwargs**: key word arguments accepted:
+        * **program** (int or dict): the program # to run, or a dict: `{'number':int, 'step': int}`
+        * **step** (int): the step # to start the given program on (if program an int) (default=1)
+* **Returns**: None
+* **Example**:  
+    `controller.set_operation('constant')`
 
-## get_program(N)
-Read an entire program from the controller.
+## set_program(N, value)
+Write a program to the controller (None = delete the program)
 * **Arguments**:
-* **Returns**:
-* **Example**:
+    * **N** (int): The number of the program to write.
+    * **value** (dict or None): The program to write to the controller, `None` deletes the program
+* **Returns**: None
+* **Example**:  
+    `controller.set_program(1, my_program)`
+
+## set_datetime(value)
+Write the date/time to the controller.
+* **Arguments**:
+    * **value** (datetime.datetime): The new datetime to write to the controller
+* **Returns**: None
+* **Example**:  
+    `controller.datetime(datetime.now())`
+
+## set_refrig(value)
+Write the constant refrigeration mode to the controller (espec.py based controllers only).
+* **Arguments**:
+    * **value** (dict): The parameters for the refrig system.  
+    ```python
+    {
+        'mode': str, # "off" or "manual" or "auto"
+        'setpoint': int # 20 or 50 or 100
+    }
+    ```
+* **Returns**: None
+* **Example**:  
+    `controller.set_refrig({'mode':'auto', 'setpoint':0})`
+
+## set_event(N, value)
+Write the constant digital output state to the controller.
+* **Arguments**:
+    * **N** (int): The number of the output (typically 1-12 or 1-8)
+    * **value** (bool): The new constant output state (True = on)
+* **Returns**: None
+* **Example**:  
+    `controller.set_event(1, True)`

@@ -72,6 +72,7 @@ class WatlowF4T(ControllerInterface):
         #these are detectable from the part number (call process_partno())
         self.alarms = kwargs.get('alarms', 6)
         self.profiles = kwargs.get('profiles', False)
+        self.named_loop_map_list = kwargs.get('loop_names', [])
 
         self.__update_loop_map()
         self.watlow_val_dict = {
@@ -140,6 +141,8 @@ class WatlowF4T(ControllerInterface):
         '''
         self.loop_map = [{'type':'cascade', 'num':j+1} for j in range(self.cascades)]
         self.loop_map += [{'type':'loop', 'num':j+1} for j in range(self.loops)]
+        if len(self.named_loop_map_list) == len(self.loop_map):
+            self.named_loop_map = {name:i for i, name in enumerate(self.named_loop_map_list)}
 
     def __range_check(self, val, minimum, maximum):
         '''
@@ -661,7 +664,7 @@ class WatlowF4T(ControllerInterface):
             else:
                 return self.watlow_val_dict[vals[24+(event-4)*2]]
         if N == 0:
-            return self.get_prgm_empty()
+            return self.__get_prgm_empty()
         self.__range_check(N, 1, 40)
         if not self.profiles:
             raise ControllerInterfaceError("This watlow does not impliment profiles")
@@ -936,7 +939,7 @@ class WatlowF4T(ControllerInterface):
                 except ModbusError:
                     pass
             if len(self.limits):
-                partnum += 'w/ %d limits' % len(self.limits)
+                prtnum += 'w/ %d limits' % len(self.limits)
         return prtnum
 
     @exclusive
@@ -1012,7 +1015,7 @@ class WatlowF4T(ControllerInterface):
         except LookupError:
             return u'ERROR'
 
-    def get_prgm_empty(self):
+    def __get_prgm_empty(self):
         '''
         create a empty null program
         '''
@@ -1060,3 +1063,9 @@ class WatlowF4T(ControllerInterface):
             'steps':steps,
             'haswaits':haswaits
         }
+
+    def get_operation_modes(self):
+        if self.cond_event is None:
+            return ['constant', 'program']
+        else:
+            return ['standby', 'constant', 'program']

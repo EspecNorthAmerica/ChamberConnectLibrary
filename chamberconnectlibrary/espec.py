@@ -64,8 +64,11 @@ class Espec(ControllerInterface):
         '''
         update the loop map.
         '''
+        self.named_loop_map = {'Temperature':0, 'temperature':0, 'Temp':0, 'temp':0}
         self.loop_map = [{'type':'cascade', 'num':j+1} for j in range(self.cascades)]
         self.loop_map += [{'type':'loop', 'num':j+1} for j in range(self.loops)]
+        if len(self.loop_map) > 1:
+            self.named_loop_map = {'Humidity':1, 'humidity':1, 'Hum':1, 'hum':1}
 
     def connect(self):
         '''
@@ -124,7 +127,7 @@ class Espec(ControllerInterface):
         self.client.write_set(**value)
 
     @exclusive
-    def set_loop(self, N, loop_type, param_list):
+    def set_loop(self, N, loop_type, param_list=None, **kwargs):
         #cannot use the default controllerInterface version.
         lpfuncs = {
             'cascade':{
@@ -144,6 +147,8 @@ class Espec(ControllerInterface):
                 'mode':self.set_loop_mode
             }
         }
+        if param_list is None:
+            param_list = kwargs
         spt1 = 'setpoint' in param_list
         spt2 = 'setPoint' in param_list
         spt3 = 'setValue' in param_list
@@ -299,12 +304,12 @@ class Espec(ControllerInterface):
     def get_loop_mode(self, N):
         if N > 2:
             raise ValueError(self.lp_exmsg)
-        if self.lpd[N] == self.temp:
-            cur = 'On'
-            con = 'On'
-        elif self.lpd[N] == self.humi:
+        if self.lpd[N] == self.humi:
             cur = 'On' if self.cached(self.client.read_humi)['enable'] else 'Off'
             con = 'On' if self.cached(self.client.read_constant_humi)['enable'] else 'Off'
+        else:
+            cur = 'On'
+            con = 'On'
         if self.client.read_mode() in ['OFF', 'STANDBY']:
             cur = 'Off'
         return {"current": cur, "constant": con}
@@ -317,11 +322,12 @@ class Espec(ControllerInterface):
         else:
             raise ValueError(self.lp_exmsg)
 
+    @exclusive
     def get_loop_power(self, N):
         if self.lpd[N] == self.temp:
-            val = self.cached(self.client.read_htr['dry'])
+            val = self.cached(self.client.read_htr)['dry']
         elif self.lpd[N] == self.humi:
-            val = self.cached(self.client.read_htr['wet'])
+            val = self.cached(self.client.read_htr)['wet']
         else:
             raise ValueError(self.lp_exmsg)
         return {'current':val, 'constant':val}
@@ -434,11 +440,13 @@ class Espec(ControllerInterface):
             raise ValueError('value must contain "positive" and "negative" keys')
         self.client.write_temp_ptc(self.get_cascade_ctl(self.temp, exclusive=False), **value)
 
+    @exclusive
     def get_cascade_power(self, N):
         if self.lpd[N] != self.temp:
             raise ValueError(self.cs_exmsg)
         return self.get_loop_power(self.temp, exclusive=False)
 
+    @exclusive
     def set_cascade_power(self, N, value):
         raise NotImplementedError
 

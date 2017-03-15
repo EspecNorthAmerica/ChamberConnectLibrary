@@ -31,10 +31,6 @@ class WatlowF4(ControllerInterface):
         loop_event (list(int)): list of events #'s that enable/disble loops (default=[0,2,0,0])
         cascade_event (list(int)): list of events #'s that enbl/dis casc.lps(default=[0,0,0,0])
         cascade_ctl_event (list(int)): list of event#'s enbl/dis casc. mode (default=[0,0,0,0])
-        waits (list(str)): Configuration for the 4 waitfor inputs each index can be::
-            "A" -- Analog
-            "D" -- Digital
-            "" -- Off(default x4)
         time_zone (None): Not currently used
         alarms (int): The number of alarms that the controller has (default=6)
         profiles (bool): If True the controller supports profiles(programs) (default=False)
@@ -53,9 +49,17 @@ class WatlowF4(ControllerInterface):
         #list of events that may enable or disable a cascade loop
         self.cascade_event = kwargs.get('cascade_event', [0, 0, 0, 0])
 
-        # waits 1-4 A= analog wait, D= digital wait
-        self.waits = kwargs.get('waits', ['', '', '', ''])
+        self.combined_event = [
+            self.cascade_event[0] if self.cascades > 0 else self.loop_event[0],
+        ]
+        if self.loops == 2:
+            self.combined_event.append(self.loop_event[1])
+        elif self.cascades == 1 and self.loops == 1:
+            self.combined_event.append(self.loop_event[0])
+
         self.events = 8
+
+        self.named_loop_map_list = kwargs.get('loop_names', [])
 
         #these are detectable from the part number (call process_partno())
         self.alarms = kwargs.get('alarms', 6)
@@ -90,6 +94,8 @@ class WatlowF4(ControllerInterface):
             self.loop_map = [{'type':'loop', 'num':1}]
         if self.cascades + self.loops > 1:
             self.loop_map += [{'type':'loop', 'num':2}]
+        if len(self.named_loop_map_list) == len(self.loop_map):
+            self.named_loop_map = {name:i for i, name in enumerate(self.named_loop_map_list)}
 
     def __get_scalar(self, N):
         '''
@@ -100,10 +106,13 @@ class WatlowF4(ControllerInterface):
         Returns:
             float
         '''
-        if self.scalar[N-1] is None:
-            my_scalar = self.client.read_holding([606, 616, 626][N-1])[0]*10
-            self.scalar[N-1] = 1 / float(my_scalar if my_scalar > 0 else 1)
-        return self.scalar[N-1]
+        try:
+            if self.scalar[N-1] is None:
+                my_scalar = self.client.read_holding([606, 616, 626][N-1])[0]*10
+                self.scalar[N-1] = 1 / float(my_scalar if my_scalar > 0 else 1)
+            return self.scalar[N-1]
+        except Exception:
+            return 1
 
     def __get_digital_input(self, N):
         '''
@@ -114,7 +123,18 @@ class WatlowF4(ControllerInterface):
         Returns:
             Boolean
         '''
-        return self.client.read_holding(201 + 12*(N-1))[0] == 1
+        tval = self.client.read_holding(1061 + 2*(N-1))[0]
+        return self.client.read_holding(201 + 12*(N-1))[0] == tval
+
+    def __set_prgm_name(self, N, value):
+        '''write a profile name, does not save eeprom'''
+        value = value.upper()
+        if len(value) > 10:
+            value = value[0:10]
+        if re.match("^[A-Z0-9]*$", value):
+            self.client.write_holding_string(3500+10*(N-1), value, 10, 32)
+        else:
+            raise ValueError('Name must be uppercase letters and numbers only.')
 
     def __get_analog_input_setup(self):
         lookup = ['thermocouple', 'rtd', 'process', 'wetbulb-drybulb', 'off']
@@ -129,26 +149,37 @@ class WatlowF4(ControllerInterface):
     def __edit_prgm_step_autostart(self, step):
         '''setup an autostart step'''
         daylookup = ['daily', 'sun', 'mon', 'tue', 'wed', 'thur', 'fri', 'sat']
-        self.client.write_holding(4003, 0)
         if step['start_type'] == 'day':
             self.client.write_holding(4004, 1)
-            self.client.write_holding(4008, daylookup.index(step['time']['day']))
+            self.client.write_holding(4008, daylookup.index(step['start_time']['day']))
         else:
-            date = [0, step['date']['month'], step['date']['day'], step['date']['year']]
+            date = [
+                0,
+                step['start_date']['month'],
+                step['start_date']['day'],
+                step['start_date']['year']
+            ]
             self.client.write_holding(4004, date)
-        time = [step['time']['hours'], step['time']['minutes'], step['time']['seconds']]
-        self.client.write_holding(4009, time)
+        my_time = [
+            step['start_time']['hours'],
+            step['start_time']['minutes'],
+            step['start_time']['seconds']
+        ]
+        self.client.write_holding(4009, my_time)
 
     def __edit_prgm_step_rampsoak(self, step):
         eventlookup = ['disable', 'off', 'on']
         stypes = {'ramptime':1, 'ramprate':2, 'soak':3}
         self.client.write_holding(4003, stypes[step['type']])
-        if step['waits']['waits']:
+        if step['wait']['enable']:
             self.client.write_holding(4012, 1)
-            for event in step['waits']['events']:
-                self.client.write_holding(4013+event['number']-1, eventlookup.index(event['value']))
-            for analog in step['waits']['analog']:
-                if analog['waits']:
+            for event in step['wait']['digital']:
+                self.client.write_holding(
+                    4013+event['number']-1,
+                    eventlookup.index(event['value']) if event['enable'] else 0
+                )
+            for analog in step['wait']['analog']:
+                if analog['enable']:
                     reg = 4021+(analog['number']-1)*2
                     value = int(analog['value']/self.__get_scalar(analog['number']))
                     self.client.write_holding(reg, 1)
@@ -158,27 +189,32 @@ class WatlowF4(ControllerInterface):
         else:
             self.client.write_holding(4012, 0)
         for event in step['events']:
-            self.client.write_holding(4030+event['number']-1, 1 if event['value'] else 0)
+            self.client.write_holding(4030+event['number']-1, 1 if event['value'] == 'on' else 0)
         if step['type'] != 'ramprate':
             dur = step['duration']
             self.client.write_holding(4009, [dur['hours'], dur['minutes'], dur['seconds']])
         else:
-            self.client.write_holding(4043, int(step['rate']*10))
+            self.client.write_holding(4043, int(step['loops'][0]['rate']*10))
         for i, loop in enumerate(step['loops']):
-            target = int(loop['target'] * self.__get_scalar(i+1))
-            self.client.write_holding_signed(4044+i, target)#setpoint
-            self.client.write_holding(4046+i, loop['pidset'] - 5*i - 1)#pid set
-            self.client.write_holding(4048+i, 1 if loop['gsoak'] else 0) #guarrneteed soak
-            if self.loop_event[i]:
-                reg = 4030+self.loop_event[i]-1
-                self.client.write_holding(reg, 1 if loop['enable'] else 0)
+            if i < self.loops + self.cascades:
+                target = int(loop['target']/self.__get_scalar(i+1))
+                self.client.write_holding_signed(4044+i, target)#setpoint
+                self.client.write_holding(4046+i, loop['pidset'] - 5*i - 1)#pid set
+                self.client.write_holding(4048+i, 1 if loop['gsoak'] else 0) #guarrneteed soak
+                if self.combined_event[i]:
+                    reg = 4030+self.combined_event[i]-1
+                    self.client.write_holding(reg, 1 if loop['enable'] else 0)
         if self.cond_event: #if we have a condition event force it on for the profile
             self.client.write_holding(4030+self.cond_event-1, 1)
 
     def __edit_prgm_step_jump(self, step):
         '''setup an jump step'''
+        if step['jprofile'] == 0:
+            profile_num = self.client.read_holding(4000)[0]
+        else:
+            profile_num = step['jprofile']
         self.client.write_holding(4003, 4)
-        self.client.write_holding(4050, [step['jprofile'], step['jstep'], step['jcount']])
+        self.client.write_holding(4050, [profile_num, step['jstep'], step['jcount']])
 
     def __edit_prgm_step_end(self, step):
         '''setup an end step'''
@@ -189,10 +225,10 @@ class WatlowF4(ControllerInterface):
         elif step['action'] == 'alloff':
             self.client.write_holding(4060, 2)
         elif step['action'] == 'idle':
-            self.client.write_holding(4060, 3)
+            cache = [3]
             for idxl, loop in enumerate(step['loops']):
-                value = int(loop['target'] / self.__get_scalar(idxl+1))
-                self.client.write_holding_signed(4061+idxl, value)
+                cache.append(int(loop['target'] / self.__get_scalar(idxl+1)))
+            self.client.write_holding_signed(4060, cache)
         else:
             raise ValueError('invalid end step action')
 
@@ -208,14 +244,12 @@ class WatlowF4(ControllerInterface):
             self.__edit_prgm_step_end(step)
         else:
             raise ValueError('invalid step type')
-        #self.client.write_holding(25, 0) #save the step
 
     def __create_prgm(self, value):
         '''create a new program return its number'''
         self.client.write_holding(4002, 1)
         num = self.client.read_holding(4000)[0]
-        if re.match("^[A-Z0-9]*$", value['name']):
-            self.client.write_holding_string(3500+10*(num-1), value['name'], 10, 32)
+        self.__set_prgm_name(num, value['name'])
         for i, step in enumerate(value['steps']):
             if step['type'] != 'end':
                 self.client.write_holding(4001, [i+1, 2])
@@ -226,24 +260,8 @@ class WatlowF4(ControllerInterface):
 
     def __edit_prgm(self, num, value):
         '''Edit an existing program'''
-        self.client.write_holding(4000, num)
-        if re.match("^[A-Z0-9]*$", value['name']):
-            self.client.write_holding_string(3500+10*(num-1), value['name'], 10, 32)
-        for i in range(1, 256): #delete all steps but the end step
-            self.client.write_holding(4001, 1)
-            if self.client.read_holding(4003)[0] == 5:
-                break #is end step stop looping.
-            self.client.write_holding(4002, 4) #delete this step
-
-        for i, step in enumerate(value['steps']):
-            if step['type'] != 'end': #insert a new step
-                self.client.write_holding(4001, [i+1, 2])
-                self.__edit_prgm_step(step)
-            elif step['type'] == 'end': #edit the existing step
-                self.client.write_holding(4001, i+1)
-                self.__edit_prgm_step_end(step)
-            else:
-                raise ValueError('invalid step type')
+        self.prgm_delete(num, exclusive=False)
+        return self.__create_prgm(value)
 
 
     def connect(self):
@@ -251,7 +269,12 @@ class WatlowF4(ControllerInterface):
         connect to the controller using the paramters provided on class initialization
         '''
         if self.interface == "RTU":
-            self.client = ModbusRTU(address=self.adr, port=self.serialport, baud=self.baudrate, timeout=10.0)
+            self.client = ModbusRTU(
+                address=self.adr,
+                port=self.serialport,
+                baud=self.baudrate,
+                timeout=10.0
+            )
         else:
             self.client = ModbusTCP(self.adr, self.host, timeout=10.0)
 
@@ -300,12 +323,16 @@ class WatlowF4(ControllerInterface):
     @exclusive
     def get_loop_sp(self, N):
         self.__range_check(N, 1, self.loops + self.cascades)
+        minsp = self.client.read_holding_signed([602, 612][N-1])[0] * self.__get_scalar(N)
         const = self.client.read_holding_signed([300, 319][N-1])[0] * self.__get_scalar(N)
         if self.client.read_holding(200)[0] in [2, 3]: #running or holding profile
             cur = self.client.read_holding_signed([4122, 4123][N-1])[0] * self.__get_scalar(N)
         else:
             cur = const
-        return {'constant': const, 'current': cur}
+        return {
+            'constant': const if const > minsp else minsp,
+            'current': cur if cur > minsp else minsp
+        }
 
     @exclusive
     def set_loop_sp(self, N, value):
@@ -339,8 +366,8 @@ class WatlowF4(ControllerInterface):
         lrange = self.get_loop_range(N, exclusive=False)
         profile = self.client.read_holding(200)[0] in [2, 3]
         cmd = self.get_loop_sp(N, exclusive=False)['constant'] >= lrange['min']
-        if self.loop_event[N-1] != 0:
-            eve = self.get_event(self.loop_event[N-1], exclusive=False)['constant']
+        if self.combined_event[N-1] != 0:
+            eve = self.get_event(self.combined_event[N-1], exclusive=False)['constant']
             if self.cond_event:
                 running = self.get_event(self.cond_event, exclusive=False)
             else:
@@ -356,8 +383,8 @@ class WatlowF4(ControllerInterface):
         lrange = self.get_loop_range(N, exclusive=False)
         if self.get_loop_sp(N, exclusive=False)['constant'] < lrange['min'] and value:
             self.set_loop_sp(N, lrange['min'], exclusive=False)
-        if self.loop_event[N-1] != 0:
-            self.set_event(self.loop_event[N-1], value)
+        if self.combined_event[N-1] != 0:
+            self.set_event(self.combined_event[N-1], value, exclusive=False)
 
     @exclusive
     def get_loop_units(self, N):
@@ -370,12 +397,15 @@ class WatlowF4(ControllerInterface):
     @exclusive
     def get_loop_mode(self, N):
         self.__range_check(N, 1, self.loops + self.cascades)
-        return 'On' if self.get_loop_en(N, exclusive=False) else 'Off'
+        lpen = self.get_loop_en(N, exclusive=False)
+        lpen['constant'] = 'On' if lpen['constant'] else 'Off'
+        lpen['current'] = 'On' if lpen['current'] else 'Off'
+        return lpen
 
     @exclusive
     def get_loop_modes(self, N):
         self.__range_check(N, 1, self.loops + self.cascades)
-        return ['On', 'Off'] if self.loop_event[N-1] != 0 else ['On']
+        return ['On', 'Off'] if self.combined_event[N-1] != 0 else ['On']
 
     @exclusive
     def set_loop_mode(self, N, value):
@@ -401,7 +431,7 @@ class WatlowF4(ControllerInterface):
     @exclusive
     def get_cascade_sp(self, N):
         self.__range_check(N, 1, self.cascades)
-        vals = self.get_loop_sp(1)
+        vals = self.get_loop_sp(1, exclusive=False)
         vals.update({
             'air':self.client.read_holding_signed(1922)[0]*self.__get_scalar(1),
             'product':vals['current']
@@ -411,7 +441,7 @@ class WatlowF4(ControllerInterface):
     @exclusive
     def set_cascade_sp(self, N, value):
         self.__range_check(N, 1, self.cascades)
-        return self.set_loop_sp(N, value)
+        return self.set_loop_sp(N, value, exclusive=False)
 
     @exclusive
     def get_cascade_pv(self, N):
@@ -424,46 +454,47 @@ class WatlowF4(ControllerInterface):
     @exclusive
     def get_cascade_range(self, N):
         self.__range_check(N, 1, self.cascades)
-        return self.get_loop_range(N)
+        return self.get_loop_range(N, exclusive=False)
 
     @exclusive
     def set_cascade_range(self, N, value):
         self.__range_check(N, 1, self.cascades)
-        return self.set_loop_range(N, value)
+        return self.set_loop_range(N, value, exclusive=False)
 
     @exclusive
     def get_cascade_en(self, N):
         self.__range_check(N, 1, self.cascades)
-        return self.get_loop_en(N)
+        return self.get_loop_en(N, exclusive=False)
 
     @exclusive
     def set_cascade_en(self, N, value):
         self.__range_check(N, 1, self.cascades)
-        return self.set_loop_en(N, value)
+        return self.set_loop_en(N, value, exclusive=False)
 
     @exclusive
     def get_cascade_units(self, N):
         self.__range_check(N, 1, self.cascades)
-        return self.get_loop_units(N)
+        return self.get_loop_units(N, exclusive=False)
 
     @exclusive
     def get_cascade_mode(self, N):
         self.__range_check(N, 1, self.cascades)
-        return self.get_loop_mode(N)
+        return self.get_loop_mode(N, exclusive=False)
 
     @exclusive
     def get_cascade_modes(self, N):
         self.__range_check(N, 1, self.cascades)
-        return self.get_loop_modes(N)
+        return self.get_loop_modes(N, exclusive=False)
 
     @exclusive
     def set_cascade_mode(self, N, value):
         self.__range_check(N, 1, self.cascades)
-        return self.set_loop_mode(N, value)
+        return self.set_loop_mode(N, value, exclusive=False)
 
     @exclusive
     def get_cascade_ctl(self, N):
-        raise NotImplementedError
+        self.__range_check(N, 1, self.cascades)
+        return {'constant':True, 'current':True}
 
     @exclusive
     def set_cascade_ctl(self, N, value):
@@ -473,8 +504,10 @@ class WatlowF4(ControllerInterface):
     def get_cascade_deviation(self, N):
         self.__range_check(N, 1, self.cascades)
         vals = self.client.read_holding_signed(1926, 2)
-        return {'positive': vals[1] * self.__get_scalar(1),
-                'negative': vals[0] * self.__get_scalar(1)}
+        return {
+            'positive': vals[1] * self.__get_scalar(1),
+            'negative': vals[0] * self.__get_scalar(1)
+        }
 
     @exclusive
     def set_cascade_deviation(self, N, value):
@@ -484,11 +517,12 @@ class WatlowF4(ControllerInterface):
             int(value['positive']/self.__get_scalar(1))
         ]
         self.client.write_holding_signed(1926, vals)
+        self.client.write_holding(25, 0)
 
     @exclusive
     def get_cascade_power(self, N):
         self.__range_check(N, 1, self.cascades)
-        return self.get_loop_power(N)
+        return self.get_loop_power(N, exclusive=False)
 
     @exclusive
     def set_cascade_power(self, N, value):
@@ -582,10 +616,10 @@ class WatlowF4(ControllerInterface):
         jumps = 0
         for step in pgm['steps']:
             jumps += 1 if step['type'] == 'jump' else 0
-            if jumps > 1 or step.get('jprofile', rpgmi) != rpgmi:
-                return 'ERROR: multiple jump steps'
-            if step.get('jprofile', rpgmi) != rpgmi:
-                return 'ERROR: cross program jump step.'
+            if jumps > 1:
+                return 'ERROR:jump qty'
+            if step['type'] == 'jump' and step.get('jprofile', rpgmi) != rpgmi:
+                return 'ERROR:jump prfl'
         rtime = list(self.client.read_holding(4119, 3)) #[hours,minutes,seconds]
         jump_cnt = self.client.read_holding(4126)[0]
         stepi = self.get_prgm_cstep(exclusive=False) + 1
@@ -628,11 +662,8 @@ class WatlowF4(ControllerInterface):
 
     @exclusive
     def set_prgm_name(self, N, value):
-        if re.match("^[A-Z0-9]*$", value):
-            self.client.write_holding_string(3500+10*(N-1), value, 10, 32)
-            self.client.write_holding(25, 0) #save changes to profiles
-        else:
-            raise ValueError('Name must be uppercase letters and numbers only.')
+        self.__set_prgm_name(N, value)
+        self.client.write_holding(25, 0) #save changes to profiles
 
     @exclusive
     def get_prgm_steps(self, N):
@@ -651,38 +682,134 @@ class WatlowF4(ControllerInterface):
         programs = []
         num_programs = 40 - self.client.read_holding(1218)[0]
         for idx in range(1, 41):
-            try:
-                programs.append({
-                    'number': idx,
-                    'steps': self.get_prgm_steps(idx, exclusive=False),
-                    'name': self.get_prgm_name(idx, exclusive=False)
-                })
-            except ValueError:
-                pass
-            if idx > num_programs:
-                break
+            self.client.write_holding(4001, 2)
+            if num_programs > 0:
+                self.client.write_holding(4000, [idx, 1])
+                if self.client.read_holding(4003)[0] <= 5:
+                    programs.append({'number':idx, 'name':self.get_prgm_name(idx, exclusive=False)})
+                    num_programs -= 1
+                else:
+                    programs.append({'number': idx, 'name': ''})
+            else:
+                programs.append({'number': idx, 'name': ''})
         return programs
+
+    def __get_prgm_empty(self):
+        '''
+        create an empty null program
+        '''
+        dins = [self.client.read_holding(1060+i*2)[0] == 10 for i in range(4)]
+        analogs = self.__get_analog_input_setup()
+        return {
+            'name':'PROFILE',
+            'steps_available': self.client.read_holding(1219)[0],
+            'steps':[{
+                'type':'end',
+                'start_type':'day',
+                'start_date':{'month':1, 'day':1, 'year':2000},
+                'start_time':{'day':'sunday', 'hours':0, 'minutes':0, 'seconds':0},
+                'loops':[
+                    {
+                        'enable':True,
+                        'target':0,
+                        'pidset':1 + 5*i,
+                        'gsoak':False,
+                        'isCascade': self.cascades > 0 if i == 0 else False,
+                        'showEnable': self.combined_event[i] > 0
+                    }
+                    for i in range(self.loops + self.cascades)
+                ],
+                'events':[
+                    {'number':i, 'value':'off'}
+                    for i in range(1, 9) if i not in self.combined_event and i != self.cond_event
+                ],
+                'wait':{
+                    'enable':False,
+                    'digital':[
+                        {'number':i+1, 'enable':False, 'value':'off'}
+                        for i in range(4) if dins[i]
+                    ],
+                    'analog':[
+                        {'number':i+1, 'enable':False, 'value':0.0}
+                        for i in range(len(analogs)) if analogs[i] != 'off'
+                    ]
+                },
+                'duration':{'hours':0, 'minutes':0, 'seconds':0},
+                'jprofile':0,
+                'jstep':0,
+                'jcount':0,
+                'action':'hold'
+            }]
+        }
+
 
     @exclusive
     def get_prgm(self, N):
+        if N == 0:
+            return self.__get_prgm_empty()
         rbase = 4003 #first register to read
         self.__range_check(N, 1, 40)
         self.client.write_holding(4000, N)
-        program = {'steps':[], 'name': self.get_prgm_name(N, exclusive=False)}
+        program = {
+            'steps':[],
+            'name': self.get_prgm_name(N, exclusive=False),
+            'steps_available': self.client.read_holding(1219)[0]
+        }
         daylookup = ['daily', 'sun', 'mon', 'tue', 'wed', 'thur', 'fri', 'sat']
+        dins = [self.client.read_holding(1060+i*2)[0] == 10 for i in range(4)]
+        analogs = self.__get_analog_input_setup()
         for step in range(1, 257):
             self.client.write_holding(4001, step)
-            params = self.client.read_holding_signed(rbase, 4062-rbase+1)
+            params = self.client.read_holding_signed(rbase, 4062-rbase+1) #registers 4003-4062
+            step_params = {
+                'type':'soak',
+                'start_type':'day',
+                'start_date':{'month':1, 'day':1, 'year':2000},
+                'start_time':{'day':'sunday', 'hours':0, 'minutes':0, 'seconds':0},
+                'loops':[
+                    {
+                        'enable':True,
+                        'target':0,
+                        'pidset':1 + 5*i,
+                        'gsoak':False,
+                        'isCascade': self.cascades > 0 if i == 0 else False,
+                        'showEnable': self.combined_event[i] > 0
+                    }
+                    for i in range(self.loops + self.cascades)
+                ],
+                'events':[
+                    {'number':i, 'value':'off'}
+                    for i in range(1, 9) if i not in self.combined_event and i != self.cond_event
+                ],
+                'wait':{
+                    'enable':False,
+                    'digital':[
+                        {'number':i+1, 'enable':False, 'value':'off'}
+                        for i in range(4) if dins[i]
+                    ],
+                    'analog':[
+                        {'number':i+1, 'enable':False, 'value':0.0}
+                        for i in range(len(analogs)) if analogs[i] != 'off'
+                    ]
+                },
+                'duration':{'hours':0, 'minutes':0, 'seconds':0},
+                'jprofile':0,
+                'jstep':0,
+                'jcount':0,
+                'action':'hold'
+            }
+            if self.loops + self.cascades == 1:
+                step_params['loops'][0]['rate'] = 0
             if params[4003-rbase] == 0:#Auto start
-                program['steps'].append({
+                step_params.update({
                     'type':'autostart',
                     'start_type':['date', 'day'][params[4004-rbase]],
-                    'date':{
+                    'start_date':{
                         'month':params[4005-rbase],
                         'day':params[4006-rbase],
                         'year':params[4007-rbase]
                     },
-                    'time':{
+                    'start_time':{
                         'day':daylookup[params[4008-rbase]],
                         'hours':params[4009-rbase],
                         'minutes':params[4010-rbase],
@@ -690,21 +817,28 @@ class WatlowF4(ControllerInterface):
                     }
                 })
             elif params[4003-rbase] in [1, 2, 3]: #ramptime, ramprate, soak
-                step_params = {
+                step_params.update({
                     'type': ['', 'ramptime', 'ramprate', 'soak'][params[4003-rbase]],
-                    'waits':{'waits': params[4012-rbase] == 1},
+                    'wait':{'enable': params[4012-rbase] == 1},
                     'events':[
-                        {'number':i, 'value':params[4030-rbase-1+i] == 1}
-                        for i in range(1, 9) if i not in self.loop_event and i != self.cond_event
+                        {'number':i, 'value':'on' if params[4030-rbase-1+i] else 'off'}
+                        for i in range(1, 9) if i not in self.combined_event and i != self.cond_event
                     ],
-                    'loops':[{
-                        'enable':params[4030-rbase-1+self.loop_event[i]] == 1 \
-                                 if self.loop_event[i] else True,
-                        'target':params[4044-rbase+i] * self.__get_scalar(i+1),
-                        'pidset':params[4046-rbase+i] + 1 + 5*i,
-                        'gsoak':params[4048-rbase+i] == 1
-                    } for i in range(self.loops + self.cascades)]
-                }
+                    'loops':[
+                        {
+                            'enable':params[4030-rbase-1+self.combined_event[i]] == 1 \
+                                        if self.combined_event[i] else True,
+                            'target':params[4044-rbase+i] * self.__get_scalar(i+1),
+                            'pidset':params[4046-rbase+i] + 1 + 5*i,
+                            'gsoak':params[4048-rbase+i] == 1,
+                            'isCascade': self.cascades > 0 if i == 0 else False,
+                            'showEnable': self.combined_event[i] > 0
+                        }
+                        for i in range(self.loops + self.cascades)
+                    ]
+                })
+                if self.loops + self.cascades == 1:
+                    step_params['loops'][0]['rate'] = 0
                 if params[4003-rbase] != 2:
                     step_params['duration'] = {
                         'hours':params[4009-rbase],
@@ -712,43 +846,58 @@ class WatlowF4(ControllerInterface):
                         'seconds':params[4011-rbase]
                     }
                 else:
-                    step_params['rate'] = params[4043-rbase] / 10.0
-                if step_params['waits']['waits']:
-                    analogs = self.__get_analog_input_setup()
-                    step_params['waits'].update({
-                        'events':[
-                            {'number':i+1, 'value':['disable', 'off', 'on'][params[4013-rbase+i]]}
-                            for i in range(4) if self.client.read_holding(1060+i*2)[0] == 10
-                        ],
-                        'analog':[
-                            {
-                                'number':i+1,
-                                'waits':params[4021-rbase+i*2] == 1,
-                                'value':params[4022-rbase+i*2] * self.__get_scalar(i+1)
-                            }
-                            for i in range(len(analogs)) if analogs[i] != 'off'
-                        ]
-                    })
-                program['steps'].append(step_params)
+                    step_params['loops'][0]['rate'] = params[4043-rbase] / 10.0
+                step_params['wait'].update({
+                    'digital':[
+                        {
+                            'number':i+1,
+                            'enable':params[4013-rbase+i] != 0,
+                            'value':['off', 'off', 'on'][params[4013-rbase+i]]
+                        }
+                        for i in range(4) if dins[i]
+                    ],
+                    'analog':[
+                        {
+                            'number':i+1,
+                            'enable':params[4021-rbase+i*2] == 1,
+                            'value':params[4022-rbase+i*2] * self.__get_scalar(i+1)
+                        }
+                        for i in range(len(analogs)) if analogs[i] != 'off'
+                    ]
+                })
             elif params[4003-rbase] == 4:#Jump
-                program['steps'].append({
+                #if we are jumping to the same profile hprofile will be 0
+                prof_num = params[4050-rbase]
+                prof_num = 0 if prof_num == N else prof_num
+                step_params.update({
                     'type':'jump',
-                    'jprofile':params[4050-rbase],
+                    'jprofile':prof_num,
                     'jstep':params[4051-rbase],
                     'jcount':params[4052-rbase]
                 })
             elif params[4003-rbase] == 5:#End
-                program['steps'].append({
+                step_params.update({
                     'type':'end',
                     'action':['hold', 'controloff', 'alloff', 'idle'][params[4060-rbase]],
                     'loops':[
-                        {'target':params[4061-rbase+i]*self.__get_scalar(i+1)}
+                        {
+                            'enable':True,
+                            'target':params[4061-rbase+i]*self.__get_scalar(i+1),
+                            'pidset':1 + 5*i,
+                            'gsoak':False,
+                            'isCascade': self.cascades > 0 if i == 0 else False,
+                            'showEnable': self.combined_event[i] > 0
+                        }
                         for i in range(self.loops + self.cascades)
                     ]
                 })
-                break
+                if self.loops + self.cascades == 1:
+                    step_params['loops'][0]['rate'] = 0
             else:#Not a program
-                raise ValueError('Program #%d does not exist' % N)
+                raise ControllerInterfaceError('Program #%d does not exist' % N)
+            program['steps'].append(step_params)
+            if step_params['type'] == 'end':
+                break
         return program
 
     @exclusive
@@ -759,6 +908,7 @@ class WatlowF4(ControllerInterface):
             self.__edit_prgm(N, value)
         except ValueError:
             N = self.__create_prgm(value)
+        self.client.write_holding(25, 0) #save the new program
         return N
 
     @exclusive
@@ -766,6 +916,33 @@ class WatlowF4(ControllerInterface):
         self.__range_check(N, 1, 40)
         self.client.write_holding(4000, [N, 1, 3]) #program #, step 1, action delete
         self.client.write_holding(25, 0) #save changes to profiles
+
+    @exclusive
+    def sample(self, lookup=None):
+        '''
+        Take a sample for data logging, gets datetime, mode, and sp/pv on all loops
+
+        Returns:
+            {"datetime":datetime.datetime, "loops":[{varies}], "status":str}
+        '''
+        loops = []
+        for i in range(self.loops + self.cascades):
+            icasc = i == 0 and self.cascades == 1
+            items = ['setpoint', 'processvalue', 'enable', 'mode', 'power']
+            if icasc:
+                items.append('enable_cascade')
+            if lookup:
+                idx = 0 if i == 0 else 1 if not self.cascades == 1 else 0
+                lpdat = lookup['cascade' if icasc else 'loop'][idx].copy()
+            else:
+                lpdat = {}
+            lpdat.update(self.get_loop(i+1, 'cascade' if icasc else 'loop', items, exclusive=False))
+            loops.append(lpdat)
+        return {
+            'datetime':self.get_datetime(exclusive=False),
+            'loops':loops,
+            'status':self.get_status(exclusive=False)
+        }
 
     @exclusive
     def process_controller(self, update=True):
@@ -798,3 +975,9 @@ class WatlowF4(ControllerInterface):
     @exclusive
     def set_network_settings(self, value):
         raise NotImplementedError
+
+    def get_operation_modes(self):
+        if self.cond_event is None:
+            return ['constant', 'program']
+        else:
+            return ['standby', 'constant', 'program']

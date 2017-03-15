@@ -44,6 +44,7 @@ class ControllerInterface:
     __metaclass__ = ABCMeta
 
     loop_map = []
+    named_loop_map = {}
 
     def init_common(self, **kwargs):
         '''Setup properties of all controllers of the chamberconnectlibrary'''
@@ -99,16 +100,35 @@ class ControllerInterface:
         pass
 
     @exclusive
-    def get_loop(self, N, loop_type, param_list=None):
+    def get_loop(self, identifier, *args):
         '''
         Get all parameters for a loop from a given list.
+        There are four different ways to call this method; all methods return the same data:
 
-        Args:
-            N (int): The loop number (1-4).
-            loop_type (str): The loop type::
-                "cascade" -- A cascade control loop.
-                "loop" -- A standard control loop.
-            param_list (list(str)): The list of parameters to read defaults::
+        get_loop(str(identifier), *str(parameters))
+            Args:
+                identifier (str): The name of the loop.
+                parameters (list(string)): The list of parameters to get from the loop, (see below)
+
+        get_loop(str(identifier), [str(parameters)])
+            Args:
+                identifier (str): The name of the loop.
+                parameters (list(string)): The list of parameters to get from the loop, (see below)
+
+        get_loop(int(identifier), str(loop_type), *str(parameters))
+            Args:
+                identifier (str): The name of the loop.
+                loop_type (str): The type of loop to be accessed ("loop" or "cascade")
+                parameters (list(string)): The list of parameters to get from the loop, (see below)
+
+        get_loop(int(identifier), str(loop_type), [str(parameters)])
+            Args:
+                identifier (str): The name of the loop.
+                loop_type (str): The type of loop to be accessed ("loop" or "cascade")
+                parameters (list(string)): The list of parameters to get from the loop, (see below)
+
+        parameters:
+            The following is a list of available parameters as referenced by each call type:
                 "setpoint" -- The target temp/humi/altitude/etc of the control loop
                 "processvalue" -- The current conditions inside the chamber
                 "range" -- The settable range for the "setpoint"
@@ -158,14 +178,34 @@ class ControllerInterface:
                 'power':self.get_loop_power
             }
         }
+
+        if isinstance(identifier, basestring):
+            my_loop_map = self.loop_map[self.named_loop_map[identifier]]
+            loop_number = my_loop_map['num']
+            loop_type = my_loop_map['type']
+            param_list = args if len(args) > 0 else None
+        elif isinstance(identifier, int) and len(args) >= 1:
+            loop_number = identifier
+            loop_type = args[0]
+            param_list = args[1:] if len(args) > 1 else None
+        else:
+            raise ValueError(
+                'invalid argument format, call w/: '
+                'get_loop(int(identifier), str(loop_type), *args) or '
+                'get_loop(str(identifier), *args), *args are optional.'
+            )
+
         if param_list is None:
             param_list = loop_functions[loop_type].keys()
             excludes = ['setPoint', 'setValue', 'processValue']
             param_list = [x for x in param_list if x not in excludes]
+        elif len(param_list) >= 1 and \
+             (isinstance(param_list[0], list) or isinstance(param_list[0], tuple)):
+            param_list = param_list[0]
         ret = {}
         for key in param_list:
             try:
-                ret[key] = loop_functions[loop_type][key](N, exclusive=False)
+                ret[key] = loop_functions[loop_type][key](loop_number, exclusive=False)
             except KeyError:
                 ret[key] = None
             except NotImplementedError:
@@ -173,26 +213,27 @@ class ControllerInterface:
         return ret
 
     @exclusive
-    def set_loop(self, N, loop_type, param_list):
+    def set_loop(self, identifier, loop_type='loop', param_list=None, **kwargs):
         '''
         Set all parameters for a loop from a given list.
 
         Args:
-            N (int): The loop number (1-4).
-            loop_type (str): The loop type::
+            identifier (int or str): The loop number, or the name of the loop
+            loop_type (str): The loop type (disregarded when identifier is a str)::
                 "cascade" -- A cascade control loop.
-                "loop" -- A standard control loop.
-            param_list (dict(dict)): The possible keys and there values::
+                "loop" -- A standard control loop (default).
+            param_list (dict(dict)): The parameters to update as a dictionary::
+                see kwargs for possible keys/values
+            kwargs (dict): The parameters to update as key word arguments, param_list overrides::
                 "setpoint" -- The target temp/humi/altitude/etc of the control loop
                 "range" -- The settable range for the "setpoint"
                 "enable" -- turn the control loop on or off
                 "power" -- set the manual power of the control loop
+                "mode" -- set the control mode of the control loop
                 "deviation" -- (type="cascade" only) The allowable difference between air/prod.
                 "enable_cascade" -- (type="cascade" only) Enable or disable cascade type control
         Returns:
             None
-        Raises:
-            ModbusError
         '''
         loop_functions = {
             'cascade':{
@@ -216,13 +257,38 @@ class ControllerInterface:
                 'power':self.set_loop_power
             }
         }
+        if param_list is None:
+            param_list = kwargs
+        if isinstance(identifier, basestring):
+            my_loop_map = self.loop_map[self.named_loop_map[identifier]]
+            loop_number = my_loop_map['num']
+            loop_type = my_loop_map['type']
+        elif isinstance(identifier, int):
+            loop_number = identifier
+        else:
+            raise ValueError(
+                'invalid argument format, call w/: '
+                'set_loop(int(identifier), str(loop_type), **kwargs) or '
+                'get_loop(str(identifier), **kwargs)'
+            )
+
         #mode must be done first
         if 'mode' in param_list:
-            loop_functions[loop_type]['mode'](exclusive=False, N=N, value=param_list.pop('mode'))
+            loop_functions[loop_type]['mode'](
+                exclusive=False,
+                N=loop_number,
+                value=param_list.pop('mode')
+            )
         for key, val in param_list.items():
             try:
-                loop_functions[loop_type][key](exclusive=False, N=N, value=val)
+                loop_functions[loop_type][key](
+                    exclusive=False,
+                    N=loop_number,
+                    value=val
+                )
             except KeyError:
+                pass
+            except NotImplementedError:
                 pass
 
     @exclusive
@@ -341,7 +407,7 @@ class ControllerInterface:
 
         Args:
             N (int): The program number
-            value (dict): The program to write to the controller
+            value (dict): The program to write to the controller, None erases the given program
         '''
         if value is None:
             return self.prgm_delete(N, exclusive=False)
@@ -995,6 +1061,15 @@ class ControllerInterface:
             value ({"address":str, "mask":str, "gateway":str, "message":str, "host":str}): Settings
         '''
         pass
+
+    def get_operation_modes(self):
+        '''
+        Get the supported operation modes for this controller.
+
+        Returns:
+            ["standby","constant","program"] or ["constant","program"]
+        '''
+        return ['standby', 'constant', 'program']
 
     def self_test(self, loops, cascades):
         '''
