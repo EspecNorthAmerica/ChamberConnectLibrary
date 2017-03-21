@@ -592,7 +592,7 @@ class WatlowF4(ControllerInterface):
         program = self.get_prgm_cur(exclusive=False)
         nextstep = self.get_prgm_cstep(exclusive=False) + 1
         self.const_start(exclusive=False)
-        time.sleep(1)
+        time.sleep(2)
         self.prgm_start(program, nextstep, exclusive=False)
 
     @exclusive
@@ -618,7 +618,7 @@ class WatlowF4(ControllerInterface):
             jumps += 1 if step['type'] == 'jump' else 0
             if jumps > 1:
                 return 'ERROR:jump qty'
-            if step['type'] == 'jump' and step.get('jprofile', rpgmi) != rpgmi:
+            if step['type'] == 'jump' and step.get('jprofile', rpgmi) != 0:
                 return 'ERROR:jump prfl'
         rtime = list(self.client.read_holding(4119, 3)) #[hours,minutes,seconds]
         jump_cnt = self.client.read_holding(4126)[0]
