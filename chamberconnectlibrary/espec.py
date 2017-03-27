@@ -127,7 +127,7 @@ class Espec(ControllerInterface):
         self.client.write_set(**value)
 
     @exclusive
-    def set_loop(self, N, loop_type, param_list=None, **kwargs):
+    def set_loop(self, identifier, loop_type='loop', param_list=None, **kwargs):
         #cannot use the default controllerInterface version.
         lpfuncs = {
             'cascade':{
@@ -149,6 +149,18 @@ class Espec(ControllerInterface):
         }
         if param_list is None:
             param_list = kwargs
+        if isinstance(identifier, basestring):
+            my_loop_map = self.loop_map[self.named_loop_map[identifier]]
+            loop_number = my_loop_map['num']
+            loop_type = my_loop_map['type']
+        elif isinstance(identifier, (int, long)):
+            loop_number = identifier
+        else:
+            raise ValueError(
+                'invalid argument format, call w/: '
+                'set_loop(int(identifier), str(loop_type), **kwargs) or '
+                'get_loop(str(identifier), **kwargs)'
+            )
         spt1 = 'setpoint' in param_list
         spt2 = 'setPoint' in param_list
         spt3 = 'setValue' in param_list
@@ -173,9 +185,9 @@ class Espec(ControllerInterface):
             params = {'setpoint':spv, 'enable':enable}
             if range in param_list:
                 params.update(param_list.pop('range'))
-            if self.lpd[N] == self.temp:
+            if self.lpd[loop_number] == self.temp:
                 self.client.write_temp(**params)
-            elif self.lpd[N] == self.humi:
+            elif self.lpd[loop_number] == self.humi:
                 self.client.write_humi(**params)
             else:
                 raise ValueError(self.lp_exmsg)
@@ -188,7 +200,7 @@ class Espec(ControllerInterface):
             self.client.write_temp_ptc(**params)
         for key, val in param_list.items():
             params = {'value':val}
-            params.update({'exclusive':False, 'N':N})
+            params.update({'exclusive':False, 'N':loop_number})
             try:
                 lpfuncs[loop_type][key](**params)
             except KeyError:

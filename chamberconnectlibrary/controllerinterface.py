@@ -263,7 +263,7 @@ class ControllerInterface:
             my_loop_map = self.loop_map[self.named_loop_map[identifier]]
             loop_number = my_loop_map['num']
             loop_type = my_loop_map['type']
-        elif isinstance(identifier, int):
+        elif isinstance(identifier, (int, long)):
             loop_number = identifier
         else:
             raise ValueError(

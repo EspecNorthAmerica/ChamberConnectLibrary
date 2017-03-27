@@ -366,12 +366,9 @@ class WatlowF4(ControllerInterface):
         lrange = self.get_loop_range(N, exclusive=False)
         profile = self.client.read_holding(200)[0] in [2, 3]
         cmd = self.get_loop_sp(N, exclusive=False)['constant'] >= lrange['min']
-        if self.combined_event[N-1] != 0:
+        if self.combined_event[N-1] > 0:
             eve = self.get_event(self.combined_event[N-1], exclusive=False)['constant']
-            if self.cond_event:
-                running = self.get_event(self.cond_event, exclusive=False)
-            else:
-                running = False
+            running = self.get_event(self.cond_event, exclusive=False) if self.cond_event else True
             return {'constant': eve, 'current': eve if running else cmd}
         else:
             return {'constant': cmd, 'current': True if profile else cmd}
