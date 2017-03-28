@@ -321,7 +321,7 @@ class WatlowF4(ControllerInterface):
         raise NotImplementedError
 
     @exclusive
-    def get_loop_sp(self, N):
+    def get_loop_sp(self, N, range_restrict=True):
         self.__range_check(N, 1, self.loops + self.cascades)
         minsp = self.client.read_holding_signed([602, 612][N-1])[0] * self.__get_scalar(N)
         const = self.client.read_holding_signed([300, 319][N-1])[0] * self.__get_scalar(N)
@@ -329,10 +329,13 @@ class WatlowF4(ControllerInterface):
             cur = self.client.read_holding_signed([4122, 4123][N-1])[0] * self.__get_scalar(N)
         else:
             cur = const
-        return {
-            'constant': const if const > minsp else minsp,
-            'current': cur if cur > minsp else minsp
-        }
+        if range_restrict:
+            return {
+                'constant': const if const > minsp else minsp,
+                'current': cur if cur > minsp else minsp
+            }
+        else:
+            return {'constant': const, 'current': cur}
 
     @exclusive
     def set_loop_sp(self, N, value):
@@ -365,7 +368,9 @@ class WatlowF4(ControllerInterface):
         self.__range_check(N, 1, self.loops + self.cascades)
         lrange = self.get_loop_range(N, exclusive=False)
         profile = self.client.read_holding(200)[0] in [2, 3]
-        cmd = self.get_loop_sp(N, exclusive=False)['constant'] >= lrange['min']
+        cmd = self.get_loop_sp(N, False, exclusive=False)['current'] >= lrange['min']
+        print 'loop_sp=%r, range=%r' % (self.get_loop_sp(N, False, exclusive=False), lrange)
+        print 'N=%r, combined_event=%r, cmd=%r' % (N, self.combined_event, cmd)
         if self.combined_event[N-1] > 0:
             eve = self.get_event(self.combined_event[N-1], exclusive=False)['constant']
             running = self.get_event(self.cond_event, exclusive=False) if self.cond_event else True
