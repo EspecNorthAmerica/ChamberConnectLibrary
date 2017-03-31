@@ -527,6 +527,19 @@ class Espec(ControllerInterface):
         self.client.write_prgm_advance()
 
     @exclusive
+    def get_prgm_counter(self):
+        prgm_set = self.client.read_prgm_set()
+        prgm_data = self.client.read_prgm_data(prgm_set['number'])
+        prgm_mon = self.client.read_prgm_mon()
+        ret = [
+            {'name':'A', 'remaining': prgm_mon['counter_a']},
+            {'name':'B', 'remaining': prgm_mon['counter_b']},
+        ]
+        ret[0].update(prgm_data['counter_a'])
+        ret[1].update(prgm_data['counter_b'])
+        return ret
+
+    @exclusive
     def get_prgm_cur(self):
         return self.cached(self.client.read_prgm_set)['number']
 

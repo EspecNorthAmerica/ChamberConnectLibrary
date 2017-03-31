@@ -9,6 +9,7 @@ from abc import ABCMeta, abstractmethod
 from threading import RLock
 import traceback
 import time
+import inspect
 
 class ControllerInterfaceError(Exception):
     '''Exception that is thrown when a there is a problem communicating with a controller'''
@@ -330,7 +331,8 @@ class ControllerInterface:
                 'time_remaining':self.get_prgm_time(pgm, exclusive=False),
                 'step_time_remaining':self.get_prgm_cstime(exclusive=False),
                 'name':self.get_prgm_name(pnum, exclusive=False),
-                'steps':self.get_prgm_steps(pnum, exclusive=False)
+                'steps':self.get_prgm_steps(pnum, exclusive=False),
+                'cycles':self.get_prgm_counter(exclusive=False)
             }
         else:
             ret['program'] = None
@@ -885,6 +887,16 @@ class ControllerInterface:
     def prgm_next_step(self):
         '''
         Skip to the next step of the running program.
+        '''
+        pass
+
+    @abstractmethod
+    def get_prgm_counter(self):
+        '''
+        Get the status of the jump step/counter
+
+        Returns:
+            [{'name':str, 'start':int, 'end':int, 'cycles':int, 'remaining':int}]
         '''
         pass
 

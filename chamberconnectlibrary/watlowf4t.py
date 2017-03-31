@@ -617,6 +617,10 @@ class WatlowF4T(ControllerInterface):
         self.prgm_start(program, nextstep, exclusive=False)
 
     @exclusive
+    def get_prgm_counter(self):
+        return []
+
+    @exclusive
     def get_prgm_cur(self):
         return self.client.read_holding(16588, 1)[0]
 

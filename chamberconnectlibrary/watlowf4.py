@@ -590,6 +590,24 @@ class WatlowF4(ControllerInterface):
         self.client.write_holding(1209, 1)
 
     @exclusive
+    def get_prgm_counter(self):
+        status = self.client.read_holding(4126, 3) #count, profile, step
+        if status[1] > 0:
+            return []
+        else:
+            self.client.write_holding(4000, status[1:])
+            prof = self.client.read_holding(4050, 3)
+            return [
+                {
+                    'name':str(status[0]),
+                    'start':prof[1],
+                    'end':status[2],
+                    'cycles':int,
+                    'remaining':prof[2]-status[0]
+                }
+            ]
+
+    @exclusive
     def prgm_next_step(self):
         program = self.get_prgm_cur(exclusive=False)
         nextstep = self.get_prgm_cstep(exclusive=False) + 1
