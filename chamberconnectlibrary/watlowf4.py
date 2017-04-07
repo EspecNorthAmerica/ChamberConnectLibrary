@@ -149,6 +149,7 @@ class WatlowF4(ControllerInterface):
     def __edit_prgm_step_autostart(self, step):
         '''setup an autostart step'''
         daylookup = ['daily', 'sun', 'mon', 'tue', 'wed', 'thur', 'fri', 'sat']
+        self.client.write_holding(4003, 0)
         if step['start_type'] == 'day':
             self.client.write_holding(4004, 1)
             self.client.write_holding(4008, daylookup.index(step['start_time']['day']))
@@ -591,21 +592,21 @@ class WatlowF4(ControllerInterface):
 
     @exclusive
     def get_prgm_counter(self):
-        status = self.client.read_holding(4126, 3) #count, profile, step
-        if status[1] > 0:
-            return []
-        else:
-            self.client.write_holding(4000, status[1:])
+        try:
+            status = self.client.read_holding(4126, 3) #count, profile, step
+            self.client.write_holding(4000, (status[1:]))
             prof = self.client.read_holding(4050, 3)
             return [
                 {
                     'name':str(status[0]),
                     'start':prof[1],
                     'end':status[2],
-                    'cycles':int,
+                    'cycles':prof[2],
                     'remaining':prof[2]-status[0]
                 }
             ]
+        except Exception:
+            return []
 
     @exclusive
     def prgm_next_step(self):
@@ -720,7 +721,7 @@ class WatlowF4(ControllerInterface):
         '''
         dins = [self.client.read_holding(1060+i*2)[0] == 10 for i in range(4)]
         analogs = self.__get_analog_input_setup()
-        return {
+        ret = {
             'name':'PROFILE',
             'steps_available': self.client.read_holding(1219)[0],
             'steps':[{
@@ -761,6 +762,9 @@ class WatlowF4(ControllerInterface):
                 'action':'hold'
             }]
         }
+        if self.loops + self.cascades == 1:
+            ret['steps'][0]['loops'][0]['rate'] = 0.0
+        return ret
 
 
     @exclusive
