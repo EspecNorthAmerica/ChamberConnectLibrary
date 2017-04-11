@@ -640,9 +640,9 @@ class Espec(ControllerInterface):
     def sample(self, lookup=None):
         ltype = 'cascade' if self.cascades > 0 else 'loop'
         if ltype == 'loop':
-            items = ['setpoint', 'processvalue', 'enable']
+            items = ['setpoint', 'processvalue', 'enable', 'mode', 'power']
         else:
-            items = ['setpoint', 'processvalue', 'enable', 'enable_cascade']
+            items = ['setpoint', 'processvalue', 'enable', 'enable_cascade', 'mode', 'power']
         loops = [self.get_loop(1, ltype, items, exclusive=False)]
         if lookup:
             loops[0].update(lookup[ltype][0])
