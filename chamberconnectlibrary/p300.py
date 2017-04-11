@@ -457,7 +457,7 @@ class P300(object):
         Get the constant settings for the refigeration system
 
         returns:
-            {"mode":string,"setpoint":int}
+            {"mode":string,"setpoint":float}
         '''
         rsp = self.ctlr.interact('CONSTANT SET?,REF')
         try:

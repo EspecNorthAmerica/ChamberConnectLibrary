@@ -57,6 +57,18 @@ class Espec(ControllerInterface):
         self.profiles = True
         self.events = 12
         self.total_programs = 40 if self.ctlr_type == 'P300' else 30
+        self.__update_loop_map()
+
+
+    def __update_loop_map(self):
+        '''
+        update the loop map.
+        '''
+        self.named_loop_map = {'Temperature':0, 'temperature':0, 'Temp':0, 'temp':0}
+        self.loop_map = [{'type':'cascade', 'num':j+1} for j in range(self.cascades)]
+        self.loop_map += [{'type':'loop', 'num':j+1} for j in range(self.loops)]
+        if len(self.loop_map) > 1:
+            self.named_loop_map = {'Humidity':1, 'humidity':1, 'Hum':1, 'hum':1}
 
     def connect(self):
         '''
@@ -108,65 +120,15 @@ class Espec(ControllerInterface):
 
     @exclusive
     def get_refrig(self):
-        '''
-        Get the constant settings for the refigeration system
-
-        returns:
-            {"mode":string,"setpoint":int}
-        '''
         return self.client.read_constant_ref()
 
     @exclusive
     def set_refrig(self, value):
-        '''
-        Set the constant setpoints refrig mode
-
-        params:
-            mode: string,"off" or "manual" or "auto"
-            setpoint: int,20 or 50 or 100
-        '''
         self.client.write_set(**value)
 
     @exclusive
-    def get_loop(self, N, loop_type, param_list=None):
-        '''Get a loops parameters, takes a list of values to get'''
-        lpfuncs = {
-            'cascade':{
-                'setpoint':self.get_cascade_sp,
-                'setPoint':self.get_cascade_sp,
-                'setValue':self.get_cascade_sp,
-                'processvalue':self.get_cascade_pv,
-                'processValue':self.get_cascade_pv,
-                'range':self.get_cascade_range,
-                'enable':self.get_cascade_en,
-                'units':self.get_cascade_units,
-                'mode':self.get_cascade_mode,
-                'deviation':self.get_cascade_deviation,
-                'enable_cascade':self.get_cascade_ctl
-            },
-            'loop':{
-                'setpoint':self.get_loop_sp,
-                'setPoint':self.get_loop_sp,
-                'setValue':self.get_loop_sp,
-                'processvalue':self.get_loop_pv,
-                'processValue':self.get_loop_pv,
-                'range':self.get_loop_range,
-                'enable':self.get_loop_en,
-                'units':self.get_loop_units,
-                'mode':self.get_loop_mode
-            }
-        }
-        if param_list is None:
-            exclusions = ['setPoint', 'setValue', 'processValue']
-            param_list = lpfuncs[loop_type].keys()
-            param_list = [x for x in param_list if x not in exclusions]
-        fncs = lpfuncs[loop_type]
-        return {key:fncs[key](N, exclusive=False) for key in param_list if key in fncs}
-
-    @exclusive
-    def set_loop(self, N, loop_type, param_list):
-        '''apply loop parameters, requires a dictionary in the format: {function:namedAgrs}
-        see lpfuncs for possible functions'''
+    def set_loop(self, identifier, loop_type='loop', param_list=None, **kwargs):
+        #cannot use the default controllerInterface version.
         lpfuncs = {
             'cascade':{
                 'setpoint':self.set_cascade_sp,
@@ -185,6 +147,20 @@ class Espec(ControllerInterface):
                 'mode':self.set_loop_mode
             }
         }
+        if param_list is None:
+            param_list = kwargs
+        if isinstance(identifier, basestring):
+            my_loop_map = self.loop_map[self.named_loop_map[identifier]]
+            loop_number = my_loop_map['num']
+            loop_type = my_loop_map['type']
+        elif isinstance(identifier, (int, long)):
+            loop_number = identifier
+        else:
+            raise ValueError(
+                'invalid argument format, call w/: '
+                'set_loop(int(identifier), str(loop_type), **kwargs) or '
+                'get_loop(str(identifier), **kwargs)'
+            )
         spt1 = 'setpoint' in param_list
         spt2 = 'setPoint' in param_list
         spt3 = 'setValue' in param_list
@@ -209,9 +185,9 @@ class Espec(ControllerInterface):
             params = {'setpoint':spv, 'enable':enable}
             if range in param_list:
                 params.update(param_list.pop('range'))
-            if self.lpd[N] == self.temp:
+            if self.lpd[loop_number] == self.temp:
                 self.client.write_temp(**params)
-            elif self.lpd[N] == self.humi:
+            elif self.lpd[loop_number] == self.humi:
                 self.client.write_humi(**params)
             else:
                 raise ValueError(self.lp_exmsg)
@@ -224,7 +200,7 @@ class Espec(ControllerInterface):
             self.client.write_temp_ptc(**params)
         for key, val in param_list.items():
             params = {'value':val}
-            params.update({'exclusive':False, 'N':N})
+            params.update({'exclusive':False, 'N':loop_number})
             try:
                 lpfuncs[loop_type][key](**params)
             except KeyError:
@@ -340,12 +316,12 @@ class Espec(ControllerInterface):
     def get_loop_mode(self, N):
         if N > 2:
             raise ValueError(self.lp_exmsg)
-        if self.lpd[N] == self.temp:
-            cur = 'On'
-            con = 'On'
-        elif self.lpd[N] == self.humi:
+        if self.lpd[N] == self.humi:
             cur = 'On' if self.cached(self.client.read_humi)['enable'] else 'Off'
             con = 'On' if self.cached(self.client.read_constant_humi)['enable'] else 'Off'
+        else:
+            cur = 'On'
+            con = 'On'
         if self.client.read_mode() in ['OFF', 'STANDBY']:
             cur = 'Off'
         return {"current": cur, "constant": con}
@@ -358,11 +334,12 @@ class Espec(ControllerInterface):
         else:
             raise ValueError(self.lp_exmsg)
 
+    @exclusive
     def get_loop_power(self, N):
         if self.lpd[N] == self.temp:
-            val = self.cached(self.client.read_htr['dry'])
+            val = self.cached(self.client.read_htr)['dry']
         elif self.lpd[N] == self.humi:
-            val = self.cached(self.client.read_htr['wet'])
+            val = self.cached(self.client.read_htr)['wet']
         else:
             raise ValueError(self.lp_exmsg)
         return {'current':val, 'constant':val}
@@ -475,11 +452,13 @@ class Espec(ControllerInterface):
             raise ValueError('value must contain "positive" and "negative" keys')
         self.client.write_temp_ptc(self.get_cascade_ctl(self.temp, exclusive=False), **value)
 
+    @exclusive
     def get_cascade_power(self, N):
         if self.lpd[N] != self.temp:
             raise ValueError(self.cs_exmsg)
         return self.get_loop_power(self.temp, exclusive=False)
 
+    @exclusive
     def set_cascade_power(self, N, value):
         raise NotImplementedError
 
@@ -503,11 +482,17 @@ class Espec(ControllerInterface):
     def get_status(self):
         if self.cached(self.client.read_mon)['alarms'] > 0:
             return 'Alarm'
-        return {'OFF':'Off', 'STANDBY':'Standby', 'CONSTANT':'Constant',
-                'RUN':'Program Running', 'RUN PAUSE':'Program Paused',
-                'RUN END HOLD':'Program End Hold', 'RMT RUN':'Remote Program Running',
-                'RMT RUN PAUSE':'Remote Program Paused',
-                'RMT RUN END HOLD':'Remote Program End Hold'}[self.client.read_mode(True)]
+        return {
+            'OFF':'Off',
+            'STANDBY':'Standby',
+            'CONSTANT':'Constant',
+            'RUN':'Program Running',
+            'RUN PAUSE':'Program Paused',
+            'RUN END HOLD':'Program End Hold',
+            'RMT RUN':'Remote Program Running',
+            'RMT RUN PAUSE':'Remote Program Paused',
+            'RMT RUN END HOLD':'Remote Program End Hold'
+        }[self.client.read_mode(True)]
 
     @exclusive
     def get_alarm_status(self):
@@ -540,6 +525,19 @@ class Espec(ControllerInterface):
     @exclusive
     def prgm_next_step(self):
         self.client.write_prgm_advance()
+
+    @exclusive
+    def get_prgm_counter(self):
+        prgm_set = self.client.read_prgm_set()
+        prgm_data = self.client.read_prgm_data(prgm_set['number'])
+        prgm_mon = self.client.read_prgm_mon()
+        ret = [
+            {'name':'A', 'remaining': prgm_mon['counter_a']},
+            {'name':'B', 'remaining': prgm_mon['counter_b']},
+        ]
+        ret[0].update(prgm_data['counter_a'])
+        ret[1].update(prgm_data['counter_b'])
+        return ret
 
     @exclusive
     def get_prgm_cur(self):
@@ -680,6 +678,7 @@ class Espec(ControllerInterface):
             msg += 'W/Humidity'
         except EspecError:
             pass
+        self.__update_loop_map()
         return msg
 
     @exclusive

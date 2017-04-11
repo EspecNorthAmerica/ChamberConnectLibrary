@@ -11,6 +11,7 @@ import sys
 import traceback
 from chamberconnectlibrary.espec import Espec
 from chamberconnectlibrary.watlowf4t import WatlowF4T
+from chamberconnectlibrary.watlowf4 import WatlowF4
 
 def main(**kwargs):
     '''Try each command given a set of parameters'''
@@ -19,6 +20,8 @@ def main(**kwargs):
         ctlr = Espec(**kwargs)
     elif ctlr_type == 'EspecSCP220':
         ctlr = Espec(ctlr_type='SCP220', **kwargs)
+    elif ctlr_type == 'WatlowF4':
+        ctlr = WatlowF4(**kwargs)
     else:
         ctlr = WatlowF4T(**kwargs)
     ctlr.process_controller()
@@ -38,7 +41,7 @@ if __name__ == '__main__':
 
         print '\nThe test could not be run try:'
         print '\nchamberconnectlibrary_test controller interface ipORserialport [baudrate]'
-        print '\tcontroller: "Espec"/"EspecP300" or "EspecSCP220" or "WatlowF4T"'
+        print '\tcontroller: "Espec"/"EspecP300", "EspecSCP220", "WatlowF4", or "WatlowF4T"(default)'
         print '\tinterface: "Serial": Serial connection when "controller" is "Espec".'
         print '\t           "RTU":Serial connection when "controller" is "WatlowF4T"'
         print '\t           "TCP":TCP connection'

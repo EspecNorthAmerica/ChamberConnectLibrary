@@ -72,8 +72,9 @@ class WatlowF4T(ControllerInterface):
         #these are detectable from the part number (call process_partno())
         self.alarms = kwargs.get('alarms', 6)
         self.profiles = kwargs.get('profiles', False)
+        self.named_loop_map_list = kwargs.get('loop_names', [])
 
-        self.update_profile_loop_map()
+        self.__update_loop_map()
         self.watlow_val_dict = {
             1:'2', 2:'3', 3:'50Hz', 4:'60Hz', 9:'ambientError',
             10:'auto', 11:'b', 13: 'both', 15:u'C', 17:'closeOnAlarm',
@@ -134,12 +135,14 @@ class WatlowF4T(ControllerInterface):
             self.iwatlow_val_dict = {v: k for k, v in self.watlow_val_dict.items()}
             return self.iwatlow_val_dict[key]
 
-    def update_profile_loop_map(self):
+    def __update_loop_map(self):
         '''
         update the loop map.
         '''
-        self.profile_loop_map = [{'type':'cascade', 'num':j+1} for j in range(self.cascades)]
-        self.profile_loop_map += [{'type':'loop', 'num':j+1} for j in range(self.loops)]
+        self.loop_map = [{'type':'cascade', 'num':j+1} for j in range(self.cascades)]
+        self.loop_map += [{'type':'loop', 'num':j+1} for j in range(self.loops)]
+        if len(self.named_loop_map_list) == len(self.loop_map):
+            self.named_loop_map = {name:i for i, name in enumerate(self.named_loop_map_list)}
 
     def __range_check(self, val, minimum, maximum):
         '''
@@ -198,12 +201,6 @@ class WatlowF4T(ControllerInterface):
 
     @exclusive
     def get_datetime(self):
-        '''
-        Get the datetime from the controller.
-
-        Returns:
-            datetime. The current time as a datetime.datetime object
-        '''
         dtl = self.client.read_holding(14664, 12)
         return datetime.datetime(
             hour=dtl[0],
@@ -216,12 +213,6 @@ class WatlowF4T(ControllerInterface):
 
     @exclusive
     def set_datetime(self, value):
-        '''
-        Set the datetime of the controller.
-
-        Args:
-            value (datetime.datetime): The new datetime for the controller.
-        '''
         self.client.write_holding(14664, [value.hour])
         self.client.write_holding(14666, [value.minute])
         self.client.write_holding(14668, [value.second])
@@ -236,169 +227,19 @@ class WatlowF4T(ControllerInterface):
         raise NotImplementedError
 
     @exclusive
-    def get_loop(self, N, loop_type, param_list=None):
-        '''
-        Get all parameters for a loop from a given list.
-
-        Args:
-            N (int): The loop number (1-4).
-            loop_type (str): The loop type::
-                "cascade" -- A cascade control loop.
-                "loop" -- A standard control loop.
-            param_list (list(str)): The list of parameters to read defaults::
-                "setpoint" -- The target temp/humi/altitude/etc of the control loop
-                "processvalue" -- The current conditions inside the chamber
-                "range" -- The settable range for the "setpoint"
-                "enable" -- Weather the loop is on or off
-                "units" -- The units of the "setpoint" or "processvalue" parameters
-                "mode" -- The current control status of the loop
-                "power" -- The current output power of the loop
-                "deviation" -- (type="cascade" only) The allowable difference between air/prod.
-                "enable_cascade" -- (type="cascade" only) Enable or disable cascade type control
-        Returns:
-            dict. The dictionary contains a key for each item in the list argument::
-                "setpoint" -- {"constant":float,"current":float}
-                "processvalue" -- {"air":float,"product":float} ("product" only w/ type="cascade")
-                "range" -- {"min":float,"max":float}
-                "enable" -- {"constant":bool,"current":bool}
-                "units" -- str
-                "mode" -- str('Off' or 'Auto' or 'Manual')
-                "deviation" -- {"positive": float, "negative": float}
-                "enable_cascade" -- {"constant":bool,"current":bool}
-                "power" -- {"constant": float, "current": float}
-        '''
-        loop_functions = {
-            'cascade':{
-                'setpoint':self.get_cascade_sp,
-                'setPoint':self.get_cascade_sp,
-                'setValue':self.get_cascade_sp,
-                'processvalue':self.get_cascade_pv,
-                'processValue':self.get_cascade_pv,
-                'range':self.get_cascade_range,
-                'enable':self.get_cascade_en,
-                'units':self.get_cascade_units,
-                'mode':self.get_cascade_mode,
-                'deviation':self.get_cascade_deviation,
-                'enable_cascade':self.get_cascade_ctl,
-                'power': self.get_cascade_power
-            },
-            'loop':{
-                'setpoint':self.get_loop_sp,
-                'setPoint':self.get_loop_sp,
-                'setValue':self.get_loop_sp,
-                'processvalue':self.get_loop_pv,
-                'processValue':self.get_loop_pv,
-                'range':self.get_loop_range,
-                'enable':self.get_loop_en,
-                'units':self.get_loop_units,
-                'mode':self.get_loop_mode,
-                'power':self.get_loop_power
-            }
-        }
-        if param_list is None:
-            param_list = loop_functions[loop_type].keys()
-            param_list = [x for x in param_list if x not in ['setPoint', 'setValue', 'processValue']]
-        fncs = loop_functions[loop_type]
-        return {key:fncs[key](N, exclusive=False) for key in param_list if key in fncs}
-
-    @exclusive
-    def set_loop(self, N, loop_type, param_list):
-        '''
-        Set all parameters for a loop from a given list.
-
-        Args:
-            N (int): The loop number (1-4).
-            loop_type (str): The loop type::
-                "cascade" -- A cascade control loop.
-                "loop" -- A standard control loop.
-            param_list (dict(dict)): The possible keys and there values::
-                "setpoint" -- The target temp/humi/altitude/etc of the control loop
-                "range" -- The settable range for the "setpoint"
-                "enable" -- turn the control loop on or off
-                "power" -- set the manual power of the control loop
-                "deviation" -- (type="cascade" only) The allowable difference between air/prod.
-                "enable_cascade" -- (type="cascade" only) Enable or disable cascade type control
-        Returns:
-            None
-        Raises:
-            ModbusError
-        '''
-        loop_functions = {
-            'cascade':{
-                'setpoint':self.set_cascade_sp,
-                'setPoint':self.set_cascade_sp,
-                'setValue':self.set_cascade_sp,
-                'range':self.set_cascade_range,
-                'enable':self.set_cascade_en,
-                'deviation':self.set_cascade_deviation,
-                'enable_cascade':self.set_cascade_ctl,
-                'mode':self.set_cascade_mode,
-                'power':self.set_cascade_power
-            },
-            'loop':{
-                'setpoint':self.set_loop_sp,
-                'setPoint':self.set_loop_sp,
-                'setValue':self.set_loop_sp,
-                'range':self.set_loop_range,
-                'enable':self.set_loop_en,
-                'mode':self.set_loop_mode,
-                'power':self.set_loop_power
-            }
-        }
-        #mode must be done first
-        if 'mode' in param_list:
-            loop_functions[loop_type]['mode'](exclusive=False, N=N, value=param_list.pop('mode'))
-        for key, val in param_list.items():
-            try:
-                loop_functions[loop_type][key](exclusive=False, N=N, value=val)
-            except KeyError:
-                pass
-
-    @exclusive
     def get_loop_sp(self, N):
-        '''
-        Get the setpoint of a control loop.
-
-        Args:
-            N (int): The number for the control loop
-        Returns:
-            {"constant":float, "current":float}
-        Raises:
-            ValueError
-        '''
         self.__range_check(N, 1, self.loops)
         return {'constant': self.client.read_holding_float(2782+(N-1)*160)[0],
                 'current': self.client.read_holding_float(2810+(N-1)*160)[0]}
 
     @exclusive
     def set_loop_sp(self, N, value):
-        '''
-        Set the setpoint of the control loop.
-
-        Args:
-            N (int): The number for the control loop
-            value (float): The new setpoint
-        Returns:
-            None
-        Raises:
-            ValueError
-        '''
         value = value['constant'] if isinstance(value, dict) else value
         self.__range_check(N, 1, self.loops)
         self.client.write_holding_float(2782+(N-1)*160, value)
 
     @exclusive
     def get_loop_pv(self, N):
-        '''
-        Get the process value of a loop.
-
-        Args:
-            N (int): The number for the control loop
-        Returns:
-            {"air":float}
-        Raises:
-            ValueError
-        '''
         reg = 2820+(N-1)*160
         self.__range_check(N, 1, self.loops)
         return {'air': self.client.read_holding_float(reg)[0]}
@@ -443,7 +284,7 @@ class WatlowF4T(ControllerInterface):
     def get_loop_units(self, N):
         self.__range_check(N, 1, self.loops)
         try:
-            act_num = self.profile_loop_map.index({'type':'loop', 'num':N}) + 1
+            act_num = self.loop_map.index({'type':'loop', 'num':N}) + 1
             return self.__profile_units(act_num, exclusive=False)
         except ControllerInterfaceError:
             return "ERROR"
@@ -467,7 +308,6 @@ class WatlowF4T(ControllerInterface):
 
     @exclusive
     def get_loop_mode(self, N):
-        '''Returns loop state'''
         self.__range_check(N, 1, self.loops)
         tdict = {62:'Off', 10:'Auto', 54:'Manual'}
         lpen = self.get_loop_en(N, exclusive=False)
@@ -522,7 +362,6 @@ class WatlowF4T(ControllerInterface):
 
     @exclusive
     def get_cascade_pv(self, N):
-        '''Read the process values of the loop, product=outer, air=inner'''
         self.__range_check(N, 1, self.cascades)
         return {'product': self.client.read_holding_float(4180+(N-1)*200)[0],
                 'air': self.client.read_holding_float(4182+(N-1)*200)[0]}
@@ -566,7 +405,7 @@ class WatlowF4T(ControllerInterface):
     def get_cascade_units(self, N):
         self.__range_check(N, 1, self.cascades)
         try:
-            act_num = self.profile_loop_map.index({'type':'cascade', 'num':N}) + 1
+            act_num = self.loop_map.index({'type':'cascade', 'num':N}) + 1
             return self.__profile_units(act_num, exclusive=False)
         except ControllerInterfaceError:
             return "ERROR"
@@ -590,7 +429,6 @@ class WatlowF4T(ControllerInterface):
 
     @exclusive
     def get_cascade_mode(self, N):
-        '''Returns loop state'''
         self.__range_check(N, 1, self.cascades)
         tdict = {62:'Off', 10:'Auto', 54:'Manual'}
         lpen = self.get_cascade_en(N, exclusive=False)
@@ -687,10 +525,6 @@ class WatlowF4T(ControllerInterface):
 
     @exclusive
     def get_status(self):
-        '''
-        Return controller state:
-        "Alarm","Standby","Constant","Program (Run/Paused/Calander Start)"
-        '''
         prgmstate = self.client.read_holding(16568, 1)[0]
         if prgmstate == 149:
             return "Program Running"
@@ -711,7 +545,6 @@ class WatlowF4T(ControllerInterface):
 
     @exclusive
     def get_alarm_status(self):
-        '''Returns a list of active alarms (1-14), alarms 20+ are limits'''
         aalms = []
         ialms = []
         for i in range(0, self.alarms):
@@ -731,7 +564,6 @@ class WatlowF4T(ControllerInterface):
 
     @exclusive
     def const_start(self):
-        '''Run constant mode, regardless of what the controller was doing.'''
         status = self.get_status(exclusive=False)
         if "Program" in status:
             self.client.write_holding(16566, self.inv_watlow_val_dict('terminate'))
@@ -748,7 +580,6 @@ class WatlowF4T(ControllerInterface):
 
     @exclusive
     def stop(self):
-        '''Stop all operation.'''
         #status = self.get_status(exclusive=False)
         if self.__read_io(self.run_module, self.run_io, exclusive=False):
             if self.cond_event_toggle:
@@ -758,7 +589,6 @@ class WatlowF4T(ControllerInterface):
 
     @exclusive
     def prgm_start(self, N, step):
-        '''Start profile N at step'''
         self.__range_check(N, 1, 40)
         if step > self.get_prgm_steps(N, exclusive=False):
             raise ControllerInterfaceError("Program #%d does not have step #%d." % (N, step))
@@ -771,12 +601,10 @@ class WatlowF4T(ControllerInterface):
 
     @exclusive
     def prgm_pause(self):
-        '''pause the current profile'''
         self.client.write_holding(16566, self.inv_watlow_val_dict('pause'))
 
     @exclusive
     def prgm_resume(self):
-        '''resume a paused profile'''
         #none(61),pause(146),terminate(148)
         self.client.write_holding(16564, self.inv_watlow_val_dict('resume'))
 
@@ -789,30 +617,29 @@ class WatlowF4T(ControllerInterface):
         self.prgm_start(program, nextstep, exclusive=False)
 
     @exclusive
+    def get_prgm_counter(self):
+        return []
+
+    @exclusive
     def get_prgm_cur(self):
-        '''get the current profile number'''
         return self.client.read_holding(16588, 1)[0]
 
     @exclusive
     def get_prgm_cstep(self):
-        '''get the current step of the current profile'''
         return self.client.read_holding(16590, 1)[0]
 
     @exclusive
     def get_prgm_cstime(self):
-        '''current step time remaining'''
         data = self.client.read_holding(16622, 5)
         return "%d:%02d:%02d" % (data[4], data[2], data[0])
 
     @exclusive
     def get_prgm_time(self, pgm=None):
-        '''time until program end'''
         data = self.client.read_holding(16570, 3)
         return "%d:%02d:00" % (data[2], data[0])
 
     @exclusive
     def get_prgm_name(self, N):
-        '''Get the name of program N'''
         reg = 16886+(N-1)*40
         self.__range_check(N, 1, 40)
         if not self.profiles:
@@ -821,7 +648,6 @@ class WatlowF4T(ControllerInterface):
 
     @exclusive
     def get_prgm_steps(self, N):
-        '''Get the number of steps in a program'''
         self.client.write_holding(18888, N)
         return self.client.read_holding(18920, 1)[0]
 
@@ -830,7 +656,6 @@ class WatlowF4T(ControllerInterface):
 
     @exclusive
     def get_prgms(self):
-        '''Get a list of all programs on the controller [number,name,steps]'''
         return [{'number':i, 'name':self.get_prgm_name(i, exclusive=False)} for i in range(1, 41)]
 
     @exclusive
@@ -843,7 +668,7 @@ class WatlowF4T(ControllerInterface):
             else:
                 return self.watlow_val_dict[vals[24+(event-4)*2]]
         if N == 0:
-            return self.get_prgm_empty()
+            return self.__get_prgm_empty()
         self.__range_check(N, 1, 40)
         if not self.profiles:
             raise ControllerInterfaceError("This watlow does not impliment profiles")
@@ -860,7 +685,7 @@ class WatlowF4T(ControllerInterface):
         prgm_dict['hasenables'] = sum(self.loop_event + self.cascade_event) > 0
         ranges, gsd, steps = [], [], []
         for i in range(self.loops + self.cascades):
-            tmap = self.profile_loop_map[i]
+            tmap = self.loop_map[i]
             gsd.append({'value':self.client.read_holding_float(19086+i*2)[0]})
             if tmap['type'] == 'loop':
                 ranges.append(self.get_loop_range(tmap['num'], exclusive=False))
@@ -890,7 +715,7 @@ class WatlowF4T(ControllerInterface):
             gse_event = self.client.read_holding(19138+170*i, 32)
 
             for j in range(self.cascades + self.loops):
-                tmap = self.profile_loop_map[j]
+                tmap = self.loop_map[j]
                 if tmap['type'] == 'loop':
                     enable_event = self.loop_event[tmap['num']-1]
                 else:
@@ -948,7 +773,6 @@ class WatlowF4T(ControllerInterface):
 
     @exclusive
     def set_prgm(self, N, prgm):
-        '''write to program N'''
         def event_number(event_number, event_value):
             '''Set event from events/gs register block'''
             if event_number < 5:
@@ -981,7 +805,7 @@ class WatlowF4T(ControllerInterface):
                     self.client.write_holding_float(19124+offset+(cwt['number']-1)*4, cwt['value'])
             if stp['type'] in ['soak', 'instant', 'ramptime', 'ramprate', 'end']:
                 for i, clp in enumerate(stp['loops']):
-                    cmap = self.profile_loop_map[i]
+                    cmap = self.loop_map[i]
                     if stp['type'] == 'ramprate': #write ramp rate
                         self.client.write_holding_float(19106+offset+i*2, clp['rate'])
                     if stp['type'] in ['ramprate', 'ramptime', 'instant']: #write target value
@@ -1028,15 +852,13 @@ class WatlowF4T(ControllerInterface):
             self.client.write_holding(18888, N) #set active profile
             self.client.write_holding(18890, self.inv_watlow_val_dict('delete')) #delete profile
         except ModbusError, exp:
-            if 'Exception code = 4' in exp.message:
-                pass # the program does not exist consume the exception
-            else:
-                raise # something else went wrong pass the exception on up.
+            exp.message = 'Cannot delete program. (original message: %s)' % exp.message
+            raise # something else went wrong pass the exception on up.
 
     @exclusive
     def sample(self, lookup=None):
         loops = []
-        for tmap in self.profile_loop_map:
+        for tmap in self.loop_map:
             items = ['setpoint', 'processvalue', 'enable', 'mode', 'power']
             if tmap['type'] == 'cascade':
                 items.append('enable_cascade')
@@ -1051,10 +873,6 @@ class WatlowF4T(ControllerInterface):
 
     @exclusive
     def process_controller(self, update=True):
-        '''
-        Lookup the F4T part number and determine: qty loops/cascade loops, qty alarms, profiling.
-        Returns: part number
-        '''
         prtnum = self.client.read_holding_string(16, 15)
 
         if update:
@@ -1114,7 +932,16 @@ class WatlowF4T(ControllerInterface):
             else: #(pn[11] == '1')
                 self.loops = 1
                 self.cascades = 0
-            self.update_profile_loop_map()
+            self.__update_loop_map()
+            self.limits = []
+            for i in range(6):
+                try:
+                    self.client.read_holding(11250+60*i)
+                    self.limits.append(i+1)
+                except ModbusError:
+                    pass
+            if len(self.limits):
+                prtnum += 'w/ %d limits' % len(self.limits)
         return prtnum
 
     @exclusive
@@ -1190,7 +1017,7 @@ class WatlowF4T(ControllerInterface):
         except LookupError:
             return u'ERROR'
 
-    def get_prgm_empty(self):
+    def __get_prgm_empty(self):
         '''
         create a empty null program
         '''
@@ -1201,8 +1028,8 @@ class WatlowF4T(ControllerInterface):
             gsd.append({'value':3.0})
         for j in range(self.loops + self.cascades):
             lpdata = {'target':0, 'rate':0, 'mode':'', 'gsoak': False, 'cascade': False,
-                      'isCascade': self.profile_loop_map[j]['type'] == 'cascade'}
-            if self.profile_loop_map[j]['type'] == 'cascade':
+                      'isCascade': self.loop_map[j]['type'] == 'cascade'}
+            if self.loop_map[j]['type'] == 'cascade':
                 lpdata.update({
                     'enable': self.cascade_event[j] == 0,
                     'showEnable': self.cascade_event[j] != 0
@@ -1238,3 +1065,9 @@ class WatlowF4T(ControllerInterface):
             'steps':steps,
             'haswaits':haswaits
         }
+
+    def get_operation_modes(self):
+        if self.cond_event is None:
+            return ['constant', 'program']
+        else:
+            return ['standby', 'constant', 'program']

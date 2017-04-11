@@ -1,4 +1,9 @@
 // Place your settings in this file to overwrite default and user settings.
 {
-    "python.pythonPath": "C:/Python27/python.exe"
+    "python.pythonPath": "C:/Python27/python.exe",
+    "python.autoComplete.extraPaths": [
+        "${env.SPARK_HOME}\\python",
+        "${env.SPARK_HOME}\\python\\pyspark"
+    ],
+    "python.linting.pylintPath": "c:/Python27/Scripts/pylint.exe"
 }
