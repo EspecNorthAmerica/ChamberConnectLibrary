@@ -370,8 +370,6 @@ class WatlowF4(ControllerInterface):
         lrange = self.get_loop_range(N, exclusive=False)
         profile = self.client.read_holding(200)[0] in [2, 3]
         cmd = self.get_loop_sp(N, False, exclusive=False)['current'] >= lrange['min']
-        print 'loop_sp=%r, range=%r' % (self.get_loop_sp(N, False, exclusive=False), lrange)
-        print 'N=%r, combined_event=%r, cmd=%r' % (N, self.combined_event, cmd)
         if self.combined_event[N-1] > 0:
             eve = self.get_event(self.combined_event[N-1], exclusive=False)['constant']
             running = self.get_event(self.cond_event, exclusive=False) if self.cond_event else True
@@ -990,6 +988,13 @@ class WatlowF4(ControllerInterface):
         except Exception:
             pass
         self.__update_loop_map()
+        self.combined_event = [
+            self.cascade_event[0] if self.cascades > 0 else self.loop_event[0],
+        ]
+        if self.loops == 2:
+            self.combined_event.append(self.loop_event[1])
+        elif self.cascades == 1 and self.loops == 1:
+            self.combined_event.append(self.loop_event[0])
         return part_no
 
     @exclusive
