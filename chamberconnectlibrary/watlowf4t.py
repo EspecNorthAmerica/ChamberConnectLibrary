@@ -370,13 +370,13 @@ class WatlowF4T(ControllerInterface):
     def get_cascade_range(self, N):
         self.__range_check(N, 1, self.cascades)
         return {'max':self.client.read_holding_float(4036+(N-1)*200)[0],
-                'min':self.client.read_holding_float(4038+(N-1)*200)[0]}
+                'min':self.client.read_holding_float(4034+(N-1)*200)[0]}
 
     @exclusive
     def set_cascade_range(self, N, value):
         self.__range_check(N, 1, self.cascades)
         self.client.write_holding_float(4036+(N-1)*200, value['max'])
-        self.client.write_holding_float(4038+(N-1)*200, value['min'])
+        self.client.write_holding_float(4034+(N-1)*200, value['min'])
 
     @exclusive
     def get_cascade_en(self, N):
