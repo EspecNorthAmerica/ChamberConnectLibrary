@@ -11,27 +11,27 @@ CONTROLLER = WatlowF4(
     baudrate=19200,
     loop_names=LOOP_NAMES
 )
-print CONTROLLER.process_controller()
+print(CONTROLLER.process_controller())
 
-print '\ncascade loops:'
+print('\ncascade loops:')
 for i in range(CONTROLLER.cascades):
-    print CONTROLLER.get_loop(i+1, 'cascade', ['processvalue', 'setpoint'])
+    print(CONTROLLER.get_loop(i+1, 'cascade', ['processvalue', 'setpoint']))
 
-print '\nloops:'
+print('\nloops:')
 for i in range(CONTROLLER.loops):
-    print CONTROLLER.get_loop(i+1, 'loop', 'processvalue', 'setpoint')
+    print(CONTROLLER.get_loop(i+1, 'loop', 'processvalue', 'setpoint'))
 
-print '\nnamed loops:'
+print('\nnamed loops:')
 for name in LOOP_NAMES:
-    print CONTROLLER.get_loop(name, ['processvalue', 'setpoint'])
+    print(CONTROLLER.get_loop(name, ['processvalue', 'setpoint']))
 
 for name in LOOP_NAMES:
-    print CONTROLLER.set_loop(name, setpoint=60.0)
+    print(CONTROLLER.set_loop(name, setpoint=60.0))
 
-print '\noperations:'
-print CONTROLLER.get_operation()
+print('\noperations:')
+print(CONTROLLER.get_operation())
 CONTROLLER.set_operation('standby')
 
-print '\nEvents:'
+print('\nEvents:')
 for i in range(8):
-    print CONTROLLER.get_event(i+1)
+    print(CONTROLLER.get_event(i+1))
