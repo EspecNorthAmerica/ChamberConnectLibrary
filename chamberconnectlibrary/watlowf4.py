@@ -390,9 +390,9 @@ class WatlowF4(ControllerInterface):
     @exclusive
     def get_loop_units(self, N):
         self.__range_check(N, 1, self.loops + self.cascades)
-        units = ['Temp', u'%RH', u'PSI', u''][self.client.read_holding([608, 618, 628][N-1])[0]]
+        units = ['Temp', '%RH', 'PSI', ''][self.client.read_holding([608, 618, 628][N-1])[0]]
         if units == 'Temp':
-            units = u'\xb0C' if self.client.read_holding(901)[0] else u'\xb0F'
+            units = '\xb0C' if self.client.read_holding(901)[0] else '\xb0F'
         return units
 
     @exclusive

@@ -39,11 +39,11 @@ if __name__ == '__main__':
     except Exception:
         traceback.print_exc()
 
-        print '\nThe test could not be run try:'
-        print '\nchamberconnectlibrary_test controller interface ipORserialport [baudrate]'
-        print '\tcontroller: "Espec"/"EspecP300", "EspecSCP220", "WatlowF4", or "WatlowF4T"(default)'
-        print '\tinterface: "Serial": Serial connection when "controller" is "Espec".'
-        print '\t           "RTU":Serial connection when "controller" is "WatlowF4T"'
-        print '\t           "TCP":TCP connection'
-        print '\t"hostORserialport": hostname for TCP, or serial port for RTU/Serial'
-        print '\t"baudrate": The baudrate for RTU/Serial, optional(default=9600)'
+        print('\nThe test could not be run try:')
+        print('\nchamberconnectlibrary_test controller interface ipORserialport [baudrate]')
+        print('\tcontroller: "Espec"/"EspecP300", "EspecSCP220", "WatlowF4", or "WatlowF4T"(default)')
+        print('\tinterface: "Serial": Serial connection when "controller" is "Espec".')
+        print('\t           "RTU":Serial connection when "controller" is "WatlowF4T"')
+        print('\t           "TCP":TCP connection')
+        print('\t"hostORserialport": hostname for TCP, or serial port for RTU/Serial')
+        print('\t"baudrate": The baudrate for RTU/Serial, optional(default=9600)')

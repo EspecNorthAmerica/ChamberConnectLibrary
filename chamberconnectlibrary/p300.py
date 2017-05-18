@@ -6,7 +6,7 @@ A direct implimentation of the P300's communication interface.
 '''
 #pylint: disable=W0703
 import re
-from especinteract import EspecSerial, EspecTCP
+from .especinteract import EspecSerial, EspecTCP
 
 def tryfloat(val, default):
     '''
@@ -857,7 +857,7 @@ class P300(object):
         '''
         Read the configured IP address of the controller
         '''
-        return dict(zip(['address', 'mask', 'gateway'], self.ctlr.interact('IPSET?').split(',')))
+        return dict(list(zip(['address', 'mask', 'gateway'], self.ctlr.interact('IPSET?').split(','))))
 
     #--- write methods --- write methods --- write methods --- write methods --- write methods ---
     def write_date(self, year, month, day, dow):

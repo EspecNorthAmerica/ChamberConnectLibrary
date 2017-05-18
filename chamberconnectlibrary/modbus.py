@@ -255,7 +255,7 @@ class ModbusRTU(Modbus):
         crc = 0xFFFF
         for i in data:
             crc = crc ^ ord(i)
-            for _ in xrange(8):
+            for _ in range(8):
                 tmp = crc & 1
                 crc = crc >> 1
                 if tmp:
