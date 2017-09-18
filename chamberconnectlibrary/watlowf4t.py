@@ -220,9 +220,11 @@ class WatlowF4T(ControllerInterface):
         self.client.write_holding(14672, [value.day])
         self.client.write_holding(14674, [value.year])
 
+    @exclusive
     def get_refrig(self):
         raise NotImplementedError
 
+    @exclusive
     def set_refrig(self, value):
         raise NotImplementedError
 
@@ -855,21 +857,6 @@ class WatlowF4T(ControllerInterface):
             exp.message = 'Cannot delete program. (original message: %s)' % exp.message
             raise # something else went wrong pass the exception on up.
 
-    @exclusive
-    def sample(self, lookup=None):
-        loops = []
-        for tmap in self.loop_map:
-            items = ['setpoint', 'processvalue', 'enable', 'mode', 'power']
-            if tmap['type'] == 'cascade':
-                items.append('enable_cascade')
-            lpdata = lookup[tmap['type']][tmap['num']-1].copy() if lookup else {}
-            lpdata.update(self.get_loop(tmap['num'], tmap['type'], items, exclusive=False))
-            loops.append(lpdata)
-        return {
-            'datetime':self.get_datetime(exclusive=False),
-            'loops':loops,
-            'status':self.get_status(exclusive=False)
-        }
 
     @exclusive
     def process_controller(self, update=True):

@@ -1021,26 +1021,63 @@ class ControllerInterface:
         pass
 
     @exclusive
-    def sample(self, lookup=None):
+    def sample(self, lookup=None, **kwargs):
         '''
         Take a sample for data logging, gets datetime, mode, and sp/pv on all loops
 
+        kwargs:
+            get_loops (bool): If true get loop status (Default=True)
+            get_status (bool): If true get controller operation status. (Default=True)
+            get_alarms (bool): If true get the controller alarms status. (Default=False)
+            get_program_status (bool): If true get information about the running progam. (Default=False)
+            get_events (list or dict): A list of events to get the current status of (Default=None)
+            get_program_list (bool): get a list of programs on the controller. (Default=False)
+            get_refrig (bool): If true get the controller refrig mode. (Default=False)
         Returns:
             {"datetime":datetime.datetime, "loops":[{varies}], "status":str}
         '''
-        loops = []
-        for tmap in self.loop_map:
-            items = ['setpoint', 'processvalue', 'enable', 'mode', 'power']
-            if tmap['type'] == 'cascade':
-                items.append('enable_cascade')
-            lpdata = lookup[tmap['type']][tmap['num']-1].copy() if lookup else {}
-            lpdata.update(self.get_loop(tmap['num'], tmap['type'], items, exclusive=False))
-            loops.append(lpdata)
-        return {
-            'datetime':self.get_datetime(exclusive=False),
-            'loops':loops,
-            'status':self.get_status(exclusive=False)
-        }
+        ret = {'datetime':self.get_datetime(exclusive=False)}
+        if kwargs.get('get_loops', True):
+            ret['loops'] = []
+            for tmap in self.loop_map:
+                items = ['setpoint', 'processvalue', 'enable', 'mode', 'power']
+                if tmap['type'] == 'cascade':
+                    items.append('enable_cascade')
+                lpdata = lookup[tmap['type']][tmap['num']-1].copy() if lookup else {}
+                lpdata.update(self.get_loop(tmap['num'], tmap['type'], items, exclusive=False))
+                ret['loops'].append(lpdata)
+        if kwargs.get('get_status', True):
+            ret['status'] = self.get_status(exclusive=False)
+        if kwargs.get('get_alarms', False):
+            ret['alarms'] = self.get_alarm_status(exclusive=False)
+        if kwargs.get('get_program_status', False):
+            if ret['status'].startswith('Program'):
+                cpn = self.get_prgm_cur(exclusive=False)
+                ret['program_status'] = {
+                    'number':cpn,
+                    'name':self.get_prgm_name(cpn, exclusive=False),
+                    'step':self.get_prgm_cstep(exclusive=False),
+                    'time_step':self.get_prgm_cstime(exclusive=False),
+                    'time_total':self.get_prgm_time(kwargs.get('running_program'), exclusive=False)
+                }
+            else:
+                ret['program_status'] = {'number':None, 'name':None, 'step':None}
+        if kwargs.get('get_program_list', False):
+            ret['program_list'] = self.get_prgms(exclusive=False)
+        if kwargs.get('get_events', None):
+            if isinstance(kwargs['get_events'][0], dict):
+                events = kwargs['get_events']
+            else:
+                events = [{'N':i} for i in kwargs['get_events']]
+            for event in events:
+                event['status'] = self.get_event(event['N'], exclusive=False)
+            ret['events'] = events
+        if kwargs.get('get_refrig', False):
+            try:
+                ret['refrig'] = self.get_refrig(exclusive=False)
+            except NotImplementedError:
+                ret['refrig'] = None
+        return ret
 
     @abstractmethod
     def process_controller(self, update=True):

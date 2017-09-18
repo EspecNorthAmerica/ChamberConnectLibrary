@@ -9,7 +9,7 @@ def readme():
 
 setup(
     name='chamberconnectlibrary',
-    version='2.0.2',
+    version='2.1.0',
     description='A library for interfacing with Espec North America chambers',
     long_description=readme(),
     url='https://github.com/EspecNorthAmerica/ChamberConnectLibrary',
@@ -19,7 +19,7 @@ setup(
     packages=['chamberconnectlibrary'],
     install_requires=['pyserial'],
     zip_safe=False,
-    keywords='Espec P300 SCP220 F4T',
+    keywords='Espec P300 SCP220 F4T F4',
     include_package_data=True,
     scripts=['bin/chamberconnectlibrary-test.py']
 )

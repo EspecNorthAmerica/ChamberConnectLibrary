@@ -64,11 +64,15 @@ class Espec(ControllerInterface):
         '''
         update the loop map.
         '''
+        if self.cascades > 0:
+            self.loop_map = [{'type':'cascade', 'num':1}]
+        else:
+            self.loop_map = [{'type':'loop', 'num':1}]
+        if self.cascades + self.loops > 1:
+            self.loop_map += [{'type':'loop', 'num':2}]
         self.named_loop_map = {'Temperature':0, 'temperature':0, 'Temp':0, 'temp':0}
-        self.loop_map = [{'type':'cascade', 'num':j+1} for j in range(self.cascades)]
-        self.loop_map += [{'type':'loop', 'num':j+1} for j in range(self.loops)]
         if len(self.loop_map) > 1:
-            self.named_loop_map = {'Humidity':1, 'humidity':1, 'Hum':1, 'hum':1}
+            self.named_loop_map.update({'Humidity':1, 'humidity':1, 'Hum':1, 'hum':1})
 
     def connect(self):
         '''
@@ -636,26 +640,6 @@ class Espec(ControllerInterface):
     def prgm_delete(self, N):
         self.client.write_prgm_erase(N)
 
-    @exclusive
-    def sample(self, lookup=None):
-        ltype = 'cascade' if self.cascades > 0 else 'loop'
-        if ltype == 'loop':
-            items = ['setpoint', 'processvalue', 'enable', 'mode', 'power']
-        else:
-            items = ['setpoint', 'processvalue', 'enable', 'enable_cascade', 'mode', 'power']
-        loops = [self.get_loop(1, ltype, items, exclusive=False)]
-        if lookup:
-            loops[0].update(lookup[ltype][0])
-        if self.loops + self.cascades > 1:
-            tlst = ['setpoint', 'processvalue', 'enable']
-            loops.append(self.get_loop(2, 'loop', tlst, exclusive=False))
-            if lookup:
-                loops[1].update(lookup['loop'][0 if ltype == 'cascade' else 1])
-        return {
-            'datetime':self.get_datetime(exclusive=False),
-            'loops':loops,
-            'status':self.get_status(exclusive=False)
-        }
 
     @exclusive
     def process_controller(self, update=True):

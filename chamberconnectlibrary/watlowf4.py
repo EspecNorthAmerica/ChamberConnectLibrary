@@ -124,7 +124,7 @@ class WatlowF4(ControllerInterface):
             Boolean
         '''
         tval = self.client.read_holding(1061 + 2*(N-1))[0]
-        return self.client.read_holding(201 + 12*(N-1))[0] == tval
+        return self.client.read_holding(201 + 12*(N-1))[0] != tval
 
     def __set_prgm_name(self, N, value):
         '''write a profile name, does not save eeprom'''
@@ -372,7 +372,7 @@ class WatlowF4(ControllerInterface):
         cmd = self.get_loop_sp(N, False, exclusive=False)['current'] >= lrange['min']
         if self.combined_event[N-1] > 0:
             eve = self.get_event(self.combined_event[N-1], exclusive=False)['constant']
-            running = self.get_event(self.cond_event, exclusive=False) if self.cond_event else True
+            running = self.get_event(self.cond_event, exclusive=False)['current'] if self.cond_event else True
             return {'constant': eve, 'current': eve if running else cmd}
         else:
             return {'constant': cmd, 'current': True if profile else cmd}
@@ -548,7 +548,7 @@ class WatlowF4(ControllerInterface):
         mode = self.client.read_holding(200)[0]
         prof = ['Constant', 'Constant', 'Program Running', 'Program Paused'][mode]
         if self.cond_event:
-            return prof if self.get_event(self.cond_event, exclusive=False) else 'Standby'
+            return prof if self.get_event(self.cond_event, exclusive=False)['current'] else 'Standby'
         else:
             return prof
 
@@ -556,7 +556,7 @@ class WatlowF4(ControllerInterface):
     def get_alarm_status(self):
         aalms, ialms = [], []
         for alm in self.limits:
-            if self.__get_digital_input(alm):
+            if self.__get_digital_input(abs(alm)): #this needs to be configurable
                 ialms.append(alm)
             else:
                 aalms.append(alm)
@@ -939,32 +939,6 @@ class WatlowF4(ControllerInterface):
         self.client.write_holding(4000, [N, 1, 3]) #program #, step 1, action delete
         self.client.write_holding(25, 0) #save changes to profiles
 
-    @exclusive
-    def sample(self, lookup=None):
-        '''
-        Take a sample for data logging, gets datetime, mode, and sp/pv on all loops
-
-        Returns:
-            {"datetime":datetime.datetime, "loops":[{varies}], "status":str}
-        '''
-        loops = []
-        for i in range(self.loops + self.cascades):
-            icasc = i == 0 and self.cascades == 1
-            items = ['setpoint', 'processvalue', 'enable', 'mode', 'power']
-            if icasc:
-                items.append('enable_cascade')
-            if lookup:
-                idx = 0 if i == 0 else 1 if not self.cascades == 1 else 0
-                lpdat = lookup['cascade' if icasc else 'loop'][idx].copy()
-            else:
-                lpdat = {}
-            lpdat.update(self.get_loop(i+1, 'cascade' if icasc else 'loop', items, exclusive=False))
-            loops.append(lpdat)
-        return {
-            'datetime':self.get_datetime(exclusive=False),
-            'loops':loops,
-            'status':self.get_status(exclusive=False)
-        }
 
     @exclusive
     def process_controller(self, update=True):
