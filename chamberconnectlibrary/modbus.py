@@ -308,7 +308,7 @@ class ModbusTCP(Modbus):
     16: Write Multiple Holding Registers
     '''
 
-    def __init__(self, address, host, port=502):
+    def __init__(self, address, host, port=502, **kwargs):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         #self.socket.settimeout(timeout)
         self.socket.setblocking(True)
