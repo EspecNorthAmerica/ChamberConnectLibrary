@@ -129,9 +129,10 @@ class WatlowF4(ControllerInterface):
     def __set_prgm_name(self, N, value):
         '''write a profile name, does not save eeprom'''
         value = value.upper()
+        value = value.rstrip()
         if len(value) > 10:
             value = value[0:10]
-        if re.match("^[A-Z0-9]*$", value):
+        if re.match("^[A-Z0-9 ]*$", value):
             self.client.write_holding_string(3500+10*(N-1), value, 10, 32)
         else:
             raise ValueError('Name must be uppercase letters and numbers only.')
@@ -676,8 +677,8 @@ class WatlowF4(ControllerInterface):
 
     @exclusive
     def get_prgm_name(self, N):
-        parsed = re.search(r'([A-Z0-9]+)', self.client.read_holding_string(3500+10*(N-1), 10))
-        return parsed.group(1)
+        parsed = re.search(r'([A-Z0-9 ]+)', self.client.read_holding_string(3500+10*(N-1), 10))
+        return parsed.group(1).rstrip()
 
     @exclusive
     def set_prgm_name(self, N, value):
