@@ -2,7 +2,7 @@
 Copyright (C) Espec North America, INC. - All Rights Reserved
 Written by Myles Metzler mmetzler@espec.com, Feb. 2016
 
-Partial modbus implimantation for communicating with watlow controllers (holding registers only)
+Partial modbus implimantation for communicating with watlow controllers (input/holding registers only)
 '''
 #pylint: disable=W0703
 import socket
@@ -19,6 +19,7 @@ class Modbus(object):
     '''
     A subset of a modbus master library, only impliments modbus functions:
     3: Read Holding Register(s)
+    4: Read Input Register(s)
     6: Write Holding Register
     16: Write Multiple Holding Registers
     '''
@@ -38,6 +39,78 @@ class Modbus(object):
     retry = False
 
 
+    def read_input(self, register, count=1):
+        '''
+        Read input register(s)
+
+        Args:
+            register (int): The modbus register to read
+            count (int): The number of modbus registers to read (defaul=1)
+
+        Returns:
+            list. unsigned 16bit integers
+        '''
+        packet = self.__make_packet(4, register, count)
+        try:
+            rval = self.interact(packet)
+        except ModbusError:
+            if self.retry:
+                rval = self.interact(packet)
+            else:
+                raise
+        return self.__decode_packet(rval, packet)
+
+
+    def read_input_signed(self, register, count=1):
+        '''
+        Read some signed short(s)
+
+        Args:
+            register (int): The modbus register to read
+            count (int): The number of modbus registers to read (default=1)
+
+        Returns:
+            list. signed 16bit integers
+        '''
+        vals = self.read_input(register, count)
+        return [struct.unpack('h', struct.pack('H', val))[0] for val in vals]
+
+
+    def read_input_float(self, register, count=1):
+        '''
+        Read some floating point values from 2 adjacent modbus registers
+
+        Args:
+            register (int): the first register to start reading at.
+            count (int): the number of floats to read (2*count will actually be read)
+
+        Returns:
+            list. 32bit floats
+        '''
+        val = self.read_input(register, count*2)
+        return [round(struct.unpack('f', struct.pack('HH', val[i], val[i+1]))[0], 1)
+                for i in range(0, count*2, 2)]
+
+
+    def read_input_string(self, register, count):
+        '''
+        Read a string
+
+        Args:
+            register (int): The register to start reading from
+            count(int): The number of registers to read (length of string)
+
+        Returns:
+            str
+        '''
+        val = self.read_input(register, count)
+        rstring = ""
+        for char in val:
+            if char is not 0:
+                rstring = rstring + chr(char)
+        return rstring
+
+
     def read_holding(self, register, count=1):
         '''
         Read holding register(s)
@@ -49,7 +122,7 @@ class Modbus(object):
         Returns:
             list. unsigned 16bit integers
         '''
-        packet = self.make_packet(3, register, count)
+        packet = self.__make_packet(3, register, count)
         try:
             rval = self.interact(packet)
         except ModbusError:
@@ -57,7 +130,8 @@ class Modbus(object):
                 rval = self.interact(packet)
             else:
                 raise
-        return self.decode_packet(rval, packet)
+        return self.__decode_packet(rval, packet)
+
 
     def read_holding_signed(self, register, count=1):
         '''
@@ -73,6 +147,7 @@ class Modbus(object):
         vals = self.read_holding(register, count)
         return [struct.unpack('h', struct.pack('H', val))[0] for val in vals]
 
+
     def read_holding_float(self, register, count=1):
         '''
         Read some floating point values from 2 adjacent modbus registers
@@ -87,6 +162,7 @@ class Modbus(object):
         val = self.read_holding(register, count*2)
         return [round(struct.unpack('f', struct.pack('HH', val[i], val[i+1]))[0], 1)
                 for i in range(0, count*2, 2)]
+
 
     def read_holding_string(self, register, count):
         '''
@@ -106,6 +182,7 @@ class Modbus(object):
                 rstring = rstring + chr(char)
         return rstring
 
+
     def write_holding(self, register, value):
         '''
         Write to holding 16bit register(s), accepts single values or lists of values
@@ -115,7 +192,7 @@ class Modbus(object):
             value (int or list(int)): value(s) to write,
         '''
         packettype = 16 if isinstance(value, collections.Iterable) else 6
-        packet = self.make_packet(packettype, register, value)
+        packet = self.__make_packet(packettype, register, value)
         try:
             rval = self.interact(packet)
         except ModbusError:
@@ -123,7 +200,8 @@ class Modbus(object):
                 rval = self.interact(packet)
             else:
                 raise
-        self.decode_packet(rval, packet)
+        self.__decode_packet(rval, packet)
+
 
     def write_holding_signed(self, register, value):
         '''
@@ -139,6 +217,7 @@ class Modbus(object):
             value = 0xFFFF & value #trim to 16bit signed int
         self.write_holding(register, value)
 
+
     def write_holding_float(self, register, value):
         '''
         Write floating point values to the controller
@@ -152,6 +231,7 @@ class Modbus(object):
         else:
             packval = struct.unpack('HH', struct.pack('f', value))
         self.write_holding(register, packval)
+
 
     def write_holding_string(self, register, value, length=20, padder=0):
         '''
@@ -169,25 +249,24 @@ class Modbus(object):
         mods.extend([padder]*length)
         self.write_holding(register, mods[0:length])
 
+
     def interact(self, packet):
         '''Interact with the physical interface'''
-        raise NotImplementedError
+        raise NotImplementedError('ModbusTCP or ModbusRTU must be used not Modbus class')
 
-    def make_packet(self, function, register, args):
+
+    def __make_packet(self, function, register, args):
         '''Make modbus request packet.'''
-        if function == 3:
-            return struct.pack(">BBHH", self.address, function, register, args)
-        elif function == 6:
+        if function in [3, 4, 6]:
             return struct.pack(">BBHH", self.address, function, register, args)
         elif function == 16:
-            data = struct.pack(">BBHHB", self.address, function, register, len(args), len(args)*2)
-            for val in args:
-                data += struct.pack(">H", val)
-            return data
+            margs = [self.address, function, register, len(args), len(args)*2] + list(args)
+            return struct.pack(">BBHHB%dH" % len(args), *margs)
         else:
-            raise NotImplementedError("Only modbus function codes 3,6,16 are implimented.")
+            raise NotImplementedError("Supplied modbus function code is not supported.")
 
-    def decode_packet(self, packet, spacket):
+
+    def __decode_packet(self, packet, spacket):
         '''Decode the modbus request packet.'''
         fcode = struct.unpack(">B", packet[1])[0]
         addr = struct.unpack(">B", packet[0])[0]
@@ -200,7 +279,7 @@ class Modbus(object):
             ttp = (ecode, self.errorMessages.get(ecode, 'Unknown error code'))
             raise ModbusError('Modbus Error: Exception code = %d(%s)' % ttp)
 
-        if fcode == 3: #Read holding register(s)
+        if fcode in [3, 4]: #Read input/holding register(s)
             cnt = struct.unpack(">B", packet[2])[0]/2
             return struct.unpack(">%dH" % cnt, packet[3:])
         elif fcode == 6:
@@ -208,12 +287,13 @@ class Modbus(object):
         elif fcode == 16:
             pass #nothing required
         else:
-            raise NotImplementedError("Only modbus function codes 3,6,16 are implimented.")
+            raise NotImplementedError("Supplied modbus function code is not supported.")
 
 class ModbusRTU(Modbus):
     '''
     A subset of a modbus RTU master library, only impliments modbus functions:
     3: Read Holding Register(s)
+    4: Read Input Register(s)
     6: Write Holding Register
     16: Write Multiple Holding Registers
     '''
@@ -304,6 +384,7 @@ class ModbusTCP(Modbus):
     '''
     A subset of a modbus TCP master library, only impliments modbus functions:
     3: Read Holding Register(s)
+    4: Read Input Register(s)
     6: Write Holding Register
     16: Write Multiple Holding Registers
     '''
