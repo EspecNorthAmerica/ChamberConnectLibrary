@@ -493,9 +493,9 @@ class Espec(ControllerInterface):
             'RUN':'Program Running',
             'RUN PAUSE':'Program Paused',
             'RUN END HOLD':'Program End Hold',
-            'RMT RUN':'Remote Program Running',
-            'RMT RUN PAUSE':'Remote Program Paused',
-            'RMT RUN END HOLD':'Remote Program End Hold'
+            'RMT RUN':'Program Remote Running',
+            'RMT RUN PAUSE':'Program Remote Paused',
+            'RMT RUN END HOLD':'Program Remote End Hold'
         }[self.client.read_mode(True)]
 
     @exclusive
@@ -553,14 +553,21 @@ class Espec(ControllerInterface):
 
     @exclusive
     def get_prgm_cstime(self):
-        rtime = self.cached(self.client.read_prgm_mon)['time']
+        try:
+            rtime = self.cached(self.client.read_prgm_mon)['time']
+        except EspecError:
+            rtime = self.cached(self.client.read_run_prgm_mon)['time']
         return '%d:%02d:00' % (rtime['hour'], rtime['minute'])
 
     @exclusive
     def get_prgm_time(self, pgm=None):
         if pgm is None:
             pgm = self.client.read_prgm(self.cached(self.client.read_prgm_set)['number'])
-        pgms = self.cached(self.client.read_prgm_mon)
+        try:
+            pgms = self.cached(self.client.read_prgm_mon)
+        except EspecError:
+            rtime = self.cached(self.client.read_run_prgm_mon)['time']
+            return '%d:%02d:00' % (rtime['hour'], rtime['minute'])
 
         #counter_a must be the inner counter or the only counter
         if (pgm['counter_a']['end'] >= pgm['counter_b']['end'] and \

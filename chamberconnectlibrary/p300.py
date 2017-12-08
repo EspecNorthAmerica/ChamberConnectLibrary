@@ -534,7 +534,7 @@ class P300(object):
             "end"="OFF" or "STANDBY" or "CONSTANT" or "HOLD" or "RUN"
         '''
         rsp = self.ctlr.interact('PRGM SET?')
-        parsed = re.search(r'R[AO]M:(\d+),([^,;]+),END\((\w+)\)', rsp)
+        parsed = re.search(r'R[AO]M:(\d+),(.+),END\((\w+)\)', rsp)
         return {'number':int(parsed.group(1)), 'name':parsed.group(2), 'end':parsed.group(3)}
 
     def read_prgm_use(self):
@@ -556,14 +556,16 @@ class P300(object):
         returns:
             {"name":string,"date":{"year":int,"month":int,"day":int}}
         '''
-        rsp = self.ctlr.interact('PRGM USE?,%s:%d' % (self.rom_pgm(pgmnum), pgmnum)).split(',')
-        date = re.search(r'(\d+).(\d+)/(\d+)', rsp[1])
+        rsp = re.search(
+            r'(.+),(\d+).(\d+)\/(\d+)',
+            self.ctlr.interact('PRGM USE?,%s:%d' % (self.rom_pgm(pgmnum), pgmnum))
+        )
         return {
-            'name':rsp[0],
+            'name':rsp.group(1),
             'date':{
-                'year':2000+int(date.group(1)),
-                'month':int(date.group(2)),
-                'day':int(date.group(3))
+                'year':2000+int(rsp.group(2)),
+                'month':int(rsp.group(3)),
+                'day':int(rsp.group(4))
             }
         }
 
@@ -799,7 +801,7 @@ class P300(object):
                 "pgmstep":int,
                 "temperature":float,
                 "humidity":float,
-                "time":{"hours":int, "minutes":int},
+                "time":{"hour":int, "minute":int},
                 "counter":int
             }
             "humidity" is present only on humidity chambers
@@ -811,7 +813,7 @@ class P300(object):
                 'pgmstep':int(rsp[0]),
                 'temperature':float(rsp[1]),
                 'humidity':float(rsp[2]),
-                'time':{'hours':int(time[0]), 'minutes':int(time[1])},
+                'time':{'hour':int(time[0]), 'minute':int(time[1])},
                 'counter':int(rsp[4])
             }
         else:
@@ -1392,7 +1394,7 @@ class P300(object):
         Parse the program data command
         '''
         parsed = re.search(
-            r'(\d+),<([^,;]+)>,COUNT,A\((\d+).(\d+).(\d+)\),B\((\d+).(\d+).(\d+)\),'
+            r'(\d+),<(.+)>,COUNT,A\((\d+).(\d+).(\d+)\),B\((\d+).(\d+).(\d+)\),'
             r'END\(([a-zA-Z0-9:]+)\)',
             arg
         )

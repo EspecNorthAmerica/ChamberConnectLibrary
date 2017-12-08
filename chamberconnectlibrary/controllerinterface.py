@@ -1052,7 +1052,7 @@ class ControllerInterface:
         if kwargs.get('get_alarms', False):
             ret['alarms'] = self.get_alarm_status(exclusive=False)
         if kwargs.get('get_program_status', False):
-            if ret['status'].startswith('Program'):
+            if ret['status'].startswith('Program') and 'Remote' not in ret['status']:
                 cpn = self.get_prgm_cur(exclusive=False)
                 ret['program_status'] = {
                     'number':cpn,
