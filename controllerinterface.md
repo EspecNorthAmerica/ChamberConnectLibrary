@@ -11,10 +11,10 @@ Examples on setting up the instantiating the correct class for a chamber.
     from chamberconnectlibrary.watlowf4t import WatlowF4T
 
     #example interface_params for RS232/RS485 on port 7 (windows) Modbus address=1
-    interface_params = {'interface':'RTU', 'baudrate':38400, serialport:'//./COM7', 'adr':1}
+    interface_params = {'interface':'RTU', 'baudrate':38400, 'serialport':'//./COM7', 'adr':1}
 
     #example interface_params for RS232/RS485 on ttyUSB0 (linux) Modbus address=1
-    interface_params = {'interface':'RTU', 'baudrate':38400, serialport:'/dev/ttyUSB0', 'adr':1}
+    interface_params = {'interface':'RTU', 'baudrate':38400, 'serialport':'/dev/ttyUSB0', 'adr':1}
 
     #example interface_params for a TCP connection to 10.30.100.55
     interface_params = {'interface':'TCP', 'host':10.30.100.55}
@@ -85,10 +85,10 @@ Examples on setting up the instantiating the correct class for a chamber.
     from chamberconnectlibrary.espec import Espec
 
     #example interface_params for RS232/RS485 on port 7 (windows) RS485 address = 1
-    interface_params = {'interface':'Serial', 'baudrate':19200, serialport:'//./COM7', 'adr':1}
+    interface_params = {'interface':'Serial', 'baudrate':19200, 'serialport':'//./COM7', 'adr':1}
 
     #example interface_params for RS232/RS485 on ttyUSB0 (linux) RS485 address = 1
-    interface_params = {'interface':'Serial', 'baudrate':19200, serialport:'/dev/ttyUSB0', 'adr':1}
+    interface_params = {'interface':'Serial', 'baudrate':19200, 'serialport':'/dev/ttyUSB0', 'adr':1}
 
     #example interface_params for a TCP connection to 10.30.100.55
     interface_params = {'interface':'TCP', 'host':10.30.100.55}
@@ -123,10 +123,10 @@ Examples on setting up the instantiating the correct class for a chamber.
     from chamberconnectlibrary.watlowf4 import WatlowF4
 
     #example interface_params for RS232/RS485 on port 7 (windows) Modbus address=1
-    interface_params = {'interface':'RTU', 'baudrate':38400, serialport:'//./COM7', 'adr':1}
+    interface_params = {'interface':'RTU', 'baudrate':38400, 'serialport':'//./COM7', 'adr':1}
 
     #example interface_params for RS232/RS485 on ttyUSB0 (linux) Modbus address=1
-    interface_params = {'interface':'RTU', 'baudrate':38400, serialport:'/dev/ttyUSB0', 'adr':1}
+    interface_params = {'interface':'RTU', 'baudrate':38400, 'serialport':'/dev/ttyUSB0', 'adr':1}
 
     #example interface_params for a TCP connection to 10.30.100.55
     interface_params = {'interface':'TCP', 'host':10.30.100.55}
