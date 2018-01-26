@@ -112,6 +112,25 @@ class P300(object):
         time = self.ctlr.interact('TIME?').split(':')
         return {'hour':int(time[0]), 'minute':int(time[1]), 'second':int(time[2])}
 
+    def read_date_time(self):
+        '''
+        Get the date & time from the controller.
+        Merges read_date and read_time to avoid date/time being read on a different day.
+        Intended only for use with serial connections.
+
+        returns:
+            {"year":int,"month":int,"day":int, "hour":int, "minute":int, "second":int}
+        '''
+        date, time = self.ctlr.interact(['DATE?', 'TIME?'])
+        time = time.split(':')
+        ret = {'hour':int(time[0]), 'minute':int(time[1]), 'second':int(time[2])}
+        tmp_date = date.split('.')
+        date = [tmp_date[0]] + tmp_date[1].split('/')
+        ret.update({'year':2000+int(date[0]), 'month':int(date[1]), 'day':int(date[2])})
+        return ret
+        
+
+
     def read_srq(self):
         '''
         Read the SRQ status

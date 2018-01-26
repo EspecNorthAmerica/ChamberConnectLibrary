@@ -212,9 +212,7 @@ class Espec(ControllerInterface):
 
     @exclusive
     def get_datetime(self):
-        temp = self.client.read_time()
-        temp.update(self.client.read_date())
-        return datetime.datetime(**temp)
+        return datetime.datetime(**self.client.read_date_time())
 
     @exclusive
     def set_datetime(self, value):

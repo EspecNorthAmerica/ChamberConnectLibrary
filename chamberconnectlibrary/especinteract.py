@@ -54,23 +54,28 @@ class EspecSerial(object):
         raises:
             EspecError
         '''
-        message = message.encode('ascii', 'ignore')
-        if self.address:
-            self.serial.write('%d,%s%s'%(self.address, message, self.delimeter))
-        else:
-            self.serial.write('%s%s' % (message, self.delimeter))
-        recv = ''
-        while recv[0-len(self.delimeter):] != self.delimeter:
-            rbuff = self.serial.read(1)
-            if len(rbuff) == 0:
-                raise EspecError('The chamber did not respond in time')
-            recv += rbuff
-        if recv.startswith('NA:'):
-            msg = 'EspecError: command:"%s" genarated Error:"%s"' % (
-                message, recv[3:0-len(self.delimeter)]
-            )
-            raise EspecError(msg)
-        return recv[:-1*len(self.delimeter)]
+        if not isinstance(message, (list, tuple)):
+            message = [message]
+        recvs = []
+        for msg in message:
+            msg = msg.encode('ascii', 'ignore')
+            if self.address:
+                self.serial.write('%d,%s%s'%(self.address, msg, self.delimeter))
+            else:
+                self.serial.write('%s%s' % (msg, self.delimeter))
+            recv = ''
+            while recv[0-len(self.delimeter):] != self.delimeter:
+                rbuff = self.serial.read(1)
+                if len(rbuff) == 0:
+                    raise EspecError('The chamber did not respond in time')
+                recv += rbuff
+            if recv.startswith('NA:'):
+                msg = 'EspecError: command:"%s" genarated Error:"%s"' % (
+                    message, recv[3:0-len(self.delimeter)]
+                )
+                raise EspecError(msg)
+            recvs.append(recv[:-1*len(self.delimeter)])
+        return recvs if len(recvs) > 1 else recvs[0]
 
 class EspecTCP(object):
     '''
