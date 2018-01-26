@@ -39,7 +39,7 @@ class SCP220Debug(object):
     __DT_RES_DTL = 0x80
     __MAX_DATA_LEN = 2048
 
-    __DATA_TYPES = {
+    DATA_TYPES = {
         'char':1, 'b_bit':2, 'uchar':2, 'int':3, 'short':3, 'ushort':4, 'w_bit':4, 'uint':4, 'long':5,
         'ulong':6, 'ptr':6, 'float':7, 'int2':8, 'long2':9, 'int3':10, 'long3':11
     }
@@ -71,7 +71,7 @@ class SCP220Debug(object):
 
 
     def __message_to_list(self, itm):
-        return [self.__DATA_TYPES[itm['datatype']], itm['offset'], itm['dbnumber'], itm['datanumber']]
+        return [self.DATA_TYPES[itm['datatype']], itm['offset'], itm['dbnumber'], itm['datanumber']]
 
 
     def __build_payload(self, items):
@@ -110,6 +110,8 @@ class SCP220Debug(object):
 
     def __recieve(self):
         rxd = self.serial.read(6)
+        if len(rxd) == 0:
+            raise SCP220DebugError('The chamber did not respond in time.')
         rxcount = struct.unpack('>H', rxd[-2:])[0]
         rxd += self.serial.read(rxcount + 2)
         if ord(rxd[-1]) != self.__build_checksum(struct.unpack('%dB' % (len(rxd) - 1), rxd[:-1])):
@@ -137,17 +139,30 @@ class SCP220Debug(object):
         self.serial.close()
 
 
+    def read_item(self, **kwargs):
+        '''
+            Read paramter from the controller.
+            
+            kwargs:
+                datatype: string see DATA_TYPES for posible values
+                offset: int
+                dbnumber: int
+                datanumber: int
+            returns:
+                dict: ex: {'datatype':'long2', 'offset':0, 'dbnumber':13, 'datanumber':8, 'value':}
+        '''
+        return self.read_items([kwargs])[0]
+
+
     def read_items(self, items):
         '''
-            read parameters from the controller
+            Read parameters from the controller using a list of arguments for each parameter
 
             params:
                 list: ex: [{'datatype':'long2', 'offset':0, 'dbnumber':13, 'datanumber':8}]
             returns:
                 list: ex: [{'datatype':'long2', 'offset':0, 'dbnumber':13, 'datanumber':8, 'value':}]
         '''
-        if not isinstance(items, (list, tuple)):
-            items = [items]
         packet = self.__build_packet(self.__build_payload(items))
         ret = self.__interact(packet)
         for itm, rsp in zip(items, ret):
@@ -161,8 +176,7 @@ if __name__ == '__main__':
         {'datatype':'long2', 'offset':0, 'dbnumber':13, 'datanumber':8, 'scalar':256},
         {'datatype':'long2', 'offset':0, 'dbnumber':13, 'datanumber':9, 'scalar':256}
     ]
-    tst = SCP220Debug(port='COM12')
-    tst.sequence_number = 8
+    tst = SCP220Debug(port='/dev/ttyUSB1')
     tmp = tst.read_items(pkt)
     for i in tmp:
         print i

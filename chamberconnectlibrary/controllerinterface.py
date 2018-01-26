@@ -1040,9 +1040,9 @@ class ControllerInterface:
         if kwargs.get('get_loops', True):
             ret['loops'] = []
             for tmap in self.loop_map:
-                items = ['setpoint', 'processvalue', 'enable', 'mode', 'power']
+                items = ['setpoint', 'processvalue', 'enable', 'mode', 'power', 'units', 'range']
                 if tmap['type'] == 'cascade':
-                    items.append('enable_cascade')
+                    items += ['enable_cascade', 'deviation']
                 lkps = [lkp for lkp in lookup[tmap['type']] if lkp['number'] == tmap['num']]
                 lpdata = lkps[0].copy() if lookup else {}
                 lpdata.update(self.get_loop(tmap['num'], tmap['type'], items, exclusive=False))
