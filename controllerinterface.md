@@ -100,19 +100,19 @@ Examples on setting up the instantiating the correct class for a chamber.
     controller_type = 'SCP220'
 
     #example for temp only chamber
-    controller = Espec(ctrl_type=controller_type, loops=1, **interface_params)
+    controller = Espec(ctlr_type=controller_type, loops=1, **interface_params)
 
     #example for temp/humidity chamber
-    controller = Espec(ctrl_type=controller_type, loops=2, **interface_params)
+    controller = Espec(ctlr_type=controller_type, loops=2, **interface_params)
 
     #example for temp only chamber w/ product temperature control (aka PTCON)
-    controller = Espec(ctrl_type=controller_type, loops=0, cascades=1, **interface_params)
+    controller = Espec(ctlr_type=controller_type, loops=0, cascades=1, **interface_params)
 
     #example for temp/humidity chamber w/ product temperature control (aka PTCON)
-    controller = Espec(ctrl_type=controller_type, loops=1, cascades=1, **interface_params)
+    controller = Espec(ctlr_type=controller_type, loops=1, cascades=1, **interface_params)
 
     #or the library can figure it out automatically:
-    controller = Espec(ctrl_type=controller_type, **interface_params)
+    controller = Espec(ctlr_type=controller_type, **interface_params)
     controller.process_controller()
     ```
 * **Watlow F4 based chambers**  
