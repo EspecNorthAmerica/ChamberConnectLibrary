@@ -167,7 +167,7 @@ Examples on setting up the instantiating the correct class for a chamber.
 Functions used to retrieve information from the controller.
 
 ## get_alarm_status()
-Get allarms codes from chamber. Here alarms code description for the SCP220:
+Get alarms codes from chamber. Here alarms code description for the SCP220/P300 controllers:
 
    | #  | Description                          |
    |----|--------------------------------------|
