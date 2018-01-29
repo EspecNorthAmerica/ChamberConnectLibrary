@@ -1,3 +1,24 @@
+- [Initialization](#initialization)
+- [Getter Functions](#getter-functions)
+    - [get_alarm_status](#getalarmstatus)
+    - [get_loop(N, loop_type, &ast;param_list=None)](#getloopn-looptype-astparamlistnone)
+    - [get_loop_byname(name, &ast;param_list)](#getloopbynamename-astparamlist)
+    - [get_operation(pgm=None)](#getoperationpgmnone)
+    - [get_program(N)](#getprogramn)
+    - [get_program_list()](#getprogramlist)
+    - [get_program_details(N)](#getprogramdetailsn)
+    - [get_datetime()](#getdatetime)
+    - [get_refrig()](#getrefrig)
+    - [get_event(N)](#geteventn)
+- [Setter Functions](#setter-functions)
+    - [set_loop(N, loop_type, param_list=None, &ast;&ast;kwargs)](#setloopn-looptype-paramlistnone-astastkwargs)
+    - [set_loop_byname(name, param_list=None, &ast;&ast;kwargs)](#setloopbynamename-paramlistnone-astastkwargs)
+    - [set_operation(mode, **kwargs)](#setoperationmode-kwargs)
+    - [set_program(N, value)](#setprogramn-value)
+    - [set_datetime(value)](#setdatetimevalue)
+    - [set_refrig(value)](#setrefrigvalue)
+    - [set_event(N, value)](#seteventn-value)
+    
 # Initialization  
 Examples on setting up the instantiating the correct class for a chamber.
 
@@ -100,19 +121,19 @@ Examples on setting up the instantiating the correct class for a chamber.
     controller_type = 'SCP220'
 
     #example for temp only chamber
-    controller = Espec(ctrl_type=controller_type, loops=1, **interface_params)
+    controller = Espec(ctlr_type=controller_type, loops=1, **interface_params)
 
     #example for temp/humidity chamber
-    controller = Espec(ctrl_type=controller_type, loops=2, **interface_params)
+    controller = Espec(ctlr_type=controller_type, loops=2, **interface_params)
 
     #example for temp only chamber w/ product temperature control (aka PTCON)
-    controller = Espec(ctrl_type=controller_type, loops=0, cascades=1, **interface_params)
+    controller = Espec(ctlr_type=controller_type, loops=0, cascades=1, **interface_params)
 
     #example for temp/humidity chamber w/ product temperature control (aka PTCON)
-    controller = Espec(ctrl_type=controller_type, loops=1, cascades=1, **interface_params)
+    controller = Espec(ctlr_type=controller_type, loops=1, cascades=1, **interface_params)
 
     #or the library can figure it out automatically:
-    controller = Espec(ctrl_type=controller_type, **interface_params)
+    controller = Espec(ctlr_type=controller_type, **interface_params)
     controller.process_controller()
     ```
 * **Watlow F4 based chambers**  
@@ -145,6 +166,52 @@ Examples on setting up the instantiating the correct class for a chamber.
 # Getter Functions  
 Functions used to retrieve information from the controller.
 
+## get_alarm_status()
+Get alarms codes from chamber. Here alarms code description for the SCP220/P300 controllers:
+
+   | #  | Description                          |
+   |----|--------------------------------------|
+   | 0  | Sensor Failure                       |
+   | 1  | Upper Deviation Limit: Temperature   |
+   | 2  | Absolute High Limit: Temperature     |
+   | 3  | Absolute Low Limit: Temperature      |
+   | 6  | Over Heating                         |
+   | 7  | Circulator Failure                   |
+   | 8  | Refrigeration Failure                |
+   | 9  | Chamber Door Open                    |
+   | 10 | Over Cooling (PTP)                   |
+   | 11 | Over Heating (PTP)                   |
+   | 12 | Over Heating/Cooling                 |
+   | 18 | Power Phase Failure                  |
+   | 19 | External Equipment Failure           |
+   | 21 | Humidifier Failure                   |
+   | 22 | Absolute High Limit: Humidity        |
+   | 23 | Absolute Low Limit: Humidity         |
+   | 26 | Water Circuit Trouble                |
+   | 30 | Memory Error                         |
+   | 31 | System Error                         |
+   | 40 | Sensor Burn-Out (Pressure)           |
+   | 41 | High Pressure Limit Switch           |
+   | 43 | Low Pressure Limit Switch            |
+   | 46 | Motor Valve Malfunction              |
+   | 48 | Tripped Vacuum Pump Thermal Relay    |
+   | 50 | Damper Failure                       |
+   | 99 | Program Set Point Out Of Range       |
+
+* **Arguments**:
+    None
+* **Returns**:
+    Dict with list of triggered (active) and un-triggered (inactive) alarm codes.
+    
+    ```python
+    {
+    "active":[list of codes active allrams (int)],
+    "inactive":[list of codes inactive allrams (int)]
+    }
+    ```
+    
+* **Example**:
+    `controller.get_alarm_status()`
 
 ## get_loop(N, loop_type, &ast;param_list=None)
 Get parameters for a loop from a given list (or all if no list is provided)
