@@ -1,6 +1,6 @@
 - [Initialization](#initialization)
 - [Getter Functions](#getter-functions)
-    - [get_alarm_status()](#getalarmstatus)
+    - [get_alarm_status()](#header-get-alarm-status)
     - [get_loop(N, loop_type, &ast;param_list=None)](#getloopn-looptype-astparamlistnone)
     - [get_loop_byname(name, &ast;param_list)](#getloopbynamename-astparamlist)
     - [get_operation(pgm=None)](#getoperationpgmnone)
@@ -166,7 +166,7 @@ Examples on setting up the instantiating the correct class for a chamber.
 # Getter Functions  
 Functions used to retrieve information from the controller.
 
-## get_alarm_status()
+<h2 id="header-get-alarm-status">get_alarm_status()</h2>
 Get alarms codes from chamber. Here alarms code description for the SCP220/P300 controllers:
 
    | #  | Description                          |
