@@ -1,23 +1,23 @@
 - [Initialization](#initialization)
 - [Getter Functions](#getter-functions)
-    - [get_alarm_status](#getalarmstatus)
-    - [get_loop(N, loop_type, &ast;param_list=None)](#getloopn-looptype-astparamlistnone)
-    - [get_loop_byname(name, &ast;param_list)](#getloopbynamename-astparamlist)
-    - [get_operation(pgm=None)](#getoperationpgmnone)
-    - [get_program(N)](#getprogramn)
-    - [get_program_list()](#getprogramlist)
-    - [get_program_details(N)](#getprogramdetailsn)
-    - [get_datetime()](#getdatetime)
-    - [get_refrig()](#getrefrig)
-    - [get_event(N)](#geteventn)
+    - [get_alarm_status()](#user-header-get-alarm-status)
+    - [get_loop(N, loop_type, &ast;param_list=None)](#user-header-get-loop)
+    - [get_loop_byname(name, &ast;param_list)](#user-header-get-loop-byname)
+    - [get_operation(pgm=None)](#user-header-get-operation)
+    - [get_program(N)](#user-header-get-program)
+    - [get_program_list()](#user-header-get-program-list)
+    - [get_program_details(N)](#user-header-get-program-details)
+    - [get_datetime()](#user-header-get-datetime)
+    - [get_refrig()](#user-header-get-refrig)
+    - [get_event(N)](#user-header-get-event)
 - [Setter Functions](#setter-functions)
-    - [set_loop(N, loop_type, param_list=None, &ast;&ast;kwargs)](#setloopn-looptype-paramlistnone-astastkwargs)
-    - [set_loop_byname(name, param_list=None, &ast;&ast;kwargs)](#setloopbynamename-paramlistnone-astastkwargs)
-    - [set_operation(mode, **kwargs)](#setoperationmode-kwargs)
-    - [set_program(N, value)](#setprogramn-value)
-    - [set_datetime(value)](#setdatetimevalue)
-    - [set_refrig(value)](#setrefrigvalue)
-    - [set_event(N, value)](#seteventn-value)
+    - [set_loop(N, loop_type, param_list=None, &ast;&ast;kwargs)](#user-header-set-loop)
+    - [set_loop_byname(name, param_list=None, &ast;&ast;kwargs)](#user-header-set-loop-byname)
+    - [set_operation(mode, **kwargs)](#user-header-set-operation)
+    - [set_program(N, value)](#user-header-set-program)
+    - [set_datetime(value)](#user-header-set-datetime)
+    - [set_refrig(value)](#user-header-set-refrig)
+    - [set_event(N, value)](#user-header-set-event)
     
 # Initialization  
 Examples on setting up the instantiating the correct class for a chamber.
@@ -166,7 +166,7 @@ Examples on setting up the instantiating the correct class for a chamber.
 # Getter Functions  
 Functions used to retrieve information from the controller.
 
-## get_alarm_status()
+<h2 id="user-header-get-alarm-status">get_alarm_status()</h2>
 Get alarms codes from chamber. Here alarms code description for the SCP220/P300 controllers:
 
    | #  | Description                          |
@@ -213,8 +213,9 @@ Get alarms codes from chamber. Here alarms code description for the SCP220/P300 
 * **Example**:
     `controller.get_alarm_status()`
 
-## get_loop(N, loop_type, &ast;param_list=None)
+<h2 id="user-header-get-loop">get_loop(N, loop_type, &ast;param_list=None)</h2>
 Get parameters for a loop from a given list (or all if no list is provided)
+
 * **Arguments**:
     * **N** (int): The loop number (1-4)
     * **loop_type** (str): The loop type, possible values:
@@ -254,8 +255,9 @@ Get parameters for a loop from a given list (or all if no list is provided)
 * **Example**:  
     `controller.get_loop(1, 'loop')`
 
-## get_loop_byname(name, &ast;param_list)
+<h2 id="user-header-get-loop-byname">get_loop_byname(name, &ast;param_list)</h2>
 Get parameters for a loop from a given list (or all if no list is provided)
+
 * **Arguments**:
     * **name** (str): name of the loop setup during init
     * ***param_list** (list(str) or list(list(str))): The list of parameters to read,
@@ -292,8 +294,9 @@ Get parameters for a loop from a given list (or all if no list is provided)
 * **Example**:  
     `controller.get_loop('temp')`
 
-## get_operation(pgm=None)
+<h2 id="user-header-get-operation">get_operation(pgm=None)</h2>
 Get the complete operation status of the chamber.
+
 * **Arguments**:
     * **pgm** (dict): Optional. The currently executing program; used to speed up calculating
     the time until program end.
@@ -320,8 +323,9 @@ Get the complete operation status of the chamber.
 * **Example**:  
     `controller.get_operation()`
 
-## get_program(N)
+<h2 id="user-header-get-program">get_program(N)</h2>
 Read an entire program from the controller.
+
 * **Arguments**:
     * **N** (int): The program number
 * **Returns**:  
@@ -330,8 +334,9 @@ Read an entire program from the controller.
 * **Example**:  
     `my_program = controller.get_program(1)`
 
-## get_program_list()
+<h2 id="user-header-get-program-list">get_program_list()</h2>
 Get a list of all available programs on the controller.
+
 * **Arguments**: None
 * **Returns**:  
     The list available programs by name and number.  
@@ -343,8 +348,9 @@ Get a list of all available programs on the controller.
 * **Example**:
     `my_program_list = controller.get_program_list()`
 
-## get_program_details(N)
-Get the name and number of steps of a program..
+<h2 id="user-header-get-program-details">get_program_details(N)</h2>
+Get the name and number of steps of a program.
+
 * **Arguments**:
     * **N** (int): The program number.
 * **Returns**:  
@@ -357,16 +363,18 @@ Get the name and number of steps of a program..
 * **Example**:  
     `my_program_details = controller.get_program_details(1)`
 
-## get_datetime()
+<h2 id="user-header-get-datetime">get_datetime()</h2>
 Get the date and time from the controller.
+
 * **Arguments**: None
 * **Returns**:  
     The current time as a `datetime.datetime` object
 * **Example**:  
     `my_datetime = controller.get_datetime()`
 
-## get_refrig()
+<h2 id="user-header-get-refrig">get_refrig()</h2>
 Get the constant settings for the refigeration system.
+
 * **Arguments**: None
 * **Returns**:  
     The constant settings that are used by the constant setpoint.  
@@ -380,8 +388,9 @@ Get the constant settings for the refigeration system.
 * **Example**:  
     `my_refrig = controller.get_refrig()`
 
-## get_event(N)
+<h2 id="user-header-get-event">get_event(N)</h2>
 Get the state of a programmable output.
+
 * **Arguments**:
     * **N** (int): The number of the output to read.
 * **Returns**:  
@@ -397,8 +406,9 @@ Get the state of a programmable output.
 # Setter Functions  
 Functions used to write information to the controller.
 
-## set_loop(N, loop_type, param_list=None, &ast;&ast;kwargs)
+<h2 id="user-header-set-loop">set_loop(N, loop_type, param_list=None, &ast;&ast;kwargs)</h2>
 Set the parameters for control loop.
+
 * **Arguments**:
     * **N** (int): The loop number (1-4).
     * **loop_type** (str): The loop type, acceptible values:
@@ -423,8 +433,9 @@ Set the parameters for control loop.
 * **Example**:  
     `controller.set_loop(1, 'loop', {'setpoint':50.0})`
 
-## set_loop_byname(name, param_list=None, &ast;&ast;kwargs)
+<h2 id="user-header-set-loop-byname">set_loop_byname(name, param_list=None, &ast;&ast;kwargs)</h2>
 Set the parameters for a named control loop.
+
 * **Arguments**:
     * **name** (int): name of the loop to read.
     * **param_list** (dict(dict)): The items to set.  
@@ -446,8 +457,9 @@ Set the parameters for a named control loop.
 * **Example**:  
     `controller.set_loop_byname('temp', 'setpoint'=50.0)`
 
-## set_operation(mode, **kwargs)
+<h2 id="user-header-set-operation">set_operation(mode, **kwargs)</h2>
 Change to operation mode of the chamber (start a program/run constant/pause or resume a program/stop)
+
 * **Arguments**:
     * **mode** (str): The mode to run, possible values:
         * `standby`: Stop the chamber from running.
@@ -462,10 +474,20 @@ Change to operation mode of the chamber (start a program/run constant/pause or r
         * **step** (int): the step # to start the given program on (if program an int) (default=1)
 * **Returns**: None
 * **Example**:  
-    `controller.set_operation('constant')`
+    * `controller.set_operation('constant')`
+    * `controller.set_operation('stadby')`
+    * `controller.set_operation('off')`
+    * `controller.set_operation('program_pause')`
+    * `controller.set_operation('program_resume')`
+    * `controller.set_operation('program_advance')`
+    * `controller.set_operation('program', program=1)`
+    * `controller.set_operation('program', program=1, step=2)`
+    * `controller.set_operation('program', program={'number':1})`
+    * `controller.set_operation('program', program={'number':1, 'step':2})`
 
-## set_program(N, value)
+<h2 id="user-header-set-program">set_program(N, value)</h2>
 Write a program to the controller (None = delete the program)
+
 * **Arguments**:
     * **N** (int): The number of the program to write.
     * **value** (dict or None): The program to write to the controller, `None` deletes the program
@@ -473,16 +495,18 @@ Write a program to the controller (None = delete the program)
 * **Example**:  
     `controller.set_program(1, my_program)`
 
-## set_datetime(value)
+<h2 id="user-header-set-datetime">set_datetime(value)</h2>
 Write the date/time to the controller.
+
 * **Arguments**:
     * **value** (datetime.datetime): The new datetime to write to the controller
 * **Returns**: None
 * **Example**:  
     `controller.datetime(datetime.now())`
 
-## set_refrig(value)
+<h2 id="user-header-set-refrig">set_refrig(value)</h2>
 Write the constant refrigeration mode to the controller (espec.py based controllers only).
+
 * **Arguments**:
     * **value** (dict): The parameters for the refrig system.  
     ```python
@@ -495,8 +519,9 @@ Write the constant refrigeration mode to the controller (espec.py based controll
 * **Example**:  
     `controller.set_refrig({'mode':'auto', 'setpoint':0})`
 
-## set_event(N, value)
+<h2 id="user-header-set-event">set_event(N, value)</h2>
 Write the constant digital output state to the controller.
+
 * **Arguments**:
     * **N** (int): The number of the output (typically 1-12 or 1-8)
     * **value** (bool): The new constant output state (True = on)
