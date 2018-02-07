@@ -1,6 +1,6 @@
 - [Initialization](#initialization)
 - [Getter Functions](#getter-functions)
-    - [get_alarm_status()](#getalarmstatus--)
+    - [get_alarm_status()](#getalarmstatus)
     - [get_loop(N, loop_type, &ast;param_list=None)](#getloopn-looptype-astparamlistnone)
     - [get_loop_byname(name, &ast;param_list)](#getloopbynamename-astparamlist)
     - [get_operation(pgm=None)](#getoperationpgmnone)
