@@ -462,7 +462,16 @@ Change to operation mode of the chamber (start a program/run constant/pause or r
         * **step** (int): the step # to start the given program on (if program an int) (default=1)
 * **Returns**: None
 * **Example**:  
-    `controller.set_operation('constant')`
+    * `controller.set_operation('constant')`
+    * `controller.set_operation('stadby')`
+    * `controller.set_operation('off')`
+    * `controller.set_operation('program_pause')`
+    * `controller.set_operation('program_resume')`
+    * `controller.set_operation('program_advance')`
+    * `controller.set_operation('program', program=1)`
+    * `controller.set_operation('program', program=1, step=2)`
+    * `controller.set_operation('program', program={'number':1})`
+    * `controller.set_operation('program', program={'number':1, 'step':2})`
 
 ## set_program(N, value)
 Write a program to the controller (None = delete the program)
