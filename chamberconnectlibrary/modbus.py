@@ -23,20 +23,23 @@ class Modbus(object):
     6: Write Holding Register
     16: Write Multiple Holding Registers
     '''
-    errorMessages = {
-        1: 'Illegal Function',
-        2: 'Illegal Data Address',
-        3: 'Illegal Data Value',
-        4: 'Slave Device Failure',
-        5: 'Acknowledge',
-        6: 'Slave Device Busy',
-        7: 'Negative Acknowledge',
-        8: 'Memory Parity Error',
-        10:'Gateway Path Unavalable',
-        11:'Gateway Target Device Failed To Respond'
-    }
-    address = 1
-    retry = False
+    
+    def __init__(self, address, *args, **kwargs):
+        self.low_word_first = kwargs.get('low_word_first', True)
+        self.retry = kwargs.get('retry', False)
+        self.address = address
+        self.error_messages = {
+            1: 'Illegal Function',
+            2: 'Illegal Data Address',
+            3: 'Illegal Data Value',
+            4: 'Slave Device Failure',
+            5: 'Acknowledge',
+            6: 'Slave Device Busy',
+            7: 'Negative Acknowledge',
+            8: 'Memory Parity Error',
+            10:'Gateway Path Unavalable',
+            11:'Gateway Target Device Failed To Respond'
+        }
 
 
     def read_input(self, register, count=1):
@@ -50,7 +53,7 @@ class Modbus(object):
         Returns:
             list. unsigned 16bit integers
         '''
-        packet = self.__make_packet(4, register, count)
+        packet = self._make_packet(4, register, count)
         try:
             rval = self.interact(packet)
         except ModbusError:
@@ -58,7 +61,7 @@ class Modbus(object):
                 rval = self.interact(packet)
             else:
                 raise
-        return self.__decode_packet(rval, packet)
+        return self._decode_packet(rval, packet)
 
 
     def read_input_signed(self, register, count=1):
@@ -88,8 +91,11 @@ class Modbus(object):
             list. 32bit floats
         '''
         val = self.read_input(register, count*2)
-        return [round(struct.unpack('f', struct.pack('HH', val[i], val[i+1]))[0], 1)
-                for i in range(0, count*2, 2)]
+        fidx, sidx = (0, 1) if self.low_word_first else (1, 0)
+        return [
+            round(struct.unpack('f', struct.pack('HH', val[i+fidx], val[i+sidx]))[0], 1)
+            for i in range(0, count*2, 2)
+        ]
 
 
     def read_input_string(self, register, count):
@@ -122,7 +128,7 @@ class Modbus(object):
         Returns:
             list. unsigned 16bit integers
         '''
-        packet = self.__make_packet(3, register, count)
+        packet = self._make_packet(3, register, count)
         try:
             rval = self.interact(packet)
         except ModbusError:
@@ -130,7 +136,7 @@ class Modbus(object):
                 rval = self.interact(packet)
             else:
                 raise
-        return self.__decode_packet(rval, packet)
+        return self._decode_packet(rval, packet)
 
 
     def read_holding_signed(self, register, count=1):
@@ -160,8 +166,11 @@ class Modbus(object):
             list. 32bit floats
         '''
         val = self.read_holding(register, count*2)
-        return [round(struct.unpack('f', struct.pack('HH', val[i], val[i+1]))[0], 1)
-                for i in range(0, count*2, 2)]
+        fidx, sidx = (0, 1) if self.low_word_first else (1, 0)
+        return [
+            round(struct.unpack('f', struct.pack('HH', val[i+fidx], val[i+sidx]))[0], 1)
+            for i in range(0, count*2, 2)
+        ]
 
 
     def read_holding_string(self, register, count):
@@ -192,7 +201,7 @@ class Modbus(object):
             value (int or list(int)): value(s) to write,
         '''
         packettype = 16 if isinstance(value, collections.Iterable) else 6
-        packet = self.__make_packet(packettype, register, value)
+        packet = self._make_packet(packettype, register, value)
         try:
             rval = self.interact(packet)
         except ModbusError:
@@ -200,7 +209,7 @@ class Modbus(object):
                 rval = self.interact(packet)
             else:
                 raise
-        self.__decode_packet(rval, packet)
+        self._decode_packet(rval, packet)
 
 
     def write_holding_signed(self, register, value):
@@ -227,9 +236,11 @@ class Modbus(object):
             value (float or list(float)): vlaue(s) to write to
         '''
         if isinstance(value, collections.Iterable):
-            packval = ''.join([struct.unpack('HH', struct.pack('f', val)) for val in value])
+            packval = []
+            for val in value:
+                packval += self._pack32('f', val)
         else:
-            packval = struct.unpack('HH', struct.pack('f', value))
+            packval = self._pack32('f', value)
         self.write_holding(register, packval)
 
 
@@ -255,7 +266,63 @@ class Modbus(object):
         raise NotImplementedError('ModbusTCP or ModbusRTU must be used not Modbus class')
 
 
-    def __make_packet(self, function, register, args):
+    def read_item(self, **kwargs):
+        '''
+            Read paramter from the controller.
+            
+            kwargs:
+                register: int (relative register value, required)
+                address: int
+                type: string (holding/holding_signed/holding_float/holding_string/input/input_signed/input_float/input_string)
+                count: int (only applies to string only)
+                low_word_first: bool (word order for 32 bit values)
+                scalar: int (factor that read value will be devided by)
+            returns:
+                dict: ex: {'register':2782, 'address':1, 'type':'holding_float', 'count':1, 'low_word_first':True, 'scalar':1, 'value':50.0}
+        '''
+        return self.read_items([kwargs])[0]
+
+
+    def read_items(self, items):
+        '''
+            Read parameters from the controller using a list of arguments for each parameter
+
+            params:
+                list: ex: [{'register':2782, 'address':1, 'type':'holding_float', 'count':1, 'low_word_first':True, 'scalar':1}]
+            returns:
+                list: ex: [{'register':2782, 'address':1, 'type':'holding_float', 'count':1, 'low_word_first':True, 'scalar':1, 'value':50.0}]
+        '''
+        types = {
+            'holding': self.read_holding,
+            'holding_signed': self.read_holding_signed,
+            'holding_float': self.read_holding_float,
+            'holding_string': self.read_holding_string,
+            'input': self.read_input,
+            'input_signed': self.read_input_signed,
+            'input_float': self.read_input_float,
+            'input_string': self.read_input_string
+        }
+        for itm in items:
+            self.address = itm.get('address', self.address)
+            self.low_word_first = itm.get('low_word_first', self.low_word_first)
+            func = itm.get('type', 'holding')
+            vals = types[func](itm['register'], itm.get('count', 1))
+            if 'string' in func:
+                itm['value'] = vals
+            elif isinstance(vals, list):
+                for val in vals:
+                    if 'scalar' in itm and itm['scalar'] != 1:
+                        val = float(val) / itm['scalar']
+                itm['value'] = vals if len(vals) > 1 else vals[0]
+        return items
+
+
+    def _pack32(self, format, value):
+        pval = struct.unpack('HH', struct.pack(format, value))
+        return list(pval) if self.low_word_first else [pval[1], pval[0]]
+
+
+    def _make_packet(self, function, register, args):
         '''Make modbus request packet.'''
         if function in [3, 4, 6]:
             return struct.pack(">BBHH", self.address, function, register, args)
@@ -266,7 +333,7 @@ class Modbus(object):
             raise NotImplementedError("Supplied modbus function code is not supported.")
 
 
-    def __decode_packet(self, packet, spacket):
+    def _decode_packet(self, packet, spacket):
         '''Decode the modbus request packet.'''
         fcode = struct.unpack(">B", packet[1])[0]
         addr = struct.unpack(">B", packet[0])[0]
@@ -276,7 +343,7 @@ class Modbus(object):
             raise ModbusError("Address error; Sent=%s, Recieved=%s" % (shex, rhex))
         if fcode > 127:
             ecode = struct.unpack(">B", packet[2])[0]
-            ttp = (ecode, self.errorMessages.get(ecode, 'Unknown error code'))
+            ttp = (ecode, self.error_messages.get(ecode, 'Unknown error code'))
             raise ModbusError('Modbus Error: Exception code = %d(%s)' % ttp)
 
         if fcode in [3, 4]: #Read input/holding register(s)
@@ -299,8 +366,7 @@ class ModbusRTU(Modbus):
     '''
 
     def __init__(self, address, port, **kwargs):
-        self.address = address
-        self.retry = kwargs.get('retry', True)
+        super(ModbusRTU, self).__init__(address, port, **kwargs)
         #watlow suggests using 0.012 char send time for buads greater than 19200
         databits, stopbits = kwargs.get('databits', 8), kwargs.get('stopbits', 1)
         baud = kwargs.get('baud', 9600)
@@ -328,7 +394,7 @@ class ModbusRTU(Modbus):
         '''
         self.serial.close()
 
-    def __calc_crc(self, data):
+    def _calc_crc(self, data):
         '''
         calculate the CRC16
         '''
@@ -342,16 +408,8 @@ class ModbusRTU(Modbus):
                     crc = crc ^ 0xA001
         return ((crc % 256) << 8) + (crc >> 8) #swap byte order
 
-    def __check_crc(self, data, crc):
-        '''
-        check a given set of data against a given crc value
-        '''
-        crc = (crc[0] << 8) + crc[1]
-        if crc != self.__calc_crc(data):
-            raise ModbusError("The CRCs do not match.")
-
     def interact(self, packet):
-        crc = struct.pack(">H", self.__calc_crc(packet))
+        crc = struct.pack(">H", self._calc_crc(packet))
         self.serial.write(packet + crc)
         time.sleep(self.pause)
         head = self.serial.read(2)
@@ -369,7 +427,7 @@ class ModbusRTU(Modbus):
         else:
             raise NotImplementedError("Only modbus function codes 3,6,16 are implimented.")
         rcrc = struct.unpack('>H', self.serial.read(2))[0]
-        ccrc = self.__calc_crc(head+body)
+        ccrc = self._calc_crc(head+body)
         if self.address != raddress:
             shex = ":".join(["{:02x}".format(ord(c)) for c in packet+crc])
             rhex = ":".join(["{:02x}".format(ord(c)) for c in head+body+rcrc])
@@ -390,12 +448,12 @@ class ModbusTCP(Modbus):
     '''
 
     def __init__(self, address, host, port=502, **kwargs):
+        super(ModbusTCP, self).__init__(address, host, **kwargs)
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         #self.socket.settimeout(timeout)
         self.socket.setblocking(True)
         self.socket.connect((host, port))
         self.packet_id = 1
-        self.address = address
         time.sleep(0.1)
 
     def __del__(self):
@@ -408,7 +466,7 @@ class ModbusTCP(Modbus):
         self.socket.close()
         time.sleep(0.1)
 
-    def __make_mbap(self, length):
+    def _make_mbap(self, length):
         '''
         make the modbus mbap
         '''
@@ -418,7 +476,7 @@ class ModbusTCP(Modbus):
         '''
         interact with the slave device
         '''
-        self.socket.send(self.__make_mbap(len(packet)) + packet)
+        self.socket.send(self._make_mbap(len(packet)) + packet)
         mbap_raw = self.socket.recv(6)
         if len(mbap_raw) == 0:
             raise ModbusError("The controller did not respond to the request (MBAP length = 0)")
@@ -432,3 +490,13 @@ class ModbusTCP(Modbus):
             raise ModbusError("MBAP id error; expected:%r, got:%r (%r)" % ttp)
         #self.packet_id = self.packet_id + 1 if self.packet_id < 65535 else 0
         return body
+
+
+if __name__ == '__main__':
+    pkt = [
+        {'register':2782, 'address':1, 'type':'holding_float', 'count':1, 'low_word_first':True, 'scalar':1}
+    ]
+    tst = ModbusRTU(1, 3, baud=38400, low_word_first=True)
+    tmp = tst.read_items(pkt)
+    for i in tmp:
+        print i # pylint: disable=E1601
