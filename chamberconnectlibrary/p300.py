@@ -576,11 +576,11 @@ class P300(object):
             {"name":string,"date":{"year":int,"month":int,"day":int}}
         '''
         rsp = re.search(
-            r'(.+),(\d+).(\d+)\/(\d+)',
+            r'(.+)?,(\d+).(\d+)\/(\d+)',
             self.ctlr.interact('PRGM USE?,%s:%d' % (self.rom_pgm(pgmnum), pgmnum))
         )
         return {
-            'name':rsp.group(1),
+            'name':rsp.group(1) if rsp.group(1) else '',
             'date':{
                 'year':2000+int(rsp.group(2)),
                 'month':int(rsp.group(3)),
@@ -1413,13 +1413,13 @@ class P300(object):
         Parse the program data command
         '''
         parsed = re.search(
-            r'(\d+),<(.+)>,COUNT,A\((\d+).(\d+).(\d+)\),B\((\d+).(\d+).(\d+)\),'
+            r'(\d+),<(.+)?>,COUNT,A\((\d+).(\d+).(\d+)\),B\((\d+).(\d+).(\d+)\),'
             r'END\(([a-zA-Z0-9:]+)\)',
             arg
         )
         return {
             'steps':int(parsed.group(1)),
-            'name':parsed.group(2),
+            'name':parsed.group(2) if parsed.group(2) else '',
             'end':parsed.group(9) if 'RUN' not in parsed.group(9) else parsed.group(9)[:3],
             'next_prgm':int('0' if 'RUN' not in parsed.group(9) else parsed.group(9)[4:]),
             'counter_a':{
