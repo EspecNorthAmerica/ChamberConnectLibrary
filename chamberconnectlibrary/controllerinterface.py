@@ -80,7 +80,7 @@ class ControllerInterface:
         pass
 
     @abstractmethod
-    def get_refrig(self):
+    def get_refrig(self, value):
         '''
         Get the constant settings for the refigeration system
 
@@ -214,7 +214,7 @@ class ControllerInterface:
         return ret
 
     @exclusive
-    def set_loop(self, identifier, loop_type='loop', param_list=None, **kwargs):
+    def set_loop(self, identifier, loop_type='loop', param_list=None, value, **kwargs):
         '''
         Set all parameters for a loop from a given list.
 
@@ -443,7 +443,7 @@ class ControllerInterface:
         }
 
     @abstractmethod
-    def get_loop_sp(self, N):
+    def get_loop_sp(self, N, value):
         '''
         Get the setpoint of a control loop.
 
@@ -512,7 +512,7 @@ class ControllerInterface:
         pass
 
     @abstractmethod
-    def get_loop_en(self, N):
+    def get_loop_en(self, N, value):
         '''
         Get the enable/disable state of a loop
 
@@ -547,7 +547,7 @@ class ControllerInterface:
         pass
 
     @abstractmethod
-    def get_loop_mode(self, N):
+    def get_loop_mode(self, N, value):
         '''
         Get the control mode for a loop
 
@@ -605,7 +605,7 @@ class ControllerInterface:
         pass
 
     @abstractmethod
-    def get_cascade_sp(self, N):
+    def get_cascade_sp(self, N, value):
         '''
         Get the setpoint for a cascade loop
 
@@ -756,7 +756,7 @@ class ControllerInterface:
         pass
 
     @abstractmethod
-    def get_cascade_deviation(self, N):
+    def get_cascade_deviation(self, N, value): 
         '''
         Get allowable product to air deviation for a cascade loop
 
@@ -802,7 +802,7 @@ class ControllerInterface:
         pass
 
     @abstractmethod
-    def get_event(self, N):
+    def get_event(self, N, value):
         '''
         Get the state of a programmable output
 
@@ -812,6 +812,31 @@ class ControllerInterface:
             {"constant":bool, "current":bool}
         '''
         pass
+
+    @abstractmethod 
+    def get_air_speed(self, value):
+        '''
+        Get the constant air speed from the system
+
+        returns:
+            { "set value": float,
+              "maintenance": float 
+            }
+
+        '''
+        pass 
+
+    @abstractmethod 
+    def set_air_speed(self, speed, constant=None): 
+        ''' 
+        Set value of air speed 
+        for the system 
+
+        Args: 
+            speed (int): The number of constant output 
+            constant(int: 1,2,3): The number of constant speed mode 
+        '''
+        pass 
 
     @abstractmethod
     def set_event(self, N, value):
@@ -825,7 +850,7 @@ class ControllerInterface:
         pass
 
     @abstractmethod
-    def get_status(self):
+    def get_status(self, detail=False, constant=None):  
         '''
         Get the chamber status.
 
@@ -845,7 +870,7 @@ class ControllerInterface:
         pass
 
     @abstractmethod
-    def const_start(self):
+    def const_start(self, value):
         '''
         Start the constant mode of the chamber
         '''
@@ -891,7 +916,7 @@ class ControllerInterface:
         pass
 
     @abstractmethod
-    def get_prgm_counter(self):
+    def get_prgm_counter(self, constant=None):
         '''
         Get the status of the jump step/counter
 

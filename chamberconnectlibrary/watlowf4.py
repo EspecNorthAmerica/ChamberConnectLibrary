@@ -315,9 +315,13 @@ class WatlowF4(ControllerInterface):
         self.client.write_holding(1916, vals)
 
     @exclusive
-    def get_refrig(self):
+    def get_refrig(self, value):
         raise NotImplementedError
 
+    @exclusive 
+    def set_air_speed(self, speed, constant=None):
+        raise NotImplementedError 
+        
     @exclusive
     def set_refrig(self, value):
         raise NotImplementedError
@@ -535,6 +539,10 @@ class WatlowF4(ControllerInterface):
         self.__range_check(N, 1, 8)
         val = self.client.read_holding(2000 + 10*(N-1))[0] == 1
         return {'current':val, 'constant':val}
+
+    @exclusive 
+    def get_air_speed(self, value): 
+        raise NotImplementedError 
 
     @exclusive
     def set_event(self, N, value):

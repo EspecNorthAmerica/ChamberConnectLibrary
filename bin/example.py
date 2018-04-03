@@ -9,18 +9,23 @@ from chamberconnectlibrary.espec import Espec
 
 LOOP_NAMES = ['Temperature', 'Humidity']
 
+
 CONTROLLER = Espec(
     interface='Serial',
-    serialport='//./COM10',
+    serialport='//./COM3',
     baudrate=19200,
     loop_names=LOOP_NAMES
 )
-# CONTROLLER = WatlowF4(
-#     interface='RTU',
-#     serialport='//./COM7',
-#     baudrate=19200,
-#     loop_names=LOOP_NAMES
-# )
+
+""" 
+CONTROLLER = WatlowF4(
+    interface='RTU',
+    serialport='//./COM4',
+    baudrate=19200,
+    loop_names=LOOP_NAMES
+)
+"""
+
 # CONTROLLER = WatlowF4T(
 #     interface='TCP',
 #     host='10.30.100.138',
@@ -32,32 +37,35 @@ CONTROLLER = Espec(
 #     baudrate=38400,
 #     loop_names=LOOP_NAMES
 # )
+
+"""
 print CONTROLLER.process_controller()
 
-# print '\ncascade loops:'
-# for i in range(CONTROLLER.cascades):
-#     print CONTROLLER.get_loop(i+1, 'cascade', ['processvalue', 'setpoint'])
+print '\ncascade loops:'
+for i in range(CONTROLLER.cascades):
+    print CONTROLLER.get_loop(i+1, 'cascade', ['processvalue', 'setpoint'])
+print '\nloops:'
 
-# print '\nloops:'
-# for i in range(CONTROLLER.loops):
-#     print CONTROLLER.get_loop(i+1, 'loop', 'processvalue', 'setpoint')
+for i in range(CONTROLLER.loops):
+    print CONTROLLER.get_loop(i+1, 'loop', 'processvalue', 'setpoint')
 
-# print '\nnamed loops:'
-# for name in LOOP_NAMES:
-#     print CONTROLLER.get_loop(name, ['processvalue', 'setpoint'])
+print '\nnamed loops:'
+for name in LOOP_NAMES:
+    print CONTROLLER.get_loop(name, ['processvalue', 'setpoint'])
 
-# for name in LOOP_NAMES:
-#     print CONTROLLER.set_loop(name, setpoint=60.0)
+for name in LOOP_NAMES:
+    print CONTROLLER.set_loop(name, setpoint=32.5)
 
-# print '\noperations:'
-# print CONTROLLER.get_operation()
-# CONTROLLER.set_operation('standby')
+print '\noperations:'
+print CONTROLLER.get_operation()
+CONTROLLER.set_operation('standby')
 
-# print '\nEvents:'
-# for i in range(8):
-#     print CONTROLLER.get_event(i+1)
+print '\nEvents:'
+for i in range(8): # orignal val 8; 
+    print CONTROLLER.get_event(i+1)
 
-for _ in range(100):
+"""
+for _ in range(10):
     print '\nsample'
     stm = time.time()
     lookup = {'cascade':[], 'loop':[]}

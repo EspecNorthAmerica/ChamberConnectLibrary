@@ -123,15 +123,17 @@ class Espec(ControllerInterface):
             return 'NA:' + emsg[qps[len(qps)-2]+1:qps[len(qps)-1]]
 
     @exclusive
-    def get_refrig(self):
-        return self.client.read_constant_ref()
+    def get_refrig(self, value):
+        return self.client.read_constant_ref(value)
+
+    @exclusive
 
     @exclusive
     def set_refrig(self, value):
         self.client.write_set(**value)
 
     @exclusive
-    def set_loop(self, identifier, loop_type='loop', param_list=None, **kwargs):
+    def set_loop(self, identifier, loop_type='loop', param_list=None, value, **kwargs):
         #cannot use the default controllerInterface version.
         lpfuncs = {
             'cascade':{
@@ -221,7 +223,7 @@ class Espec(ControllerInterface):
         self.client.write_date(value.year, value.month, value.day, weekday)
 
     @exclusive
-    def get_loop_sp(self, N):
+    def get_loop_sp(self, N, value):
         if N not in self.lpd:
             raise ValueError(self.lp_exmsg)
         if self.lpd[N] == self.temp:
@@ -270,7 +272,7 @@ class Espec(ControllerInterface):
         else: raise ValueError(self.lp_exmsg)
 
     @exclusive
-    def get_loop_en(self, N):
+    def get_loop_en(self, N, value):
         if self.lpd[N] == self.temp:
             return {'constant':True, 'current':True}
         elif self.lpd[N] == self.humi:
@@ -312,10 +314,10 @@ class Espec(ControllerInterface):
         elif value in ['On', 'ON', 'on']:
             self.set_loop_en(N, True, exclusive=False)
         else:
-            raise ValueError('Mode must be on or off, recived:' + value)
+            raise ValueError('Mode must be on or off, received:' + value)
 
     @exclusive
-    def get_loop_mode(self, N):
+    def get_loop_mode(self, N, value):
         if N > 2:
             raise ValueError(self.lp_exmsg)
         if self.lpd[N] == self.humi:
@@ -350,7 +352,7 @@ class Espec(ControllerInterface):
         raise NotImplementedError
 
     @exclusive
-    def get_cascade_sp(self, N):
+    def get_cascade_sp(self, N, value):
         if self.lpd[N] != self.temp:
             raise ValueError(self.cs_exmsg)
         cur = self.cached(self.client.read_temp_ptc)
@@ -423,7 +425,7 @@ class Espec(ControllerInterface):
         return self.get_loop_modes(N)
 
     @exclusive
-    def get_cascade_ctl(self, N):
+    def get_cascade_ctl(self, N, value):
         if self.lpd[N] != self.temp:
             raise ValueError(self.cs_exmsg)
         return {
@@ -441,7 +443,7 @@ class Espec(ControllerInterface):
         self.client.write_temp_ptc(**params['deviation'])
 
     @exclusive
-    def get_cascade_deviation(self, N):
+    def get_cascade_deviation(self, N, value):
         if self.lpd[N] != self.temp:
             raise ValueError(self.cs_exmsg)
         return self.cached(self.client.read_constant_ptc)['deviation']
@@ -465,13 +467,21 @@ class Espec(ControllerInterface):
         raise NotImplementedError
 
     @exclusive
-    def get_event(self, N):
+    def get_event(self, N, value):
         if N >= 13:
             raise ValueError('There are only 12 events')
         return {
             'current':self.cached(self.client.read_relay)[N-1],
             'constant':self.cached(self.client.read_constant_relay)[N-1]
         }
+
+    @exclusive  
+    def get_air_speed(self, value):
+        return self.client.read_constant_air(value) 
+
+    @exclusive
+    def set_air_speed(self, speed, constant=None):
+        self.client.write_air()
 
     @exclusive
     def set_event(self, N, value):
@@ -481,7 +491,7 @@ class Espec(ControllerInterface):
         self.client.write_relay([value if i == N else None for i in range(1, 13)])
 
     @exclusive
-    def get_status(self):
+    def get_status(self, detail=False, constant=None):
         if self.cached(self.client.read_mon)['alarms'] > 0:
             return 'Alarm'
         return {
@@ -505,7 +515,7 @@ class Espec(ControllerInterface):
         return {'active':active, 'inactive':inactive}
 
     @exclusive
-    def const_start(self):
+    def const_start(self, value):
         self.client.write_mode_constant()
 
     @exclusive
@@ -529,7 +539,7 @@ class Espec(ControllerInterface):
         self.client.write_prgm_advance()
 
     @exclusive
-    def get_prgm_counter(self):
+    def get_prgm_counter(self, constant=None):
         prgm_set = self.client.read_prgm_set()
         prgm_data = self.client.read_prgm_data(prgm_set['number'])
         prgm_mon = self.client.read_prgm_mon()

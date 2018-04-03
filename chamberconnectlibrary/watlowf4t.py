@@ -505,6 +505,14 @@ class WatlowF4T(ControllerInterface):
         val = self.watlow_val_dict[self.client.read_holding(reg, 1)[0]] == 'on'
         return {'current':val, 'constant':val}
 
+    @exclusive 
+    def get_air_speed(self, value): 
+        raise NotImplementedError 
+
+    @exclusive 
+    def set_air_speed(self, speed, const=None):
+        raise NotImplementedError 
+        
     @exclusive
     def set_event(self, N, value):
         #62=0ff, 63=on
