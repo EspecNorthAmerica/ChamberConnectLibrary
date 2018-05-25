@@ -9,6 +9,37 @@ import socket
 import serial
 import time
 
+ERROR_DESCIPTIONS = {
+    'CMD ERR':'Unrocognized command',
+    'ADDR ERR':'Bad address',
+    'CONT NOT READY-1':'Chamber does not support PTCON/Humidity',
+    'CONT NOT READY-2':'Chamber is not running a program',
+    'CONT NOT READY-3':'Command not supported by this controller',
+    'CONT NOT READY-4':'Keys may not be locked while controller is off',
+    'CONT NOT READY-5':'Specified time signal is not enabled',
+    'DATA NOT READY':'Specified program does not exist',
+    'PARA ERR':'Parameter missing or unrecognizable',
+    'DATA OUT OF RANGE':'Data not with in valid range',
+    'PROTECT ON':'Controller data protection is anabled via hmi',
+    'PRGM WRITE ERR-1':'Program slot is read only',
+    'PRGM WRITE ERR-2':'Not in program edit/overwrite mode',
+    'PRGM WRITE ERR-3':'Edit request not allowed not in edit mode',
+    'PRGM WRITE ERR-4':'A program is already being edited',
+    'PRGM WRITE ERR-5':'A program is already being edited',
+    'PRGM WRITE ERR-6':'Not in overwrite mode',
+    'PRGM WRITE ERR-7':'Cannot edit program other thant the one in edit mode',
+    'PRGM WRITE ERR-8':'Steps must be entered in order',
+    'PRGM WRITE ERR-9':'Invalid counter configuration',
+    'PRGM WRITE ERR-10':'Cannot edit a running program',
+    'PRGM WRITE ERR-11':'Missing data for counter or end mode',
+    'PRGM WRITE ERR-12':'Program is being edited on hmi',
+    'PRGM WRITE ERR-13':'Invalid step data',
+    'PRGM WRITE ERR-14':'Cannot set exposure time while ramp control is on.',
+    'PRGM WRITE ERR-15':'Humidity must be enabled for humidity ramo mode',
+    'INVALID REQ':'Unsupported function',
+    'CHB NOT READY':'Could not act on given command.'
+}
+
 class EspecError(Exception):
     '''
     Generic Espec Corp controller error
@@ -70,8 +101,9 @@ class EspecSerial(object):
                     raise EspecError('The chamber did not respond in time')
                 recv += rbuff
             if recv.startswith('NA:'):
-                msg = 'EspecError: command:"%s" genarated Error:"%s"' % (
-                    message, recv[3:0-len(self.delimeter)]
+                errmsg = recv[3:0-len(self.delimeter)]
+                msg = 'EspecError: command:"%s" genarated Error:"%s"(%s)' % (
+                    message, errmsg, ERROR_DESCIPTIONS.get(errmsg, 'missing description')
                 )
                 raise EspecError(msg)
             recvs.append(recv[:-1*len(self.delimeter)])
@@ -123,8 +155,9 @@ class EspecTCP(object):
         while recv[0-len(self.delimeter):] != self.delimeter:
             recv += self.socket.recv(1)
         if recv.startswith('NA:'):
-            msg = 'EspecError: command:"%s" generated Error:"%s"' % (
-                message, recv[3:0-len(self.delimeter)]
+            errmsg = recv[3:0-len(self.delimeter)]
+            msg = 'EspecError: command:"%s" genarated Error:"%s"(%s)' % (
+                message, errmsg, ERROR_DESCIPTIONS.get(errmsg, 'missing description')
             )
             raise EspecError(msg)
         return recv[:-2]

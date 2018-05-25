@@ -1544,8 +1544,16 @@ class P300(object):
         ret = {'on':[], 'off':[]}
         for i, val in enumerate(relays):
             if val is not None:
-                if val:
-                    ret['on'].append(i+1)
+                if isinstance(val, bool):
+                    if val:
+                        ret['on'].append(i+1)
+                    else:
+                        ret['off'].append(i+1)
                 else:
-                    ret['off'].append(i+1)
+                    if val['value']:
+                        ret['on'].append(val['number'])
+                    else:
+                        ret['off'].append(val['number'])
+        ret['on'] = sorted(ret['on'])
+        ret['off'] = sorted(ret['off'])
         return ret

@@ -168,16 +168,18 @@ class Espec(ControllerInterface):
         spt1 = 'setpoint' in param_list
         spt2 = 'setPoint' in param_list
         spt3 = 'setValue' in param_list
-        if (spt1 or spt2 or spt3) and ('enable' in param_list or 'mode' in param_list):
+        if spt1 or spt2 or spt3 or 'enable' in param_list or 'mode' in param_list:
             if 'enable' in param_list:
                 enable = param_list.pop('enable')
                 if isinstance(enable, dict):
                     enable = enable['constant']
-            else:
+            elif 'mode' in param_list:
                 my_mode = param_list.pop('mode')
                 if isinstance(my_mode, dict):
                     my_mode = my_mode['constant']
                 enable = my_mode in ['On', 'ON', 'on']
+            else:
+                enable = None
             if spt1:
                 spv = param_list.pop('setpoint')
             elif spt2:
@@ -534,8 +536,16 @@ class Espec(ControllerInterface):
         prgm_data = self.client.read_prgm_data(prgm_set['number'])
         prgm_mon = self.client.read_prgm_mon()
         ret = [
-            {'name':'A', 'remaining': prgm_mon['counter_a']},
-            {'name':'B', 'remaining': prgm_mon['counter_b']},
+            {
+                'name':'A',
+                'remaining':prgm_mon['counter_a'],
+                'count':prgm_data['counter_a']['cycles'] - prgm_mon['counter_a']
+            },
+            {
+                'name':'B',
+                'remaining':prgm_mon['counter_b'],
+                'count':prgm_data['counter_b']['cycles'] - prgm_mon['counter_b']
+            }
         ]
         ret[0].update(prgm_data['counter_a'])
         ret[1].update(prgm_data['counter_b'])

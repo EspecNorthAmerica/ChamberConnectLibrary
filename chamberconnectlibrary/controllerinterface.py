@@ -1059,10 +1059,11 @@ class ControllerInterface:
                     'name':self.get_prgm_name(cpn, exclusive=False),
                     'step':self.get_prgm_cstep(exclusive=False),
                     'time_step':self.get_prgm_cstime(exclusive=False),
-                    'time_total':self.get_prgm_time(kwargs.get('running_program'), exclusive=False)
+                    'time_total':self.get_prgm_time(kwargs.get('running_program'), exclusive=False),
+                    'counters':self.get_prgm_counter(exclusive=False)
                 }
             else:
-                ret['program_status'] = {p:None for p in ['number', 'name', 'step', 'time_step', 'time_total']}
+                ret['program_status'] = {p:None for p in ['number', 'name', 'step', 'time_step', 'time_total', 'counters']}
         if kwargs.get('get_program_list', False) and self.profiles:
             ret['program_list'] = self.get_prgms(exclusive=False)
         if kwargs.get('get_events', None):
