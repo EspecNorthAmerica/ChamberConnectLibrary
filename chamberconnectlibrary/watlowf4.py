@@ -945,6 +945,7 @@ class WatlowF4(ControllerInterface):
     @exclusive
     def process_controller(self, update=True):
         part_no = 'Watlow F4'
+        self.client.write_holding(300, self.client.read_holding(300)[0]) #fail fast!
         if update:
             self.loops = 1
             self.cascades = 0
