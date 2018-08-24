@@ -941,10 +941,12 @@ class WatlowF4T(ControllerInterface):
             self.__set_message(1, value.get('message', 'Espec Server Hosted:'), exclusive=False)
             self.__set_message(2, value.get('host', 'NO_HOST_SPECIFIED!'), exclusive=False)
             self.__set_message(3, value.get('address', 'Network Not Up'), exclusive=False)
+            self.__set_message(4, value.get('datetime'), exclusive=False)
         else:
             self.__set_message(1, exclusive=False)
             self.__set_message(2, exclusive=False)
             self.__set_message(3, exclusive=False)
+            self.__set_message(4, exclusive=False)
 
     #F4T only interface items
     @exclusive
