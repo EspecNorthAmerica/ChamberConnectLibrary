@@ -592,16 +592,17 @@ class WatlowF4(ControllerInterface):
     @exclusive
     def get_prgm_counter(self):
         try:
-            status = self.client.read_holding(4126, 3) #count, profile, step
+            status = self.client.read_holding(4126, 3) #status params: count, profile, step
             self.client.write_holding(4000, (status[1:]))
-            prof = self.client.read_holding(4050, 3)
+            prof = self.client.read_holding(4050, 3) #jump step params: profile, step, repeats
             return [
                 {
-                    'name':str(status[0]),
+                    'name':'Jump Step %d' % status[2],
                     'start':prof[1],
                     'end':status[2],
                     'cycles':prof[2],
-                    'remaining':prof[2]-status[0]
+                    'remaining':prof[2]-status[0],
+                    'count':status[0]
                 }
             ]
         except Exception:
@@ -944,6 +945,7 @@ class WatlowF4(ControllerInterface):
     @exclusive
     def process_controller(self, update=True):
         part_no = 'Watlow F4'
+        self.client.write_holding(300, self.client.read_holding(300)[0]) #fail fast!
         if update:
             self.loops = 1
             self.cascades = 0

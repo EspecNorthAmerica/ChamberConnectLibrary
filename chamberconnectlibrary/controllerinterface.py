@@ -1040,18 +1040,18 @@ class ControllerInterface:
         if kwargs.get('get_loops', True):
             ret['loops'] = []
             for tmap in self.loop_map:
-                items = ['setpoint', 'processvalue', 'enable', 'mode', 'power']
+                items = ['setpoint', 'processvalue', 'enable', 'mode', 'power', 'units', 'range']
                 if tmap['type'] == 'cascade':
-                    items.append('enable_cascade')
+                    items += ['enable_cascade', 'deviation']
                 lkps = [lkp for lkp in lookup[tmap['type']] if lkp['number'] == tmap['num']]
                 lpdata = lkps[0].copy() if lookup else {}
                 lpdata.update(self.get_loop(tmap['num'], tmap['type'], items, exclusive=False))
                 ret['loops'].append(lpdata)
-        if kwargs.get('get_status', True):
+        if kwargs.get('get_status', True) or kwargs.get('get_program_status', False):
             ret['status'] = self.get_status(exclusive=False)
         if kwargs.get('get_alarms', False):
             ret['alarms'] = self.get_alarm_status(exclusive=False)
-        if kwargs.get('get_program_status', False):
+        if kwargs.get('get_program_status', False) and self.profiles:
             if ret['status'].startswith('Program') and 'Remote' not in ret['status']:
                 cpn = self.get_prgm_cur(exclusive=False)
                 ret['program_status'] = {
@@ -1059,11 +1059,12 @@ class ControllerInterface:
                     'name':self.get_prgm_name(cpn, exclusive=False),
                     'step':self.get_prgm_cstep(exclusive=False),
                     'time_step':self.get_prgm_cstime(exclusive=False),
-                    'time_total':self.get_prgm_time(kwargs.get('running_program'), exclusive=False)
+                    'time_total':self.get_prgm_time(kwargs.get('running_program'), exclusive=False),
+                    'counters':self.get_prgm_counter(exclusive=False)
                 }
             else:
-                ret['program_status'] = {'number':None, 'name':None, 'step':None}
-        if kwargs.get('get_program_list', False):
+                ret['program_status'] = {p:None for p in ['number', 'name', 'step', 'time_step', 'time_total', 'counters']}
+        if kwargs.get('get_program_list', False) and self.profiles:
             ret['program_list'] = self.get_prgms(exclusive=False)
         if kwargs.get('get_events', None):
             if isinstance(kwargs['get_events'][0], dict):

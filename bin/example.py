@@ -9,23 +9,23 @@ from chamberconnectlibrary.espec import Espec
 
 LOOP_NAMES = ['Temperature', 'Humidity']
 
-# CONTROLLER = Espec(
-#     interface='Serial',
-#     serialport='//./COM10',
-#     baudrate=19200,
-#     loop_names=LOOP_NAMES
-# )
+CONTROLLER = Espec(
+    interface='Serial',
+    serialport='//./COM10',
+    baudrate=19200,
+    loop_names=LOOP_NAMES
+)
 # CONTROLLER = WatlowF4(
 #     interface='RTU',
 #     serialport='//./COM7',
 #     baudrate=19200,
 #     loop_names=LOOP_NAMES
 # )
-CONTROLLER = WatlowF4T(
-    interface='TCP',
-    host='10.30.100.138',
-    loop_names=LOOP_NAMES
-)
+# CONTROLLER = WatlowF4T(
+#     interface='TCP',
+#     host='10.30.100.138',
+#     loop_names=LOOP_NAMES
+# )
 # CONTROLLER = WatlowF4T(
 #     interface='RTU',
 #     serialport='//./COM4',
@@ -57,8 +57,14 @@ print CONTROLLER.process_controller()
 # for i in range(8):
 #     print CONTROLLER.get_event(i+1)
 
-print '\nsample'
-stm = time.time()
-smpl = CONTROLLER.sample(get_alarms=True, get_program_status=True, get_events=[i+1 for i in range(8)], get_program_list=True, get_refrig=True)
-print("--- %s seconds ---" % (time.time() - stm))
-pprint.pprint(smpl)
+for _ in range(100):
+    print '\nsample'
+    stm = time.time()
+    lookup = {'cascade':[], 'loop':[]}
+    lookup['loop'].append({'name':'Temperature', 'id': 1, 'number': 1})
+    lookup['loop'].append({'name':'Humidity', 'id': 2, 'number': 2})
+    params = {'get_loops':True, 'get_status':True, 'get_alarms':True, 'get_program_status':True, 'get_program_list':True, 'get_refrig':True}
+    params['get_events'] = [{'N':i+1, 'name':'TS#%d'%(i+1)} for i in range(8)]
+    smpl = CONTROLLER.sample(lookup, **params)
+    print("--- %s seconds ---" % (time.time() - stm))
+    print(smpl)

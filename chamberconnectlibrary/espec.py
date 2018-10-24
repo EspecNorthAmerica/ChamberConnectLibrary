@@ -190,16 +190,18 @@ class Espec(ControllerInterface):
         spt1 = 'setpoint' in param_list
         spt2 = 'setPoint' in param_list
         spt3 = 'setValue' in param_list
-        if (spt1 or spt2 or spt3) and ('enable' in param_list or 'mode' in param_list):
+        if spt1 or spt2 or spt3 or 'enable' in param_list or 'mode' in param_list:
             if 'enable' in param_list:
                 enable = param_list.pop('enable')
                 if isinstance(enable, dict):
                     enable = enable['constant']
-            else:
+            elif 'mode' in param_list:
                 my_mode = param_list.pop('mode')
                 if isinstance(my_mode, dict):
                     my_mode = my_mode['constant']
                 enable = my_mode in ['On', 'ON', 'on']
+            else:
+                enable = None
             if spt1:
                 spv = param_list.pop('setpoint')
             elif spt2:
@@ -590,8 +592,16 @@ class Espec(ControllerInterface):
         prgm_data = self.client.read_prgm_data(prgm_set['number'])
         prgm_mon = self.client.read_prgm_mon()
         ret = [
-            {'name':'A', 'remaining': prgm_mon['counter_a']},
-            {'name':'B', 'remaining': prgm_mon['counter_b']},
+            {
+                'name':'A',
+                'remaining':prgm_mon['counter_a'],
+                'count':prgm_data['counter_a']['cycles'] - prgm_mon['counter_a']
+            },
+            {
+                'name':'B',
+                'remaining':prgm_mon['counter_b'],
+                'count':prgm_data['counter_b']['cycles'] - prgm_mon['counter_b']
+            }
         ]
         ret[0].update(prgm_data['counter_a'])
         ret[1].update(prgm_data['counter_b'])
@@ -624,45 +634,47 @@ class Espec(ControllerInterface):
             return '%d:%02d:00' % (rtime['hour'], rtime['minute'])
 
         #counter_a must be the inner counter or the only counter
-        if (pgm['counter_a']['end'] >= pgm['counter_b']['end'] and \
-           pgm['counter_a']['start'] <= pgm['counter_b']['start']) or \
-           pgm['counter_a']['cycles'] == 0 and pgm['counter_b']['cycles'] != 0:
+        use_a = pgm['counter_a']['cycles'] != 0
+        use_b = pgm['counter_b']['cycles'] != 0
+        ae_gte_be = pgm['counter_a']['end'] >= pgm['counter_b']['end']
+        as_lte_bs = pgm['counter_a']['start'] <= pgm['counter_b']['start']
+        same_end = pgm['counter_a']['end'] == pgm['counter_b']['end']
+
+        if (ae_gte_be and as_lte_bs) or not use_a and use_b:
             pgm['counter_a'], pgm['counter_b'] = pgm['counter_b'], pgm['counter_a']
             pgms['counter_a'], pgms['counter_b'] = pgms['counter_b'], pgms['counter_a']
-        cap = len(pgm['steps'])
-        cap = cap*(pgm['counter_a']['cycles'] + 2) if pgm['counter_a']['cycles'] else cap
-        cap = cap*(pgm['counter_b']['cycles'] + 2) if pgm['counter_b']['cycles'] else cap
-        cap += 2
+            use_a, use_b = use_b, use_a
 
-        cnta = pgms['counter_a']
-        cntb = pgms['counter_b']
-        cstp = pgms['pgmstep']-1
-        tminutes = pgms['time']['hour']*60 + pgms['time']['minute']
-        pcntb = cntb
-        while cstp < len(pgm['steps']) and cap:
-            cap -= 1
-            if pgm['counter_a']['start'] == pgm['counter_b']['start'] and \
-               pgm['counter_a']['cycles'] and pgm['counter_b']['cycles'] and \
-               cstp == pgm['counter_b']['start']-1:
-                if pcntb != cntb:
-                    cnta = pgm['counter_a']['cycles']
-            elif cstp == pgm['counter_b']['start']-1 and pgm['counter_b']['cycles']:
-                cnta = pgm['counter_a']['cycles']
-            if cstp == pgm['counter_a']['end']-1 and pgm['counter_a']['cycles'] and cnta:
-                cstp = pgm['counter_a']['start']-1
-                cnta -= 1
-            elif cstp == pgm['counter_b']['end']-1 and pgm['counter_b']['cycles'] and cntb:
-                cstp = pgm['counter_b']['start']-1
-                pcntb = cntb
-                cntb -= 1
+        nested = use_a and use_b and pgm['counter_a']['start'] >= pgm['counter_b']['start']
+        nested = nested and pgm['counter_a']['end'] <= pgm['counter_b']['end']
+        tminutes, tta, ttb = -1, 0, 0
+        if use_a:
+            for i in range(pgm['counter_a']['start']-1, pgm['counter_a']['end']):
+                tta += pgm['steps'][i]['time']['hour']*60 + pgm['steps'][i]['time']['minute']
+        if use_b:
+            for i in range(pgm['counter_b']['start']-1, pgm['counter_b']['end']):
+                if nested and i >= pgm['counter_a']['start']-1 and i < pgm['counter_a']['end']-1:
+                    pass
+                elif nested and i >= pgm['counter_a']['start']-1 and i == pgm['counter_a']['end']-1:
+                    ttb += tta*(pgm['counter_a']['cycles'] + 1)
+                else:
+                    ttb += pgm['steps'][i]['time']['hour']*60 + pgm['steps'][i]['time']['minute']
+
+        # correct for p300 not resetting the nested counter until it hits counter.start
+        if nested and pgms['pgmstep'] < pgm['counter_a']['start']:
+            count_a = pgm['counter_a']['cycles']
+        else:
+            count_a = pgms['counter_a']
+        for i in range(pgms['pgmstep']-1, len(pgm['steps'])): #ensure that this is not off by 1
+            if tminutes == -1:
+                tminutes = pgms['time']['hour']*60 + pgms['time']['minute']
             else:
-                pcntb = cntb
-                cstp += 1
-            if cstp < len(pgm['steps']):
-                tminutes += pgm['steps'][cstp]['time']['hour']*60 + \
-                            pgm['steps'][cstp]['time']['minute']
-        if cap == 0:
-            raise RuntimeError('Calculating the total program time remaining aborted.')
+                mystep = pgm['steps'][i]
+                tminutes += mystep['time']['hour']*60 + mystep['time']['minute']
+            if use_a and i == pgm['counter_a']['end']-1:
+                tminutes += tta*count_a
+            if use_b and i == pgm['counter_b']['end']-1:
+                tminutes += ttb*pgms['counter_b']
         return "%d:%02d:00" % (int(tminutes/60), tminutes%60)
 
     @exclusive

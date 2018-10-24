@@ -129,6 +129,11 @@ class P300(object):
         ret.update({'year':2000+int(date[0]), 'month':int(date[1]), 'day':int(date[2])})
         return ret
         
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> origin/master
     def read_srq(self):
         '''
         Read the SRQ status
@@ -632,11 +637,11 @@ class P300(object):
             {"name":string,"date":{"year":int,"month":int,"day":int}}
         '''
         rsp = re.search(
-            r'(.+),(\d+).(\d+)\/(\d+)',
+            r'(.+)?,(\d+).(\d+)\/(\d+)',
             self.ctlr.interact('PRGM USE?,%s:%d' % (self.rom_pgm(pgmnum), pgmnum))
         )
         return {
-            'name':rsp.group(1),
+            'name':rsp.group(1) if rsp.group(1) else '',
             'date':{
                 'year':2000+int(rsp.group(2)),
                 'month':int(rsp.group(3)),
@@ -1320,7 +1325,7 @@ class P300(object):
             mode: string, "START" or "END" or "CANCEL"
             overwrite: boolean, when true programs/steps may be overwritten
         '''
-        tmp = 'PRGM DATA WRITE, PGM%d, %s %s'%(pgmnum, 'OVER WRITE' if overwrite else 'EDIT', mode)
+        tmp = 'PRGM DATA WRITE,PGM%d,%s %s'%(pgmnum, 'OVER WRITE' if overwrite else 'EDIT', mode)
         self.ctlr.interact(tmp)
 
     def write_prgm_data_details(self, pgmnum, constant=None, **pgmdetail):
@@ -1345,9 +1350,13 @@ class P300(object):
                    pgmdetail['counter_b']['cycles'])
             self.ctlr.interact('PRGM DATA WRITE,PGM%d,COUNT,B(%d.%d.%d)' % ttp)
         if 'name' in pgmdetail:
+<<<<<<< HEAD
             self.ctlr.interact('PRGM DATA WRITE,PGM%d,NAME,%s' % (pgmnum, pgmdetail['name'])
         
         ''' Add new parameter after program ends '''
+=======
+            self.ctlr.interact('PRGM DATA WRITE,PGM%d,NAME,%s' % (pgmnum, pgmdetail['name']))
+>>>>>>> origin/master
         if 'end' in pgmdetail:
             if pgmdetail['end'] != 'RUN' and constant in [1,2,3]: 
                 ttp = (pgmnum, '%s,CONSTANT%d' % (pgmdetail['end'], constant))
@@ -1355,32 +1364,36 @@ class P300(object):
                 ttp = (pgmnum, pgmdetail['end'])     
             else:
                 ttp = (pgmnum, 'RUN,PTN%s'%pgmdetail['next_prgm'])
+<<<<<<< HEAD
             self.ctlr.interact('PRGM DATA WRITE, PGM%d, END,%s' % ttp)
 
+=======
+            self.ctlr.interact('PRGM DATA WRITE,PGM%d,END,%s' % ttp)
+>>>>>>> origin/master
         if 'tempDetail' in pgmdetail:
             if 'range' in pgmdetail['tempDetail']:
                 ttp = (pgmnum, pgmdetail['tempDetail']['range']['max'])
-                self.ctlr.interact('PRGM DATA WRITE, PGM%d, HTEMP,%0.1f' % ttp)
+                self.ctlr.interact('PRGM DATA WRITE,PGM%d,HTEMP,%0.1f' % ttp)
                 ttp = (pgmnum, pgmdetail['tempDetail']['range']['min'])
-                self.ctlr.interact('PRGM DATA WRITE, PGM%d, LTEMP,%0.1f' % ttp)
+                self.ctlr.interact('PRGM DATA WRITE,PGM%d,LTEMP,%0.1f' % ttp)
             if 'mode' in pgmdetail['tempDetail']:
                 ttp = (pgmnum, pgmdetail['tempDetail']['mode'])
-                self.ctlr.interact('PRGM DATA WRITE, PGM%d, PRE MODE, TEMP,%s' % ttp)
+                self.ctlr.interact('PRGM DATA WRITE,PGM%d,PRE MODE,TEMP,%s' % ttp)
             if 'setpoint' in pgmdetail['tempDetail'] and pgmdetail['tempDetail']['mode'] == 'SV':
                 ttp = (pgmnum, pgmdetail['tempDetail']['setpoint'])
-                self.ctlr.interact('PRGM DATA WRITE, PGM%d, PRE TSV,%0.1f' % ttp)
+                self.ctlr.interact('PRGM DATA WRITE,PGM%d,PRE TSV,%0.1f' % ttp)
         if 'humiDetail' in pgmdetail:
             if 'range' in pgmdetail['humiDetail']:     
                 ttp = (pgmnum, pgmdetail['humiDetail']['range']['max'])
-                self.ctlr.interact('PRGM DATA WRITE, PGM%d, HHUMI,%0.0f' % ttp)
+                self.ctlr.interact('PRGM DATA WRITE,PGM%d,HHUMI,%0.0f' % ttp)
                 ttp = (pgmnum, pgmdetail['humiDetail']['range']['min'])
-                self.ctlr.interact('PRGM DATA WRITE, PGM%d, LHUMI,%0.0f' % ttp)
+                self.ctlr.interact('PRGM DATA WRITE,PGM%d,LHUMI,%0.0f' % ttp)
             if 'mode' in pgmdetail['humiDetail']:
                 ttp = (pgmnum, pgmdetail['humiDetail']['mode'])
-                self.ctlr.interact('PRGM DATA WRITE, PGM%d, PRE MODE, HUMI,%s' % ttp)
+                self.ctlr.interact('PRGM DATA WRITE,PGM%d,PRE MODE,HUMI,%s' % ttp)
             if 'setpoint' in pgmdetail['humiDetail'] and pgmdetail['humiDetail']['mode'] == 'SV':
                 ttp = (pgmnum, pgmdetail['humiDetail']['setpoint'])
-                self.ctlr.interact('PRGM DATA WRITE, PGM%d, PRE HSV,%0.0f' % ttp)
+                self.ctlr.interact('PRGM DATA WRITE,PGM%d,PRE HSV,%0.0f' % ttp)
 
     def write_prgm_data_step(self, pgmnum, **pgmstep):
         '''
@@ -1390,6 +1403,7 @@ class P300(object):
             pgmnum: int, the program being written/edited
             pgmstep: the program parameters, see read_prgm_data_step for parameters
         '''
+<<<<<<< HEAD
         cmd = 'PRGM DATA WRITE, PGM%d, STEP%d' % (pgmnum, pgmstep['number'])
         if 'time' in pgmstep:
             cmd = '%s,TIME%d:%d' % (cmd, pgmstep['time']['hour'], pgmstep['time']['minute'])
@@ -1401,6 +1415,9 @@ class P300(object):
             cmd = '%s,%s' % (cmd, self.encode_refrig(**pgmstep['refrig']))
         if 'granty' in pgmstep:
             cmd = '%s,GRANTY %s' % (cmd, 'ON' if pgmstep['granty'] else 'OFF')
+=======
+        cmd = 'PRGM DATA WRITE,PGM%d,STEP%d' % (pgmnum, pgmstep['number'])
+>>>>>>> origin/master
         if 'temperature' in pgmstep:
             if 'setpoint' in pgmstep['temperature']:
                 cmd = '%s,TEMP%0.1f' % (cmd, pgmstep['temperature']['setpoint'])
@@ -1421,6 +1438,14 @@ class P300(object):
                 cmd = '%s,HUMI%s' % (cmd, htmp)
             if 'ramp' in pgmstep['humidity'] and pgmstep['humidity']['enable']:
                 cmd = '%s,HRAMP%s' % (cmd, 'ON' if pgmstep['humidity']['ramp'] else 'OFF')
+        if 'time' in pgmstep:
+            cmd = '%s,TIME%d:%d' % (cmd, pgmstep['time']['hour'], pgmstep['time']['minute'])
+        if 'granty' in pgmstep:
+            cmd = '%s,GRANTY %s' % (cmd, 'ON' if pgmstep['granty'] else 'OFF')
+        if 'paused' in pgmstep:
+            cmd = '%s,PAUSE %s' % (cmd, 'ON' if pgmstep['paused'] else 'OFF')
+        if 'refrig' in pgmstep:
+            cmd = '%s,%s' % (cmd, self.encode_refrig(**pgmstep['refrig']))
         if 'relay' in pgmstep:
             rlys = self.parse_relays(pgmstep['relay'])
             if rlys['on']:
@@ -1575,13 +1600,13 @@ class P300(object):
         Parse the program data command
         '''
         parsed = re.search(
-            r'(\d+),<(.+)>,COUNT,A\((\d+).(\d+).(\d+)\),B\((\d+).(\d+).(\d+)\),'
+            r'(\d+),<(.+)?>,COUNT,A\((\d+).(\d+).(\d+)\),B\((\d+).(\d+).(\d+)\),'
             r'END\(([a-zA-Z0-9:]+)\)',
             arg
         )
         return {
             'steps':int(parsed.group(1)),
-            'name':parsed.group(2),
+            'name':parsed.group(2) if parsed.group(2) else '',
             'end':parsed.group(9) if 'RUN' not in parsed.group(9) else parsed.group(9)[:3],
             'next_prgm':int('0' if 'RUN' not in parsed.group(9) else parsed.group(9)[4:]),
             'counter_a':{
@@ -1706,10 +1731,18 @@ class P300(object):
         ret = {'on':[], 'off':[]}
         for i, val in enumerate(relays):
             if val is not None:
-                if val:
-                    ret['on'].append(i+1)
+                if isinstance(val, bool):
+                    if val:
+                        ret['on'].append(i+1)
+                    else:
+                        ret['off'].append(i+1)
                 else:
-                    ret['off'].append(i+1)
+                    if val['value']:
+                        ret['on'].append(val['number'])
+                    else:
+                        ret['off'].append(val['number'])
+        ret['on'] = sorted(ret['on'])
+        ret['off'] = sorted(ret['off'])
         return ret
 
 class P300vib(P300):
