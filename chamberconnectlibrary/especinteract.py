@@ -5,9 +5,9 @@ Handle the actual communication with Espec Corp. Controllers
 :license: MIT, see LICENSE for more details.
 '''
 #pylint: disable=W0703
-import socket
-import serial
-import time
+import socket       # initialize and open socket
+import serial       # initialize and open the port
+import time         # load time library 
 
 ERROR_DESCIPTIONS = {
     'CMD ERR':'Unrocognized command',
@@ -107,11 +107,15 @@ class EspecSerial(object):
                 )
                 raise EspecError(msg)
             recvs.append(recv[:-1*len(self.delimeter)])
-        return recvs if len(recvs) > 1 else recvs[0]
+        return recvs if len(recvs) > 1 else recvs[0]"
 
 class EspecTCP(object):
     '''
     Handles low level communication to espec corp controllers via serial TCP
+
+    P300 does not have TCP/IP communication port; however, in order to connect to 
+    web controller, it will need a serial-to-tcp/ip adaptor to send information
+    and publish over to the web. Thus, this section is for that purpose. 
     '''
     def __init__(self, **kwargs):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -161,3 +165,4 @@ class EspecTCP(object):
             )
             raise EspecError(msg)
         return recv[:-2]
+ 
