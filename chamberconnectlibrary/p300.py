@@ -112,6 +112,23 @@ class P300(object):
         time = self.ctlr.interact('TIME?').split(':')
         return {'hour':int(time[0]), 'minute':int(time[1]), 'second':int(time[2])}
 
+    def read_date_time(self):
+        '''
+        Get the date & time from the controller.
+        Merges read_date and read_time to avoid date/time being read on a different day.
+        Intended only for use with serial connections.
+
+        returns:
+            {"year":int,"month":int,"day":int, "hour":int, "minute":int, "second":int}
+        '''
+        date, time = self.ctlr.interact(['DATE?', 'TIME?'])
+        time = time.split(':')
+        ret = {'hour':int(time[0]), 'minute':int(time[1]), 'second':int(time[2])}
+        tmp_date = date.split('.')
+        date = [tmp_date[0]] + tmp_date[1].split('/')
+        ret.update({'year':2000+int(date[0]), 'month':int(date[1]), 'day':int(date[2])})
+        return ret
+        
     def read_srq(self):
         '''
         Read the SRQ status
@@ -162,7 +179,7 @@ class P300(object):
         rsp = self.ctlr.interact('TIMER USE?').split(',')
         return [int(t) for t in rsp[1:]]
 
-    def read_timer_list_quick(self):
+    def read_timer_list_quick(self, constant=None):
         '''
         Read the timer settings for the quick timer(timer 0)
 
@@ -171,10 +188,11 @@ class P300(object):
             "mode"="STANDBY" or "OFF" or "CONSTANT" or "RUN"
             "pgmnum" and "pgmstep" only present when mode=="RUN"
         '''
+        rsp = self.ctlr.interact('TIMER LIST?,0%s' % (',CONSTANT' if constant else '' ))
         parsed = re.search(
-            r'(\w+)(?:,R[AO]M:(\d+),STEP(\d+))?,(\d+):(\d+)',
-            self.ctlr.interact('TIMER LIST?,0')
-        )
+            r"(\w+)(?:,R[AO]M:(\d+),STEP(\d+))?,(\d+):(\d+)",
+            rsp 
+        ) 
         ret = {
             'mode':parsed.group(1),
             'time':{'hour':int(parsed.group(4)), 'minute':int(parsed.group(5))}
@@ -183,7 +201,7 @@ class P300(object):
             ret.update({'pgmnum':int(parsed.group(2)), 'pgmstep':int(parsed.group(3))})
         return ret
 
-    def read_timer_list_start(self):
+    def read_timer_list_start(self, constant=None):
         '''
         Read the timer settings for the start timer (timer 1)
 
@@ -203,10 +221,10 @@ class P300(object):
             "pgmnum" and "step" only present when "mode"=="RUN"
             "days" only present when "repeat"=="weekly"
         '''
-        rsp = self.ctlr.interact('TIMER LIST?,1')
+        rsp = self.ctlr.interact('TIMER LIST?,1%s' % (',CONSTANT' if constant else ''))
+
         parsed = re.search(
-            r'1,MODE(\d)(?:,(\d+).(\d+)/(\d+))?(?:,([A-Z/]+))?,(\d+):(\d+),(\w+)'
-            r'(?:,R[AO]M:(\d+),STEP(\d+))?',
+            r"1,MODE(\d)(?:,(\d+).(\d+)/(\d+))?(?:,([A-Z/]+))?,(\d+):(\d+),(\w+[123])",
             rsp
         )
         ret = {
@@ -305,9 +323,11 @@ class P300(object):
                 'tempmax':float(rsp[2])
             }
 
-    def read_mode(self, detail=False):
+    def read_mode(self, detail=False, constant=None):
         '''
         Return the chamber operation state.
+
+        Added new feature: CONSTANT 
 
         Args:
             detail: boolean, if True get additional information (not SCP220 compatible)
@@ -317,9 +337,9 @@ class P300(object):
                 "OFF""STANDBY" or "CONSTANT" or "RUN" or "RUN PAUSE" or "RUN END HOLD" or
                 "RMT RUN" or "RMT RUN PAUSE" or "RMT RUN END HOLD"
         '''
-        return self.ctlr.interact('MODE?%s' % (',DETAIL' if detail else ''))
+        return self.ctlr.interact('MODE?%s%s' % (',DETAIL' if detail else '',',CONSTANT' if constant else '' ))
 
-    def read_mon(self, detail=False):
+    def read_mon(self, detail=False, constant=None):
         '''
         Returns the conditions inside the chamber
 
@@ -330,7 +350,7 @@ class P300(object):
             "humidity": only present if chamber has humidity
             "mode": see read_mode for valid parameters (with and without detail flag).
         '''
-        rsp = self.ctlr.interact('MON?%s' % (',DETAIL' if detail else '')).split(',')
+        rsp = self.ctlr.interact('MON?%s%s' % (',DETAIL' if detail else '', ',CONSTANT' if constant else '')).split(',')
         data = {'temperature':float(rsp[0]), 'mode':rsp[2], 'alarms':int(rsp[3])}
         if rsp[1]:
             data['humidity'] = float(rsp[1])
@@ -432,61 +452,116 @@ class P300(object):
         else:
             return {'dry':float(rsp[1])}
 
-    def read_constant_temp(self):
+    def read_constant_temp(self, constant=None):
         '''
         Get the constant settings for the temperature loop
 
         returns:
             {"setpoint":float,"enable":True}
         '''
-        rsp = self.ctlr.interact('CONSTANT SET?,TEMP').split(',')
+
+        if constant in [1, 2, 3]:
+            rsp = self.ctlr.interact('CONSTANT SET?,TEMP,C%d' % constant).split(',')
+        elif constant is None: 
+            rsp = self.ctlr.interact('CONSTANT SET?,TEMP').split(',')
+        else:
+            raise ValueError("Constant must be None or 1, 2, 3")
+
+        # rsp = self.ctlr.interact('CONSTANT SET?,TEMP').split(',')
+
         return {'setpoint':float(rsp[0]), 'enable':rsp[1] == 'ON'}
 
-    def read_constant_humi(self):
+    def read_constant_humi(self, constant=None):
         '''
         Get the constant settings for the humidity loop
 
         returns:
             {"setpoint":float,"enable":boolean}
         '''
-        rsp = self.ctlr.interact('CONSTANT SET?,HUMI').split(',')
+
+        if constant in [1, 2, 3]:
+            rsp = self.ctlr.interact('COSNTANT SET?,HUMI,C%d' % constant).split(',')
+        elif constant is None:
+            rsp = self.ctlr.interact('CONSTANT SET?,HUMI').split(',') 
+        else: 
+            raise ValueError("Constant must be None or 1, 2, 3")
+
+        # rsp = self.ctlr.interact('CONSTANT SET?,HUMI').split(',')
+
         return {'setpoint':float(rsp[0]), 'enable':rsp[1] == 'ON'}
 
-    def read_constant_ref(self):
+    def read_constant_ref(self, constant=None):
         '''
         Get the constant settings for the refigeration system
 
         returns:
             {"mode":string,"setpoint":float}
         '''
-        rsp = self.ctlr.interact('CONSTANT SET?,REF')
+
+        if constant in [1, 2, 3]:
+            rsp = self.ctlr.interact('CONSTANT SET?,REF,C%d' % constant)
+        elif constant is None:
+            rsp = self.ctlr.interact('CONSTANT SET?,REF')
+        else: 
+            raise ValueError("Constant must be None or 1, 2, 3")
+
+        # rsp = self.ctlr.interact('CONSTANT SET?,REF')
         try:
             return {'mode':'manual', 'setpoint':float(rsp)}
         except Exception:
             return {'mode':rsp.lower(), 'setpoint':0}
 
-    def read_constant_relay(self):
+    def read_constant_relay(self, constant=None):
         '''
         Get the constant settings for the relays(time signals)
 
         returns:
             [int]
         '''
-        rsp = self.ctlr.interact('CONSTANT SET?,RELAY').split(',')
+
+        if constant in [1, 2, 3]:
+            rsp = self.ctlr.interact('CONSTANT SET?,RELAY,C%d' % constant).split(',')
+        elif constant is None:
+            rsp = self.ctlr.interact('CONSTANT SET?,RELAY').split(',')
+        else: 
+            raise ValueError("Constant must be None or 1, 2, 3")
+
+        # rsp = self.ctlr.interact('CONSTANT SET?,RELAY').split(',')
         return [str(i) in rsp[1:] for i in range(1, 13)]
 
-    def read_constant_ptc(self):
+    def read_constant_ptc(self, constant=None):
         '''
         Get the constant settings for product temperature control
 
         returns:
             {"enable":boolean,"deviation":{"positive":float,"negative":float}}
         '''
-        rsp = self.ctlr.interact('CONSTANT SET?,PTC').split(',')
+        if constant in [1, 2, 3]:
+            rsp = self.ctlr.interact('CONSTANT SET?,PTC,C%d' % constant).split(',')
+        elif constant is None:
+            rsp = self.ctlr.interact('CONSTANT SET?,PTC').split(',')
+        else: 
+            raise ValueError("Constant must be None or 1, 2, 3")
+
+        # rsp = self.ctlr.interact('CONSTANT SET?,PTC').split(',')
         return {
             'enable': rsp[0] == 'ON',
             'deviation': {'positive':float(rsp[1]), 'negative':float(rsp[2])}
         }
+
+    # new feature added to the new P-300 model
+    def read_constant_air(self, constant=None):
+        if constant in [1, 2, 3]:
+            rsp = self.ctlr.interact('CONSTANT SET?,AIR,C%d' % constant).split('/') 
+        elif constant is None: 
+            rsp = self.ctlr.interact('CONSTANT SET?,AIR').split('/') 
+        else: 
+            raise ValueError("Constant must be None or 1, 2, 3") 
+        return { 
+            'set value': rsp[0], 
+            'maintenance value': rsp[1] 
+        }
+        
 
     def read_prgm_mon(self):
         '''
@@ -569,7 +644,7 @@ class P300(object):
             }
         }
 
-    def read_prgm_data(self, pgmnum):
+    def read_prgm_data(self, pgmnum, constant=None):
         '''
         get the parameters for a given program
 
@@ -585,7 +660,8 @@ class P300(object):
             }
             "END"="OFF" or "CONSTANT" or "STANDBY" or "RUN"
         '''
-        pdata = self.ctlr.interact('PRGM DATA?,%s:%d' % (self.rom_pgm(pgmnum), pgmnum))
+        pdata = self.ctlr.interact('PRGM DATA?,%s:%d%s' % (self.rom_pgm(pgmnum), 
+                                           pgmnum,',CONSTANT' if constant else ''))
         return self.parse_prgm_data(pdata)
 
     def read_prgm_data_detail(self, pgmnum):
@@ -603,9 +679,9 @@ class P300(object):
         pdata = self.ctlr.interact('PRGM DATA?,%s:%d,DETAIL'%(self.rom_pgm(pgmnum), pgmnum))
         return self.parse_prgm_data_detail(pdata)
 
-    def read_prgm_data_step(self, pgmnum, pgmstep):
+    def read_prgm_data_step(self, pgmnum, pgmstep, air=None):
         '''
-        get a programs step parameters
+        get a programs step parameters and air feature
 
         Args:
             pgmnum: int, the program to read from
@@ -622,7 +698,7 @@ class P300(object):
                 "relay":[int]
             }
         '''
-        tmp = self.ctlr.interact('PRGM DATA?,%s:%d,STEP%d'%(self.rom_pgm(pgmnum), pgmnum, pgmstep))
+        tmp = self.ctlr.interact('PRGM DATA?,%s:%d,STEP%d%s'%(self.rom_pgm(pgmnum), pgmnum, pgmstep, ',AIR' if air else ''))
         return self.parse_prgm_data_step(tmp)
 
     def read_system_set(self, arg='PTCOPT'):
@@ -634,7 +710,7 @@ class P300(object):
         returns:
             string
         '''
-        if arg in ['PTCOPT', 'PTC', 'PTC']:
+        if arg in ['PTCOPT', 'PTC', 'PTS']:
             return self.ctlr.interact('SYSTEM SET?,%s'%arg)
         else:
             raise ValueError('arg must be one of the following: "PTCOPT","PTC","PTS"')
@@ -726,7 +802,7 @@ class P300(object):
             'opt2':float(rsp[6])
         }
 
-    def read_prgm_data_ptc(self, pgmnum):
+    def read_prgm_data_ptc(self, pgmnum, constant=None):
         '''
         get the parameters for a given program that includes ptc
 
@@ -742,7 +818,8 @@ class P300(object):
             }
             "END"="OFF" or "CONSTANT" or "STANDBY" or "RUN"
         '''
-        pdata = self.ctlr.interact('PRGM DATA PTC?,%s:%d' % (self.rom_pgm(pgmnum), pgmnum))
+        pdata = self.ctlr.interact('PRGM DATA PTC?,%s:%d%s' % (self.rom_pgm(pgmnum), pgmnum), 
+                                                           ',CONSTANT' if constant else '')
         return self.parse_prgm_data(pdata)
 
     def read_prgm_data_ptc_detail(self, pgmnum):
@@ -760,7 +837,7 @@ class P300(object):
         tmp = self.ctlr.interact('PRGM DATA PTC?,%s:%d,DETAIL' % (self.rom_pgm(pgmnum), pgmnum))
         return self.parse_prgm_data_detail(tmp)
 
-    def read_prgm_data_ptc_step(self, pgmnum, pgmstep):
+    def read_prgm_data_ptc_step(self, pgmnum, pgmstep, air=None):
         '''
         get a programs step parameters including ptc
 
@@ -788,8 +865,8 @@ class P300(object):
                 "relay":[int]
             }
         '''
-        tmp = self.ctlr.interact('PRGM DATA PTC?,%s:%d,STEP%d' % (self.rom_pgm(pgmnum),
-                                                                  pgmnum, pgmstep))
+        tmp = self.ctlr.interact('PRGM DATA PTC?,%s:%d,STEP%d%s' % (self.rom_pgm(pgmnum),
+                                                          pgmnum, pgmstep, ',AIR' if air else ''))
         return self.parse_prgm_data_step(tmp)
 
     def read_run_prgm_mon(self):
@@ -826,7 +903,7 @@ class P300(object):
             }
 
     #not tested
-    def read_run_prgm(self):
+    def read_run_prgm(self, air=None):
         '''
         get the settings for the remote program being run
 
@@ -836,7 +913,7 @@ class P300(object):
                 "time":{"hours":int,"minutes":int},"refrig":{"mode":string,"setpoint":}
             }
         '''
-        rsp = self.ctlr.interact('RUN PRGM?')
+        rsp = self.ctlr.interact('RUN PRGM?%s' % (',AIR' if air else ''))
         parsed = re.search(
             r'TEMP([0-9.-]+) GOTEMP([0-9.-]+)(?: HUMI(\d+) GOHUMI(\d+))? TIME(\d+):(\d+) (\w+)'
             r'(?: RELAYON,([0-9,]+))?',
@@ -862,6 +939,7 @@ class P300(object):
         return dict(zip(['address', 'mask', 'gateway'], self.ctlr.interact('IPSET?').split(',')))
 
     #--- write methods --- write methods --- write methods --- write methods --- write methods ---
+
     def write_date(self, year, month, day, dow):
         '''
         write a new date to the controller
@@ -1001,7 +1079,21 @@ class P300(object):
         '''
         self.ctlr.interact('POWER,%s' % ('ON' if start else 'off'))
 
-    def write_temp(self, **kwargs):
+    def write_air(self, speed, constant=None):
+        """
+        turn on air speed
+        """
+        if speed in range(1,11):
+            if constant in [1, 2, 3]:
+                self.ctlr.interact('AIR,%d,%d' % (speed, constant))
+            elif constant is None: 
+                self.ctlr.interact('AIR,%d' % speed)
+            else:
+                raise ValueError("Constant must be None or 1, 2, 3")
+        else:
+            raise ValueError("Speed must be given")
+
+    def write_temp(self, constant=None, **kwargs):
         '''
         update the temperature parameters
 
@@ -1012,17 +1104,39 @@ class P300(object):
             range: {"max":float, "min":float}
         '''
         setpoint, maximum, minimum = kwargs.get('setpoint'), kwargs.get('max'), kwargs.get('min')
-        if setpoint is not None and minimum is not None and maximum is not None:
-            self.ctlr.interact('TEMP, S%0.1f H%0.1f L%0.1f' % (setpoint, maximum, minimum))
-        else:
-            if setpoint is not None:
-                self.ctlr.interact('TEMP, S%0.1f' % setpoint)
-            if minimum is not None:
-                self.ctlr.interact('TEMP, L%0.1f' % minimum)
-            if maximum is not None:
-                self.ctlr.interact('TEMP, H%0.1f' % maximum)
 
-    def write_humi(self, **kwargs):
+        if setpoint is not None and minimum is not None and maximum is not None:
+            if constant is None:
+                self.ctlr.interact('TEMP, S%0.1f H%0.1f L%0.1f' % (setpoint, maximum, minimum))
+            elif constant in [1, 2, 3]:
+                self.ctlr.interact('TEMP, S%0.1f H%0.1f L%0.1f, C%d' % (setpoint, 
+                                                                    maximum, minimum, constant))
+            else:
+                raise ValueError("Constant must be None or 1, 2 or 3") 
+        else:
+            if constant in [1, 2, 3]:
+                if setpoint is not None:
+                    self.ctlr.interact('TEMP, S%0.1f, C%d' % (setpoint, constant))
+                
+                if minimum is not None:
+                    self.ctlr.interact('TEMP, L%0.1f, C%d' % (minimum, constant))
+
+                if maximum is not None:
+                    self.ctlr.interact('TEMP, H%0.1f, C%d' % (maximum, constant))
+
+            elif constant is None:
+                if setpoint is not None:
+                    self.ctlr.interact('TEMP, S%0.1f' % setpoint)
+                
+                if minimum is not None:
+                    self.ctlr.interact('TEMP, L%0.1f' % minimum)
+
+                if maximum is not None:
+                    self.ctlr.interact('TEMP, H%0.1f' % maximum)
+            else:
+                raise ValueError("Constant must be None or 1, 2 or 3") 
+
+    def write_humi(self, constant=None, **kwargs):
         '''
         update the humidity parameters
 
@@ -1041,6 +1155,7 @@ class P300(object):
             spstr = ' S%0.1f' % setpoint
         else:
             spstr = None
+        """
         if spstr is not None and minimum is not None and maximum is not None:
             self.ctlr.interact('HUMI,%s H%0.1f L%0.1f' % (spstr, maximum, minimum))
         else:
@@ -1050,8 +1165,33 @@ class P300(object):
                 self.ctlr.interact('HUMI, L%0.1f' % minimum)
             if maximum is not None:
                 self.ctlr.interact('HUMI, H%0.1f' % maximum)
+        """
+        if spstr is not None and minimum is not None and maximum is not None:
+            if constant is None:
+                self.ctlr.interact('HUMI, %s H%0.1f L%0.1f' % (spstr, maximum, minimum)) 
+            elif constant in [1, 2, 3]:
+                self.ctlr.interact('HUMI, %s H%0.1f L%0.1f, C%d' % (spstr, maximum, minimum, constant))
+            else:
+                raise ValueError("Constant must be None or 1, 2 or 3")
+        else:
+            if constant in [1, 2, 3]:
+                if spstr is not None:
+                    self.ctlr.interact('HUMI,' + spstr + ',C%d' % constant)
+                if minimum is not None: 
+                    self.ctlr.interact('HUMI, L%0.1f, C%d' % (minimum, constant)) 
+                if maximum is not None: 
+                    self.ctlr.interact('HUMI, H%0.1f, C%d' % (maximum, constant))
+            elif constant is None:
+                if spstr is not None: 
+                    self.ctlr.interact('HUMI,' + spstr) 
+                if minimum is not None: 
+                    self.ctlr.interact('HUMI, L%0.1f' % minimum)
+                if maximum is not None:
+                    self.ctlr.interact('HUMI, H%0.1f' % maximum)
+            else:
+                raise ValueError("Constant must be None or 1, 2 or 3") 
 
-    def write_set(self, mode, setpoint=0):
+    def write_set(self, mode, setpoint=0, constant = None):
         '''
         Set the constant setpoints refrig mode
 
@@ -1059,20 +1199,36 @@ class P300(object):
             mode: string,"off" or "manual" or "auto"
             setpoint: int,20 or 50 or 100
         '''
-        self.ctlr.interact('SET,%s' % self.encode_refrig(mode, setpoint))
+        if constant is None: 
+            self.ctlr.interact('SET,%s' % self.encode_refrig(mode, setpoint))
+        elif constant in [1, 2, 3]: 
+            self.ctlr.interact('SET,%s,C%d' % (self.encode_refrig(mode, setpoint), constant))
+        else: 
+            raise ValueError("Constant must be None or 1, 2 or 3")
 
-    def write_relay(self, relays):
+    def write_relay(self, relays, constant=None):
         '''
         set each relay(time signal)
 
         Args:
             relays: [boolean] True=turn relay on, False=turn relay off, None=do nothing
         '''
-        vals = self.parse_relays(relays)
-        if len(vals['on']) > 0:
-            self.ctlr.interact('RELAY,ON,%s' % ','.join(str(v) for v in vals['on']))
-        if len(vals['off']) > 0:
-            self.ctlr.interact('RELAY,OFF,%s' % ','.join(str(v) for v in vals['off']))
+
+        vals = self.parse_relays(relays) 
+        if constant in [1, 2, 3]:
+            if len(vals['on']):
+                self.ctlr.interact('RELAY,ON,%s,C%d' % (','.join(str(v) for v in vals['on']), 
+                                                                             constant))
+            if len(vals['off']):
+                self.ctlr.interact('RELAY,OFF,%s,C%d' % (','.join(str(v) for v in vals['off']), 
+                                                                             constant))
+        elif constant is None: 
+            if len(vals['on']) > 0:
+                self.ctlr.interact('RELAY,ON,%s' % ','.join(str(v) for v in vals['on']))
+            if len(vals['off']) > 0:
+                self.ctlr.interact('RELAY,OFF,%s' % ','.join(str(v) for v in vals['off']))
+        else: 
+            raise ValueError("Constant must be None or 1, 2 or 3")
 
     def write_prgm_run(self, pgmnum, pgmstep):
         '''
@@ -1102,17 +1258,26 @@ class P300(object):
         '''
         self.ctlr.interact('PRGM,ADVANCE')
 
-    def write_prgm_end(self, mode="STANDBY"):
+    def write_prgm_end(self, mode="STANDBY", constant = None):
         '''
         stop the running program
 
         Args:
             mode: string, vaid options: "HOLD"/"CONST"/"OFF"/"STANDBY"(default)
-        '''
-        if mode in ["HOLD", "CONST", "OFF", "STANDBY"]:
-            self.ctlr.interact('PRGM,END,%s' % mode)
+        ''' 
+        if constant is None:    
+            if mode in ["HOLD", "CONST", "OFF", "STANDBY"]:
+                self.ctlr.interact('PRGM,END,%s' % mode)
+            else:
+                raise ValueError('"mode" must be "HOLD"/"CONST"/"OFF"/"STANDBY"')
+
+        elif constant in [1, 2, 3]: 
+            if mode in ["HOLD", "CONST", "OFF", "STANDBY"]:
+                self.ctlr.interact('PRGM,END,%s,CONST%d' % (mode, constant)) 
+            else:
+                raise ValueError('"mode" must be "HOLD"/"CONST"/"OFF"/"STANDBY"')    
         else:
-            raise ValueError('"mode" must be "HOLD"/"CONST"/"OFF"/"STANDBY"')
+            raise ValueError("Constant must be None or 1, 2 or 3") 
 
     def write_mode_off(self):
         '''
@@ -1126,11 +1291,16 @@ class P300(object):
         '''
         self.ctlr.interact('MODE,STANDBY')
 
-    def write_mode_constant(self):
+    def write_mode_constant(self, constant = None):
         '''
         run constant setpoint 1
         '''
-        self.ctlr.interact('MODE,CONSTANT')
+        if constant is None: 
+            self.ctlr.interact('MODE,CONSTANT')
+        elif constant in [1, 2, 3]:
+            self.ctlr.interact('MODE,CONSTANT,C%d' % constant) 
+        else:
+            raise ValueError("Constant must be None or 1, 2 or 3") 
 
     def write_mode_run(self, pgmnum):
         '''
@@ -1153,7 +1323,7 @@ class P300(object):
         tmp = 'PRGM DATA WRITE, PGM%d, %s %s'%(pgmnum, 'OVER WRITE' if overwrite else 'EDIT', mode)
         self.ctlr.interact(tmp)
 
-    def write_prgm_data_details(self, pgmnum, **pgmdetail):
+    def write_prgm_data_details(self, pgmnum, constant=None, **pgmdetail):
         '''
         write the various program wide parameters to the controller
 
@@ -1175,13 +1345,18 @@ class P300(object):
                    pgmdetail['counter_b']['cycles'])
             self.ctlr.interact('PRGM DATA WRITE,PGM%d,COUNT,B(%d.%d.%d)' % ttp)
         if 'name' in pgmdetail:
-            self.ctlr.interact('PRGM DATA WRITE, PGM%d, NAME,%s' % (pgmnum, pgmdetail['name']))
+            self.ctlr.interact('PRGM DATA WRITE,PGM%d,NAME,%s' % (pgmnum, pgmdetail['name'])
+        
+        ''' Add new parameter after program ends '''
         if 'end' in pgmdetail:
-            if pgmdetail['end'] != 'RUN':
-                ttp = (pgmnum, pgmdetail['end'])
+            if pgmdetail['end'] != 'RUN' and constant in [1,2,3]: 
+                ttp = (pgmnum, '%s,CONSTANT%d' % (pgmdetail['end'], constant))
+            elif pgmdetail['end'] != 'RUN' and constant is None:
+                ttp = (pgmnum, pgmdetail['end'])     
             else:
                 ttp = (pgmnum, 'RUN,PTN%s'%pgmdetail['next_prgm'])
             self.ctlr.interact('PRGM DATA WRITE, PGM%d, END,%s' % ttp)
+
         if 'tempDetail' in pgmdetail:
             if 'range' in pgmdetail['tempDetail']:
                 ttp = (pgmnum, pgmdetail['tempDetail']['range']['max'])
@@ -1195,7 +1370,7 @@ class P300(object):
                 ttp = (pgmnum, pgmdetail['tempDetail']['setpoint'])
                 self.ctlr.interact('PRGM DATA WRITE, PGM%d, PRE TSV,%0.1f' % ttp)
         if 'humiDetail' in pgmdetail:
-            if 'range' in pgmdetail['humiDetail']:
+            if 'range' in pgmdetail['humiDetail']:     
                 ttp = (pgmnum, pgmdetail['humiDetail']['range']['max'])
                 self.ctlr.interact('PRGM DATA WRITE, PGM%d, HHUMI,%0.0f' % ttp)
                 ttp = (pgmnum, pgmdetail['humiDetail']['range']['min'])
@@ -1219,7 +1394,9 @@ class P300(object):
         if 'time' in pgmstep:
             cmd = '%s,TIME%d:%d' % (cmd, pgmstep['time']['hour'], pgmstep['time']['minute'])
         if 'paused' in pgmstep:
-            cmd = '%s,PAUSE %s' % (cmd, 'ON' if pgmstep['paused'] else 'OFF')
+            cmd = '%s,PAUSE %s' % (cmd, 'ON' if pgmstep['paused'] else 'OFF') 
+        if 'air' in pgmstep:
+            cmd = '%s%s' % (cmd, ',AIR3' if pgmstep['air'] else '')
         if 'refrig' in pgmstep:
             cmd = '%s,%s' % (cmd, self.encode_refrig(**pgmstep['refrig']))
         if 'granty' in pgmstep:
@@ -1261,7 +1438,7 @@ class P300(object):
         '''
         self.ctlr.interact('PRGM ERASE,%s:%d'%(self.rom_pgm(pgmnum), pgmnum))
 
-    def write_run_prgm(self, temp, hour, minute, gotemp=None, humi=None, gohumi=None, relays=None):
+    def write_run_prgm(self, temp, hour, minute, gotemp=None, humi=None, gohumi=None, relays=None, constant=None):
         '''
         Run a remote program (single step program)
 
@@ -1273,6 +1450,7 @@ class P300(object):
             humi: float, the humidity to use at the start of the step (optional)
             gohumi: float, the humidity to end the steap at (optional for ramping)
             relays: [boolean], True= turn relay on, False=turn relay off, None=Do nothing
+            air: int, # of air speed to provide to system to operate 
         '''
         cmd = 'RUN PRGM, TEMP%0.1f TIME%d:%d' % (temp, hour, minute)
         if gotemp is not None:
@@ -1285,7 +1463,10 @@ class P300(object):
         if rlys['on']:
             cmd = '%s RELAYON,%s' % (cmd, ','.join(str(v) for v in rlys['on']))
         if rlys['off']:
-            cmd = '%s RELAYOFF,%s' % (cmd, ','.join(str(v) for v in rlys['off']))
+            cmd = '%s RELAYOFF,%s' % (cmd, ','.join(str(v) for v in rlys['off'])) 
+        if constant in not None: 
+            cmd = '%s AIR%d' % (cmd, constant)
+
         self.ctlr.interact(cmd)
 
     def write_temp_ptc(self, enable, positive, negative):
@@ -1530,3 +1711,533 @@ class P300(object):
                 else:
                     ret['off'].append(i+1)
         return ret
+
+class P300vib(P300):
+    '''
+    This is basic implementation for communications with the P300
+    with vibration feature. 
+
+    Most of its standard features are inherited from the standard P300.
+
+    Args:
+        interface (str): The interface type to connect to: "Serial" or "TCP"
+    Kwargs:
+        serialport (str/int): The serial port to connect to when interface="Serial"
+        baudrate (int): The baud rate to connect at when interface="Serial"
+        address (int): The RS485 address of the chamber to connect to.
+        host (str): The IP address or hostname of the chamber when interface="TCP"
+    '''
+    def __init__(self, interface, **kwargs):
+        super(P300vib, self).__init__(self, interface, **kwargs)
+
+    def read_vib(self):
+        '''
+        Read and return vibration values
+        '''
+        rsp = self.ctlr.interact('VIB?').split(',')
+        data = {
+            'vibration': float(rsp[0]),
+            'setpoint': float(rsp[1]),
+            'upperalarmvalue': float(rsp[2]),
+            'loweralarmvalue': float(rsp[3])
+        }
+        return data
+
+    def read_mon(self):
+        '''
+        Return the chamber status and its operation modes
+        '''
+        rsp = self.ctlr.interact('MON?').split(',')
+        data = {
+            'temperature': float(rsp[0]),
+            'mode': rsp[2],
+            'alarms': int(rsp[3])
+        }
+        if rsp[1]:
+            data['humidity'] = float(rsp[1])
+        return data 
+
+    def read_mon_ext(self):
+        '''
+        Return the chamber status and its operation modes
+        '''
+        rsp = self.ctlr.interact('MON?,EXT1').split(',')
+        data = {
+            'temperature': float(rsp[0]),
+            'modes': rsp[2],
+            'alarms': int(rsp[3])
+        }
+        if rsp[1]:
+            data['vibration'] = float(rsp[1])
+        return data 
+
+    def read_mon_detail(self, constant=None):
+        '''
+        Return the chamber status and its operation mode
+        '''
+        rsp = self.ctlr.interact('MON?,DETAIL{0:s}'.format(',CONSTANT' if constant else '')).split(',') 
+        data = {
+            'temperature': float(rsp[0]),
+            'mode': rsp[2],
+            'alarms': int(rsp[3])
+        }
+        if rsp[1]:
+            data['vibration'] = float(rsp[1])
+        return data
+
+    def read_htr(self, ext=False):
+        '''
+        Return the heater outputs and number of controllable heaters.
+        '''
+        rsp = self.ctlr.interact('%?{0:s}'.format(',EXT1' if ext else '')).split(',')
+        if ext:
+            data = {
+                'Number of heaters': int(rsp[0]),
+                'Temperature': float(rsp[1]),
+                'Vibration': float(rsp[2])
+            }
+        else:
+            if len(rsp) == 3:
+                data = {
+                    'Number of heaters': int(rsp[0]),
+                    'Temperature': float(rsp[1]),
+                    'Humidity': float(rsp[2])
+                }
+            else:
+                data = {
+                    'Number of heaters': int(rsp[0]),
+                    'Temperature': float(rsp[1])
+                }
+        return data 
+
+    def read_vib_constant_set(self, constant=None):
+        '''
+        Read vibrating status
+        '''
+        if constant in [1, 2, 3]:
+            rsp = self.ctlr.interact('CONSTANT SET?, VIB, C{0:d}'.format(constant)).split(',')
+        elif constant is None:
+            rsp = self.ctlr.interact('CONSTANT SET?, VIB').split(',')
+        else:
+            raise ValueError("Constant must be None or 1, 2, 3.")
+        return {
+            'Vibration': float(rsp[0]),
+            'Control Permission': rsp[1]
+        }
+
+    def read_prgm_mon(self, ext=False):
+        '''
+        Read status of running program
+
+        Parameters:
+            'step number': int,
+            'temperature': float,
+            'humidity': float,
+            'vibration': float,
+            'time':{'hour':int, 'minute':int},
+            'counter A': int,
+            'counter B': int
+
+            Note: 'humidity' is only available on chambers having that feature.
+            This means that for chambers with temperature and humidity, return 
+            parameters will be six. Chambers without humidity will return 
+            five parameters. Thus, two types of chambers are those with
+            temperature and vibration, temperature and humidity. 
+        '''
+        rsp = self.ctlr.interact('PRGM MON?{0:s}'.format(',EXT1' if ext else '')).split(',')
+        if exit:
+            time = rsp[3].split(':')
+            data = {
+                'step number': int(rsp[0]),
+                'temp setvalue': float(rsp[1]),
+                'vibration setvalue': float(rsp[2]),
+                'remaining time': {'hour': int(time[0]), 'minute':int(time[1])},
+                'counter A': int(rsp[4]),
+                'counter B': int(rsp[5])
+            }
+        elif len(rsp)==5:
+            time = rsp[2].split(':')
+            data = {
+                'step number': int(rsp[0]),
+                'temperature': float(rsp[1]),
+                'remaining time': {'hour': int(time[0]), 'minute': int(time[1])},
+                'counter A': int(rsp[3]),
+                'counter B': int(rsp[4])
+            }
+        else:
+            time = rsp[3].split(':')
+            data = {
+                'step number': int(rsp[0]),
+                'temperature': float(rsp[1]),
+                'humidity': float(rsp[2]),
+                'remaining time': {'hour': int(time[0]), 'minute':int(time[1])},
+                'counter A': int(rsp[4]),
+                'counter B': int(rsp[5])               
+            }
+        return data  
+
+    """
+    NOTE: read_prgm_data, read_prgm_data_step, 
+          read_prgm_data_detail are all inherited from the superclass P300.
+          Only read_prgm_data that includes vibration reading (with EXT1 command)
+          are the new def's for P300vib.
+
+    def read_prgm_data(self, pgmnum, constant=None):
+        pdata = self.ctlr.interact('PRGM DATA?,{0}:{1}{2}'.format(self.rom_pgm(pgmnum)))
+        return self.parse_prgm_data(pdata)
+
+    def read_prgm_data_step(self, pgmnum, pgmstep, ext=False):
+        tmp = self.ctlr.interact('PRGM DATA?,{0}:{1:d},STEP{2:d}{3}'.format 
+        (self.rom_pgm(pgmnum), pgmnum, pgmstep, ',EXT1' if ext else '')) 
+        return self.parse_prgm_data_step(tmp) 
+
+    def read_prgm_data_detail(self, pgmnum, ext=False):
+        tmp = self.ctlr.interact('PRGM DATA?,{0}:{1:d},DETAIL{2}'.format 
+        (self.rom_pgm(pgmnum), pgmnum, ',EXT1' if ext else ''))
+        return self.parse_prgm_data_detail(tmp) 
+    """ 
+    def read_prgm_data_step_ext(self, pgmnum, pgmstep):
+        pdata = self.ctlr.interact('PRGM DATA?,{0}:{1:d},STEP{2:d},EXT1'.format
+        (self.rom_pgm(pgmnum), pgmnum, pgmstep))
+        return self.parse_prgm_data_step_ext(pdata) # need to write parse def 
+
+    def read_prgm_data_detail_ext(self, pgmnum): 
+        pdata = self.ctlr.interact('PRGM DATA?,{0}:{1:d},DETAIL,EXT1'.format 
+        (self.rom_pgm(pgmnum), pgmnum)) 
+        return self.parse_prgm_data_detail_ext(pdata) # need to write parse def  
+
+    def parse_prgm_data_step_ext(self, arg):
+        '''
+        Parse the program parameters with vibration feature
+        '''
+        parsed = re.search(
+            r'(\d+),TEMP([0-9.-]+),TEMP RAMP (\w+),VIB([0-9.-]+),VIB RAMP (\w+)'
+            r',TIME(\d+):(\d+),GRANTY (\w+),REF(\w+)(?:,RELAY ON([0-9.]+))?,PAUSE (\w+)',
+            arg
+        )
+        # command data and response data
+        # cmd> PRGM DATA?,RAM:3,STEP3,EXT1
+        # rsp> 3,TEMP30.0,TEMP RAMP ON,VIB2.5,VIB RAMP ON,TIME0:03,GRANTY OFF,REF9,RELAY ON1.2,PAUSE OFF
+        #      1      2              3     4            5     6 7          8     9         10       11
+        # cmd> PRGM DATA?,RAM:1,STEP1,EXT1
+        # rsp> 1,TEMP25.0,TEMP RAMP ON,VIB0.0,VIB RAMP OFF,TIME1:30,GRANTY OFF,REF9,PAUSE OFF
+        #      1      2              3     4            5      6  7          8    9  (10)  11
+        base = {
+            'number':int(parsed.group(1)),          # step number
+            'time':{
+                'hour':int(parsed.group(6)),        # time: hour
+                'minute':int(parsed.group(7))       # time: minute
+            },
+            'paused':parsed.group(11) == 'ON', 'granty':parsed.group(8) == 'ON',
+            'refrig':self.reflookup.get(
+                'REF' + parsed.group(9),            # refrig number
+                    { 'mode':'manual', 'setpoint':0 }
+            ),
+            'temperature':{
+                'setpoint':float(parsed.group(2)),  # temp setpoint
+                'ramp':parsed.group(3) == 'ON'      # ramp on
+            }, 
+            'vibration':{
+                'setpoint':float(parsed.group(4)),  # vibration setpoint
+                'ramp':parsed.group(5) == 'ON'      # vibration ramp
+            }
+        }
+        if parsed.group(10):
+            relays = parsed.group(10).split('.')
+            base['relay'] = [str(i) in relays for i in range(1, 13)]
+        else:
+            base['relay'] = [False for i in range(1, 13)]
+        return base
+
+    def parse_prgm_data_detail_ext(self, arg):
+        '''
+        parse program parameters
+        '''
+        parsed = re.search(
+            r'([0-9.-]+),([0-9.-]+),([0-9.-]+),([0-9.-]+),TEMP(\w+)'
+            r'(?:,([0-9.-]+))?,VIB(\w+)(?:,([0-9.-]+))?',
+            arg
+        )
+        # general cmd/rsp pattern: 
+        # cmd> PRGM DATA?,RAM:2,DETAIL,EXT1
+        # rsp> 180.0,-50.0,110.0,0.0,TEMPSV,26.0,VIBOFF
+        # cmd> PRGM DATA?,RAM:3,DETAIL,EXT1
+        # rsp> 180.0,-50.0,110.0,0.0,TEMPSV,26.0,VIBSV,2.5
+        # cmd> PRGM DATA?,RAM:1,DETAIL,EXT1 
+        # rsp> 265.0,-115.0,110.0,0.0,TEMPOFF,VIBOFF
+        # cmd> PRGM DATA?,RAM:2,DETAIL,EXT1
+        # rsp> 180.0,-50.0,110.0,0.0,TEMPSV,26.0,VIBOFF
+        ret = {
+            'tempDetail':{
+                'range':{
+                    'max':float(parsed.group(1)), 'min':float(parsed.group(2))
+                    },
+                'mode':parsed.group(5)
+            }
+            'vibrationDetail':{
+                'range':{
+                    'max':float(parsed.group(3)), 'min':float(parsed.group(4))
+                },
+                'mode':parsed.group(7)
+            }
+        }
+        if parsed.group(6):
+            ret['tempDetail'] = {
+                'range':{
+                    'max':float(parsed.group(1)), 'min':float(parsed.group(2))
+                },
+                'mode':parsed.group(5), 'setpoint':parsed.group(6)
+            }
+        if parsed.group(8):
+            ret['vibrationDetail'] = {
+                'range':{
+                    'max':float(parsed.group(3)), 'min':float(parsed.group(4))
+                },
+                'mode':parsed.group(7), 'setpoint':parsed.group(8)
+            }
+        return ret
+
+    def write_vib(self, constant=None, **kwargs):
+        '''
+        Update the vibration parameters
+        '''
+        setpoint, maximum, minimum = kwargs.get('setpoint'), kwargs.get('max'), kwargs.get('min')
+    
+        if setpoint is not None and minimum is not None and maximum is not None:
+            if constant is None:
+				self.ctlr.interact('VIB, S{0:0.1f} H{1:0.1f} L{2:0.1f}'.format(setpoint, maximum, minimum))				
+            elif constant in [1, 2, 3]:
+        
+				self.ctlr.interact('VIB, S{0:0.1f} H{1:0.1f} L{2:0.1f}, C{3:d}'.format 
+                        (setpoint, maximum, minimum, constant))
+            else:
+                raise ValueError("Constant must be None or 1, 2 or 3")
+        else:
+            if constant in [1, 2, 3]:
+                if setpoint is not None:
+                    self.ctlr.interact('VIB, S{0:0.1f}, C{1:d}'.format(setpoint, constant))
+
+                if minimum is not None:
+                    self.ctlr.interact('VIB, L{0:0.1f}, C{1:d}'.format(minimum, constant))
+
+                if maximum is not None:
+                    self.ctlr.interact('VIB, H{0:0.1f}, C{1:d}'.format(maximum, constant))
+
+            elif constant is None:
+                if setpoint is not None:
+                    self.ctlr.interact('VIB, S{0:0.1f}'.format(setpoint))
+
+                if minimum is not None:
+                    self.ctlr.interact('VIB, L{0:0.1f}'.format(minimum))
+
+                if maximum is not None:
+                    self.ctlr.interact('VIB, H{0:0.1f}'.format(maximum))
+            else:
+                raise ValueError("Constant must be None or 1, 2 or 3")
+    # program to write prgm data for vibration feature
+    # written/modified: 10/19/2018
+    def write_prgm_data_details(self, pgmnum, constant=None, **pgmdetail):
+        '''
+        write the various program wide parameters to the controller
+
+        Args:
+            pgmnum: int, the program being written or edited
+            pgmdetail: the program details see write_prgmDataDetail for parameters
+        '''
+        if 'counter_a' in pgmdetail and pgmdetail['counter_a']['cycles'] > 0:
+            ttp = (pgmnum, pgmdetail['counter_a']['start'], pgmdetail['counter_a']['end'],
+                   pgmdetail['counter_a']['cycles'])
+            tmp = 'PRGM DATA WRITE,PGM{0:d},COUNT,A({1:d}.{2:d}.{3:d})'.format(ttp)
+            if 'counter_b' in pgmdetail and pgmdetail['counter_b']['cycles'] > 0:
+                ttp = (tmp, pgmdetail['counter_b']['start'], pgmdetail['counter_b']['end'],
+                       pgmdetail['counter_b']['cycles'])
+                #tmp = '%s,B(%d.%d.%d)' % ttp
+                tmp = '{0:s},B({1:d}.{2:d}.{3:d})'.format(ttp)
+            self.ctlr.interact(tmp)
+        elif 'counter_b' in pgmdetail and pgmdetail['counter_b']['cycles'] > 0:
+            ttp = (pgmnum, pgmdetail['counter_b']['start'], pgmdetail['counter_b']['end'],
+                   pgmdetail['counter_b']['cycles'])
+            self.ctlr.interact('PRGM DATA WRITE,PGM{0:d},COUNT,B({1:d}.{2:d}.{3:d})'.format(ttp))
+        if 'name' in pgmdetail:
+            self.ctlr.interact('PRGM DATA WRITE,PGM{0:d},NAME,{1:s}'.format(pgmnum, pgmdetail['name']))
+        
+        # Add new parameter after program ends
+        if 'end' in pgmdetail:
+            if pgmdetail['end'] != 'RUN' and constant in [1,2,3]: 
+                ttp = (pgmnum, '{0:s},CONSTANT{1:d}'.format(pgmdetail['end'], constant))
+            elif pgmdetail['end'] != 'RUN' and constant is None:
+                ttp = (pgmnum, pgmdetail['end'])     
+            else:
+                ttp = (pgmnum, 'RUN,PTN{0:s}'.format(pgmdetail['next_prgm']))
+            self.ctlr.interact('PRGM DATA WRITE,PGM{0:d},END,{1:s}'.format(ttp)) 
+
+        if 'tempDetail' in pgmdetail:
+            if 'range' in pgmdetail['tempDetail']:
+                ttp = (pgmnum, pgmdetail['tempDetail']['range']['max'])
+                self.ctlr.interact('PRGM DATA WRITE,PGM{0:d},HTEMP,{1:0.1f}'.format(ttp))
+                ttp = (pgmnum, pgmdetail['tempDetail']['range']['min'])
+                self.ctlr.interact('PRGM DATA WRITE,PGM{0:d},LTEMP,{1:0.1f}'.format(ttp))
+            if 'mode' in pgmdetail['tempDetail']:
+                ttp = (pgmnum, pgmdetail['tempDetail']['mode'])
+                self.ctlr.interact('PRGM DATA WRITE,PGM{0:d},PRE MODE,TEMP,{1:s}'.format(ttp))
+            if 'setpoint' in pgmdetail['tempDetail'] and pgmdetail['tempDetail']['mode'] == 'SV':
+                ttp = (pgmnum, pgmdetail['tempDetail']['setpoint'])
+                self.ctlr.interact('PRGM DATA WRITE,PGM{0:d},PRE TSV,{1:0.1f}'.format(ttp))
+
+        if 'humiDetail' in pgmdetail:
+            if 'range' in pgmdetail['humiDetail']:     
+                ttp = (pgmnum, pgmdetail['humiDetail']['range']['max'])
+                self.ctlr.interact('PRGM DATA WRITE,PGM{0:d},HHUMI,{1:0.0f}'.format(ttp))
+                ttp = (pgmnum, pgmdetail['humiDetail']['range']['min'])
+                self.ctlr.interact('PRGM DATA WRITE,PGM{0:d},LHUMI,{1:0.0f}'.format(ttp))
+            if 'mode' in pgmdetail['humiDetail']:
+                ttp = (pgmnum, pgmdetail['humiDetail']['mode'])
+                self.ctlr.interact('PRGM DATA WRITE,PGM{0:d},PRE MODE,HUMI,{1:s}'.format(ttp))
+            if 'setpoint' in pgmdetail['humiDetail'] and pgmdetail['humiDetail']['mode'] == 'SV':
+                ttp = (pgmnum, pgmdetail['humiDetail']['setpoint'])
+                self.ctlr.interact('PRGM DATA WRITE,PGM{0:d},PRE HSV,{1:0.0f}'.format(ttp)) 
+
+        if 'vibrationDetail' in pgmdetail:
+            if 'range' in pgmdetail['vibrationDetail']:
+                ttp = (pgmnum, pgmdetail['vibrationDetail']['range']['max'])
+                self.ctlr.interact('PRGM DATA WRITE,PGM{0:d},HVIB,{1:0.1f}'.format(ttp))
+                ttp = (pgmnum, pgmdetail['vibrationDetail']['range']['min'])
+                self.ctlr.interact('PRGM DATA WRITE,PGM{0:d},LVIB,{1:0.1f}'.format(ttp))
+            if 'mode' in pgmdetail['vibrationDetail']:
+                ttp = (pgmnum, pgmdetail['vibrationDetail']['mode'])
+                self.ctlr.interact('PRGM DATA WRITE,PGM{0:d},PRE MODE,VIB,{1:s}'.format(ttp))
+            if 'setpoint' in pgmdetail['vibrationDetail'] and pgmdetail['vibrationDetail']['mode'] == 'SV':
+                ttp = (pgmnum, pgmdetail['vibrationDetail']['setpoint'])
+                self.ctlr.interact('PRGM DATA WRITE,PGM{0:d},PRE VSV,{1:0.1f}'.format(ttp))   
+
+    def write_prgm_data_step(self, pgmnum, **pgmstep):
+        '''
+        write a program step includiong vibration feature to the controller
+
+        Args:
+            pgmnum: int, the program being written/edited
+            pgmstep: the program parameters, see read_prgm_data_step for parameters
+        '''
+        cmd = ('PRGM DATA WRITE,PGM{0:d},STEP{1:d}'.format(pgmnum, pgmstep['number']))
+        if 'time' in pgmstep:
+            cmd = '{0:s},TIME{1:d}:{2:d}'.format(cmd, pgmstep['time']['hour'], pgmstep['time']['minute'])
+        if 'paused' in pgmstep:
+            cmd = '{0:s},PAUSE {1:s}'.format(cmd, 'ON' if pgmstep['paused'] else 'OFF')
+        if 'air' in pgmstep:
+            cmd = '{0:s}{1:s}'.format(cmd, ',AIR3' if pgmstep['air'] else '')
+        if 'refrig' in pgmstep:
+            cmd = '{0:s},{1:s}'.format(cmd, self.encode_refrig(**pgmstep['refrig']))
+        if 'granty' in pgmstep:
+            cmd = '{0:s},GRANTY {1:s}'.format(cmd, 'ON' if pgmstep['granty'] else 'OFF')
+        if 'temperature' in pgmstep:
+            if 'setpoint' in pgmstep['temperature']:
+                cmd = '{0:s},TEMP{1:0.1f}'.format(cmd, pgmstep['temperature']['setpoint'])
+            if 'ramp' in pgmstep['temperature']:
+                cmd = ('{0:s},TRAMP{1:s}'
+                    .format(cmd, 'ON' if pgmstep['temperature']['ramp'] else 'OFF'))
+            if 'enable_cascade' in pgmstep['temperature']:
+                cmd = ('{0:s},PTC{1:s}'
+                .format(cmd, 'ON' if pgmstep['temperature']['enable_cascade'] else 'OFF'))
+            if 'deviation' in pgmstep['temperature']:
+                ttp = (cmd, pgmstep['temperature']['deviation']['positive'],
+                       pgmstep['temperature']['deviation']['negative'])
+                cmd = '{0:s},DEVP{1:0.1f},DEVN{2:0.1f}'.format(ttp)
+        if 'humidity' in pgmstep:
+            if 'setpoint' in pgmstep['humidity']:
+                if pgmstep['humidity']['enable']:
+                    htmp = '{0:0.0f}'.format(pgmstep['humidity']['setpoint'])
+                else:
+                    htmp = 'OFF'
+                cmd = '{0:s},HUMI{1:s}'.format(cmd, htmp)
+            if 'ramp' in pgmstep['humidity'] and pgmstep['humidity']['enable']:
+                cmd = '{0:s},HRAMP{1:s}'.format(cmd, 'ON' if pgmstep['humidity']['ramp'] else 'OFF')
+        if 'vibration' in pgmstep:
+            if 'setpoint' in pgmstep['vibration']:
+                if pgmstep['vibration']['enable']:
+                    vtmp = ('{0:0.1f}'.format(pgmstep['vibration']['setpoint']))
+                else:
+                    vtmp = 'OFF'
+                cmd = ('{0:s},VIB{1:s}'.format(cmd, vtmp)) 
+            if 'ramp' in pgmstep['vibration'] and pgmstep['vibration']['enable']:
+                cmd = ('{0:s},VRAMP{1:s}'
+                    .format(cmd, 'ON' if pgmstep['vibration']['ramp'] else 'OFF'))
+        if 'relay' in pgmstep:
+            rlys = self.parse_relays(pgmstep['relay'])
+            if rlys['on']:
+                cmd = '{0:s},RELAY ON{1:s}'.format(cmd, '.'.join(str(v) for v in rlys['on']))
+            if rlys['off']:
+                cmd = '{0:s},RELAY OFF{1:s}'.format(cmd, '.'.join(str(v) for v in rlys['off']))
+        self.ctlr.interact(cmd)
+
+    def write_prgm_erase(self, pgmnum):
+        '''
+        erase a program
+
+        Args:
+            pgmnum: int, the program to erase
+        '''
+        self.ctlr.interact('PRGM ERASE,{0:s}:{1:d}'.format(self.rom_pgm(pgmnum), pgmnum))
+
+    def write_run_prgm(self, temp, hour, minute, gotemp=None, humi=None, gohumi=None, relays=None, constant=None):
+        '''
+        Run a remote program (single step program)
+
+        Args:
+            temp: float, temperature to use at the start of the step
+            hour: int, # of hours to run the step
+            minute: int, # of minutes to run the step
+            gotemp: float, temperature to end the step at(optional for ramping)
+            humi: float, the humidity to use at the start of the step (optional)
+            gohumi: float, the humidity to end the step at (optional for ramping)
+            relays: [boolean], True= turn relay on, False=turn relay off, None=Do nothing
+            air: int, # of air speed to provide to system to operate
+        '''
+        cmd = 'RUN PRGM, TEMP{0:0.1f} TIME{1:d}:{2:d}'.format(temp, hour, minute)
+        if gotemp is not None:
+            cmd = '{0:s} GOTEMP{1:0.1f}'.format(cmd, gotemp)
+        if humi is not None:
+            cmd = '{0:s} HUMI{1:0.0f}'.format(cmd, humi)
+        if gohumi is not None:
+            cmd = '{0:s} GOHUMI{1:0.0f}'.format(cmd, gohumi)
+        rlys = self.parse_relays(relays) if relays is not None else {'on':None, 'off':None}
+        if rlys['on']:
+            cmd = '{0:s} RELAYON,{1:s}'.format(cmd, ','.join(str(v) for v in rlys['on']))
+        if rlys['off']:
+            cmd = '{0:s} RELAYOFF,{1:s}'.format(cmd, ','.join(str(v) for v in rlys['off'])) 
+        if constant in not None: 
+            cmd = '{0:s} AIR{1:d}'.format(cmd, constant)
+
+        self.ctlr.interact(cmd)
+
+    def write_temp_ptc(self, enable, positive, negative):
+        '''
+        set product temperature control settings
+
+        Args:
+            enable: boolean, True(on)/False(off)
+            positive: float, maximum positive deviation
+            negative: float, maximum negative deviation
+        '''
+        ttp = ('ON' if enable else 'OFF', positive, negative)
+        self.ctlr.interact('TEMP PTC,PTC{0:s},DEVP{1:0.1f},DEVN{2:0.1f}'.format(ttp)
+
+    def write_ptc(self, op_range, pid_p, pid_filter, pid_i, **kwargs):
+        '''
+        write product temp control parameters to controller
+
+        Args:
+            range: {"max":float,"min":float}, allowable range of operation
+            p: float, P parameter of PID
+            i: float, I parameter of PID
+            filter: float, filter value
+            opt1,opt2 not used set to 0.0
+        '''
+        opt1, opt2 = kwargs.get('opt1', 0), kwargs.get('opt2', 0)
+        ttp = (op_range['max'], op_range['min'], pid_p, pid_filter, pid_i, opt1, opt2)
+        self.ctlr.interact('PTC,{0:0.1f},{1:0.1f},{2:0.1f},{3:0.1f},{4:0.1f},{5:0.1f},{6:0.1f}'.format(ttp))
+
+    def write_ip_set(self, address, mask, gateway):
+        '''
+        Write the IP address configuration to the controller
+        '''
+        self.ctlr.interact('IPSET,{0:s},{1:s},{2:s}'.format(address, mask, gateway))

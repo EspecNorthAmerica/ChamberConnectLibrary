@@ -9,7 +9,7 @@ import datetime
 import time
 from chamberconnectlibrary.controllerinterface import ControllerInterface, exclusive
 from chamberconnectlibrary.controllerinterface import ControllerInterfaceError
-from chamberconnectlibrary.p300 import P300
+from chamberconnectlibrary.p300 import P300, P300vib
 from chamberconnectlibrary.scp220 import SCP220
 from chamberconnectlibrary.especinteract import EspecError
 
@@ -37,7 +37,7 @@ class Espec(ControllerInterface):
         self.init_common(**kwargs)
         self.freshness = kwargs.get('freshness', 0)
         self.cache = {}
-        self.temp, self.humi = 1, 2
+        self.temp, self.humi, self.vib = 1, 2, 3
         self.lpd = {
             'temp':self.temp,
             'humi':self.humi,
@@ -45,8 +45,12 @@ class Espec(ControllerInterface):
             'humidity':self.humi,
             'Temperature':self.temp,
             'Humidity':self.humi,
+            'vib':self.vib,
+            'vibration':self.vib,
+            'Vibration':self.vib,
             self.temp:self.temp,
-            self.humi:self.humi
+            self.humi:self.humi,
+            self.vib:self.vib
         }
         self.ctlr_type = kwargs.get('ctlr_type', 'P300')
         ttp = (self.ctlr_type, self.temp, self.humi)
@@ -59,6 +63,17 @@ class Espec(ControllerInterface):
         self.total_programs = 40 if self.ctlr_type == 'P300' else 30
         self.__update_loop_map()
 
+        self.ctlr_type = kwargs.get('ctlr_type', 'P300vib')
+        ttp = (self.ctlr_type, self.temp, self.vib)
+        self.lp_exmsg = ('The {0:s} controller only supports 2 loops ({1:d}:temperature,{2:d}:vibration)'
+            .format(ttp))
+        ttp = (self.ctlr_type, self.vib)
+        self.cs_exmsg = ('The {0:s} controller can only have loop {1:d} as cascade'.format(ttp)) 
+        self.alarms = 27
+        self.profiles = True
+        self.events = 12
+        self.total_programs = 40 if self.ctlr_type == 'P300vib' else 30
+        self.__update_loop_map()
 
     def __update_loop_map(self):
         '''
@@ -71,6 +86,9 @@ class Espec(ControllerInterface):
         if self.cascades + self.loops > 1:
             self.loop_map += [{'type':'loop', 'num':2}]
         self.named_loop_map = {'Temperature':0, 'temperature':0, 'Temp':0, 'temp':0}
+        if self.cascades + self.loops > 2:
+            self.loop_map += [{'type':'loo', 'num':3}]
+        self.named_loop_map = {'Vibration':0, 'vibration':0, 'Vib':0, 'vib':0}] 
         if len(self.loop_map) > 1:
             self.named_loop_map.update({'Humidity':1, 'humidity':1, 'Hum':1, 'hum':1})
 
@@ -82,6 +100,8 @@ class Espec(ControllerInterface):
                 'address':self.adr}
         if self.ctlr_type == 'P300':
             self.client = P300(self.interface, **args)
+        elif self.ctlr_type == 'P300vib':
+            self.client = P300vib(self.interface, **args)
         elif self.ctlr_type == 'SCP220':
             self.client = SCP220(self.interface, **args)
         else:
@@ -123,15 +143,17 @@ class Espec(ControllerInterface):
             return 'NA:' + emsg[qps[len(qps)-2]+1:qps[len(qps)-1]]
 
     @exclusive
-    def get_refrig(self):
-        return self.client.read_constant_ref()
+    def get_refrig(self, value):
+        return self.client.read_constant_ref(value)
+
+    @exclusive
 
     @exclusive
     def set_refrig(self, value):
         self.client.write_set(**value)
 
     @exclusive
-    def set_loop(self, identifier, loop_type='loop', param_list=None, **kwargs):
+    def set_loop(self, identifier, loop_type='loop', param_list=None, value, **kwargs):
         #cannot use the default controllerInterface version.
         lpfuncs = {
             'cascade':{
@@ -193,6 +215,8 @@ class Espec(ControllerInterface):
                 self.client.write_temp(**params)
             elif self.lpd[loop_number] == self.humi:
                 self.client.write_humi(**params)
+            elif self.lpd[loop_number] == self.vib:
+                self.client.write_vib(**params)
             else:
                 raise ValueError(self.lp_exmsg)
         if 'deviation' in param_list and 'enable_cascade' in param_list:
@@ -212,9 +236,7 @@ class Espec(ControllerInterface):
 
     @exclusive
     def get_datetime(self):
-        temp = self.client.read_time()
-        temp.update(self.client.read_date())
-        return datetime.datetime(**temp)
+        return datetime.datetime(**self.client.read_date_time())
 
     @exclusive
     def set_datetime(self, value):
@@ -223,12 +245,15 @@ class Espec(ControllerInterface):
         self.client.write_date(value.year, value.month, value.day, weekday)
 
     @exclusive
-    def get_loop_sp(self, N):
+    def get_loop_sp(self, N, value):
         if N not in self.lpd:
             raise ValueError(self.lp_exmsg)
         if self.lpd[N] == self.temp:
             cur = self.cached(self.client.read_temp)['setpoint']
             con = self.cached(self.client.read_constant_temp)['setpoint']
+        elif isinstance(self.client, P300):
+            cur = self.cached(self.client_read_vib)['setpoint'])
+            con = self.cached(self.client_read_vib_constant_set)['setpoint']
         else:
             cur = self.cached(self.client.read_humi)['setpoint']
             con = self.cached(self.client.read_constant_humi)['setpoint']
@@ -241,6 +266,8 @@ class Espec(ControllerInterface):
             self.client.write_temp(setpoint=value)
         elif self.lpd[N] == self.humi:
             self.client.write_humi(setpoint=value)
+        elif self.lpd[N] == self.vib:
+            self.client.write_vib(setpoint=value)
         else:
             raise ValueError(self.lp_exmsg)
 
@@ -250,6 +277,8 @@ class Espec(ControllerInterface):
             return {'air':self.cached(self.client.read_temp)['processvalue']}
         elif self.lpd[N] == self.humi:
             return {'air':self.cached(self.client.read_humi)['processvalue']}
+        elif self.lpd[N] == self.vib:
+            return {'air':self.cached(self.client.read_vib)['processvalue']}
         else:
             raise ValueError(self.lp_exmsg)
 
@@ -261,6 +290,8 @@ class Espec(ControllerInterface):
             self.client.write_temp(min=value['min'], max=value['max'])
         elif self.lpd[N] == self.humi:
             self.client.write_humi(min=value['min'], max=value['max'])
+        elif self.lpd[N] == self.vib:
+            self.client.write_vib(min=value['min'], max=value['max'])
         else: raise ValueError(self.lp_exmsg)
 
     @exclusive
@@ -269,15 +300,20 @@ class Espec(ControllerInterface):
             return self.cached(self.client.read_temp)['range']
         elif self.lpd[N] == self.humi:
             return self.cached(self.client.read_humi)['range']
+        elif self.lpd[N] == self.vib:
+            return self.cached(self.client.read_vib)['range'] 
         else: raise ValueError(self.lp_exmsg)
 
     @exclusive
-    def get_loop_en(self, N):
+    def get_loop_en(self, N, value):
         if self.lpd[N] == self.temp:
             return {'constant':True, 'current':True}
         elif self.lpd[N] == self.humi:
             return {'current':self.cached(self.client.read_humi)['enable'],
                     'constant':self.cached(self.client.read_constant_humi)['enable']}
+        elif self.lpd[N] == self.vib:
+            return {'current':self.cached(self.client.read_vib)['enable'],
+                    'constant':self.cached(self.client.read_vib_constant_set)['enable']}
         else: raise ValueError(self.lp_exmsg)
 
     @exclusive
@@ -293,6 +329,14 @@ class Espec(ControllerInterface):
                 )
             else:
                 self.client.write_humi(enable=False)
+        elif self.lpd[N] == self.vib:
+            if value:
+                self.client.write_vib(
+                    enable=True,
+                    setpoint=self.cached(self.client.read_vib_constant_set)['setpoint']
+                )
+            else:
+                self.client.write_vib(enable=False)                
         else: raise ValueError(self.lp_exmsg)
 
     @exclusive
@@ -301,6 +345,8 @@ class Espec(ControllerInterface):
             return u'\xb0C'
         elif self.lpd[N] == self.humi:
             return u'%RH'
+        elif self.lpd[N] == self.vib:
+            return u'Grms'
         else:
             raise ValueError(self.lp_exmsg)
 
@@ -314,10 +360,10 @@ class Espec(ControllerInterface):
         elif value in ['On', 'ON', 'on']:
             self.set_loop_en(N, True, exclusive=False)
         else:
-            raise ValueError('Mode must be on or off, recived:' + value)
+            raise ValueError('Mode must be on or off, received:' + value)
 
     @exclusive
-    def get_loop_mode(self, N):
+    def get_loop_mode(self, N, value):
         if N > 2:
             raise ValueError(self.lp_exmsg)
         if self.lpd[N] == self.humi:
@@ -352,7 +398,7 @@ class Espec(ControllerInterface):
         raise NotImplementedError
 
     @exclusive
-    def get_cascade_sp(self, N):
+    def get_cascade_sp(self, N, value):
         if self.lpd[N] != self.temp:
             raise ValueError(self.cs_exmsg)
         cur = self.cached(self.client.read_temp_ptc)
@@ -425,7 +471,7 @@ class Espec(ControllerInterface):
         return self.get_loop_modes(N)
 
     @exclusive
-    def get_cascade_ctl(self, N):
+    def get_cascade_ctl(self, N, value):
         if self.lpd[N] != self.temp:
             raise ValueError(self.cs_exmsg)
         return {
@@ -443,7 +489,7 @@ class Espec(ControllerInterface):
         self.client.write_temp_ptc(**params['deviation'])
 
     @exclusive
-    def get_cascade_deviation(self, N):
+    def get_cascade_deviation(self, N, value):
         if self.lpd[N] != self.temp:
             raise ValueError(self.cs_exmsg)
         return self.cached(self.client.read_constant_ptc)['deviation']
@@ -467,13 +513,21 @@ class Espec(ControllerInterface):
         raise NotImplementedError
 
     @exclusive
-    def get_event(self, N):
+    def get_event(self, N, value):
         if N >= 13:
             raise ValueError('There are only 12 events')
         return {
             'current':self.cached(self.client.read_relay)[N-1],
             'constant':self.cached(self.client.read_constant_relay)[N-1]
         }
+
+    @exclusive  
+    def get_air_speed(self, value):
+        return self.client.read_constant_air(value) 
+
+    @exclusive
+    def set_air_speed(self, speed, constant=None):
+        self.client.write_air()
 
     @exclusive
     def set_event(self, N, value):
@@ -483,7 +537,7 @@ class Espec(ControllerInterface):
         self.client.write_relay([value if i == N else None for i in range(1, 13)])
 
     @exclusive
-    def get_status(self):
+    def get_status(self, detail=False, constant=None):
         if self.cached(self.client.read_mon)['alarms'] > 0:
             return 'Alarm'
         return {
@@ -507,7 +561,7 @@ class Espec(ControllerInterface):
         return {'active':active, 'inactive':inactive}
 
     @exclusive
-    def const_start(self):
+    def const_start(self, value):
         self.client.write_mode_constant()
 
     @exclusive
@@ -531,7 +585,7 @@ class Espec(ControllerInterface):
         self.client.write_prgm_advance()
 
     @exclusive
-    def get_prgm_counter(self):
+    def get_prgm_counter(self, constant=None):
         prgm_set = self.client.read_prgm_set()
         prgm_data = self.client.read_prgm_data(prgm_set['number'])
         prgm_mon = self.client.read_prgm_mon()
