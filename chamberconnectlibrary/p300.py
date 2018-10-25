@@ -129,11 +129,6 @@ class P300(object):
         ret.update({'year':2000+int(date[0]), 'month':int(date[1]), 'day':int(date[2])})
         return ret
         
-<<<<<<< HEAD
-=======
-
-
->>>>>>> origin/master
     def read_srq(self):
         '''
         Read the SRQ status
@@ -567,7 +562,6 @@ class P300(object):
             'maintenance value': rsp[1] 
         }
         
-
     def read_prgm_mon(self):
         '''
         get the status of the running program
@@ -1160,17 +1154,16 @@ class P300(object):
             spstr = ' S%0.1f' % setpoint
         else:
             spstr = None
-        """
-        if spstr is not None and minimum is not None and maximum is not None:
-            self.ctlr.interact('HUMI,%s H%0.1f L%0.1f' % (spstr, maximum, minimum))
-        else:
-            if spstr is not None:
-                self.ctlr.interact('HUMI,' + spstr)
-            if minimum is not None:
-                self.ctlr.interact('HUMI, L%0.1f' % minimum)
-            if maximum is not None:
-                self.ctlr.interact('HUMI, H%0.1f' % maximum)
-        """
+        # For Non-air feature:
+        # if spstr is not None and minimum is not None and maximum is not None:
+        #     self.ctlr.interact('HUMI,%s H%0.1f L%0.1f' % (spstr, maximum, minimum))
+        # else:
+        #    if spstr is not None:
+        #        self.ctlr.interact('HUMI,' + spstr)
+        #    if minimum is not None:
+        #        self.ctlr.interact('HUMI, L%0.1f' % minimum)
+        #    if maximum is not None:
+        #        self.ctlr.interact('HUMI, H%0.1f' % maximum)
         if spstr is not None and minimum is not None and maximum is not None:
             if constant is None:
                 self.ctlr.interact('HUMI, %s H%0.1f L%0.1f' % (spstr, maximum, minimum)) 
@@ -1350,19 +1343,7 @@ class P300(object):
                    pgmdetail['counter_b']['cycles'])
             self.ctlr.interact('PRGM DATA WRITE,PGM%d,COUNT,B(%d.%d.%d)' % ttp)
         if 'name' in pgmdetail:
-<<<<<<< HEAD
-<<<<<<< HEAD
-            self.ctlr.interact('PRGM DATA WRITE,PGM%d,NAME,%s' % (pgmnum, pgmdetail['name'])
-        
-        ''' Add new parameter after program ends '''
-=======
             self.ctlr.interact('PRGM DATA WRITE,PGM%d,NAME,%s' % (pgmnum, pgmdetail['name']))
->>>>>>> origin/master
-=======
-            self.ctlr.interact('PRGM DATA WRITE,PGM%d,NAME,%s' % (pgmnum, pgmdetail['name'])
-        
-        ''' Add new parameter after program ends '''
->>>>>>> origin/new_p300_cmds
         if 'end' in pgmdetail:
             if pgmdetail['end'] != 'RUN' and constant in [1,2,3]: 
                 ttp = (pgmnum, '%s,CONSTANT%d' % (pgmdetail['end'], constant))
@@ -1370,15 +1351,7 @@ class P300(object):
                 ttp = (pgmnum, pgmdetail['end'])     
             else:
                 ttp = (pgmnum, 'RUN,PTN%s'%pgmdetail['next_prgm'])
-<<<<<<< HEAD
-            self.ctlr.interact('PRGM DATA WRITE, PGM%d, END,%s' % ttp)
-
-<<<<<<< HEAD
-=======
             self.ctlr.interact('PRGM DATA WRITE,PGM%d,END,%s' % ttp)
->>>>>>> origin/master
-=======
->>>>>>> origin/new_p300_cmds
         if 'tempDetail' in pgmdetail:
             if 'range' in pgmdetail['tempDetail']:
                 ttp = (pgmnum, pgmdetail['tempDetail']['range']['max'])
@@ -1412,7 +1385,6 @@ class P300(object):
             pgmnum: int, the program being written/edited
             pgmstep: the program parameters, see read_prgm_data_step for parameters
         '''
-<<<<<<< HEAD
         cmd = 'PRGM DATA WRITE, PGM%d, STEP%d' % (pgmnum, pgmstep['number'])
         if 'time' in pgmstep:
             cmd = '%s,TIME%d:%d' % (cmd, pgmstep['time']['hour'], pgmstep['time']['minute'])
@@ -1424,9 +1396,6 @@ class P300(object):
             cmd = '%s,%s' % (cmd, self.encode_refrig(**pgmstep['refrig']))
         if 'granty' in pgmstep:
             cmd = '%s,GRANTY %s' % (cmd, 'ON' if pgmstep['granty'] else 'OFF')
-=======
-        cmd = 'PRGM DATA WRITE,PGM%d,STEP%d' % (pgmnum, pgmstep['number'])
->>>>>>> origin/master
         if 'temperature' in pgmstep:
             if 'setpoint' in pgmstep['temperature']:
                 cmd = '%s,TEMP%0.1f' % (cmd, pgmstep['temperature']['setpoint'])
@@ -1498,7 +1467,7 @@ class P300(object):
             cmd = '%s RELAYON,%s' % (cmd, ','.join(str(v) for v in rlys['on']))
         if rlys['off']:
             cmd = '%s RELAYOFF,%s' % (cmd, ','.join(str(v) for v in rlys['off'])) 
-        if constant in not None: 
+        if constant is not None: 
             cmd = '%s AIR%d' % (cmd, constant)
 
         self.ctlr.interact(cmd)
@@ -1756,10 +1725,10 @@ class P300(object):
 
 class P300vib(P300):
     '''
-    This is basic implementation for communications with the P300
+    This is the basic implementation for communications with the P300
     with vibration feature. 
 
-    Most of its standard features are inherited from the standard P300.
+    Most of its standard features are inherited from the superclass, standard P300.
 
     Args:
         interface (str): The interface type to connect to: "Serial" or "TCP"
@@ -1918,26 +1887,25 @@ class P300vib(P300):
             }
         return data  
 
-    """
-    NOTE: read_prgm_data, read_prgm_data_step, 
-          read_prgm_data_detail are all inherited from the superclass P300.
-          Only read_prgm_data that includes vibration reading (with EXT1 command)
-          are the new def's for P300vib.
-
-    def read_prgm_data(self, pgmnum, constant=None):
-        pdata = self.ctlr.interact('PRGM DATA?,{0}:{1}{2}'.format(self.rom_pgm(pgmnum)))
-        return self.parse_prgm_data(pdata)
-
-    def read_prgm_data_step(self, pgmnum, pgmstep, ext=False):
-        tmp = self.ctlr.interact('PRGM DATA?,{0}:{1:d},STEP{2:d}{3}'.format 
-        (self.rom_pgm(pgmnum), pgmnum, pgmstep, ',EXT1' if ext else '')) 
-        return self.parse_prgm_data_step(tmp) 
-
-    def read_prgm_data_detail(self, pgmnum, ext=False):
-        tmp = self.ctlr.interact('PRGM DATA?,{0}:{1:d},DETAIL{2}'.format 
-        (self.rom_pgm(pgmnum), pgmnum, ',EXT1' if ext else ''))
-        return self.parse_prgm_data_detail(tmp) 
-    """ 
+    # NOTE: read_prgm_data, read_prgm_data_step, 
+    #       read_prgm_data_detail are all inherited from the superclass P300.
+    #       Only read_prgm_data that includes vibration reading (with EXT1 command)
+    #       are the new def's for P300vib.
+    #
+    # def read_prgm_data(self, pgmnum, constant=None):
+    #     pdata = self.ctlr.interact('PRGM DATA?,{0}:{1}{2}'.format(self.rom_pgm(pgmnum)))
+    #     return self.parse_prgm_data(pdata)
+    #
+    # def read_prgm_data_step(self, pgmnum, pgmstep, ext=False):
+    #     tmp = self.ctlr.interact('PRGM DATA?,{0}:{1:d},STEP{2:d}{3}'.format 
+    #     (self.rom_pgm(pgmnum), pgmnum, pgmstep, ',EXT1' if ext else '')) 
+    #     return self.parse_prgm_data_step(tmp) 
+    #
+    # def read_prgm_data_detail(self, pgmnum, ext=False):
+    #     tmp = self.ctlr.interact('PRGM DATA?,{0}:{1:d},DETAIL{2}'.format 
+    #     (self.rom_pgm(pgmnum), pgmnum, ',EXT1' if ext else ''))
+    #    return self.parse_prgm_data_detail(tmp) 
+     
     def read_prgm_data_step_ext(self, pgmnum, pgmstep):
         pdata = self.ctlr.interact('PRGM DATA?,{0}:{1:d},STEP{2:d},EXT1'.format
         (self.rom_pgm(pgmnum), pgmnum, pgmstep))
@@ -2015,7 +1983,7 @@ class P300vib(P300):
                     'max':float(parsed.group(1)), 'min':float(parsed.group(2))
                     },
                 'mode':parsed.group(5)
-            }
+            },
             'vibrationDetail':{
                 'range':{
                     'max':float(parsed.group(3)), 'min':float(parsed.group(4))
@@ -2246,40 +2214,41 @@ class P300vib(P300):
             cmd = '{0:s} RELAYON,{1:s}'.format(cmd, ','.join(str(v) for v in rlys['on']))
         if rlys['off']:
             cmd = '{0:s} RELAYOFF,{1:s}'.format(cmd, ','.join(str(v) for v in rlys['off'])) 
-        if constant in not None: 
+        if constant is not None: 
             cmd = '{0:s} AIR{1:d}'.format(cmd, constant)
 
         self.ctlr.interact(cmd)
-
-    def write_temp_ptc(self, enable, positive, negative):
-        '''
-        set product temperature control settings
-
-        Args:
-            enable: boolean, True(on)/False(off)
-            positive: float, maximum positive deviation
-            negative: float, maximum negative deviation
-        '''
-        ttp = ('ON' if enable else 'OFF', positive, negative)
-        self.ctlr.interact('TEMP PTC,PTC{0:s},DEVP{1:0.1f},DEVN{2:0.1f}'.format(ttp)
-
-    def write_ptc(self, op_range, pid_p, pid_filter, pid_i, **kwargs):
-        '''
-        write product temp control parameters to controller
-
-        Args:
-            range: {"max":float,"min":float}, allowable range of operation
-            p: float, P parameter of PID
-            i: float, I parameter of PID
-            filter: float, filter value
-            opt1,opt2 not used set to 0.0
-        '''
-        opt1, opt2 = kwargs.get('opt1', 0), kwargs.get('opt2', 0)
-        ttp = (op_range['max'], op_range['min'], pid_p, pid_filter, pid_i, opt1, opt2)
-        self.ctlr.interact('PTC,{0:0.1f},{1:0.1f},{2:0.1f},{3:0.1f},{4:0.1f},{5:0.1f},{6:0.1f}'.format(ttp))
-
-    def write_ip_set(self, address, mask, gateway):
-        '''
-        Write the IP address configuration to the controller
-        '''
-        self.ctlr.interact('IPSET,{0:s},{1:s},{2:s}'.format(address, mask, gateway))
+    # NOTE: The following data commands for vibration are null:
+    # PRGM DATA ERASE, RUN PRGM, PRGM SET?, PRGM USE?, and PRGM DATA PTC?
+    #
+    #def write_temp_ptc(self, enable, positive, negative):
+    #    '''
+    #    set product temperature control settings
+    #    Args:
+    #        enable: boolean, True(on)/False(off)
+    #        positive: float, maximum positive deviation
+    #        negative: float, maximum negative deviation
+    #    '''
+    #    ttp = ('ON' if enable else 'OFF', positive, negative)
+    #    self.ctlr.interact('TEMP PTC,PTC{0:s},DEVP{1:0.1f},DEVN{2:0.1f}'.format(ttp)
+    
+    #def write_ptc(self, op_range, pid_p, pid_filter, pid_i, **kwargs):
+    #    '''
+    #    write product temp control parameters to controller
+    #
+    #    Args:
+    #        range: {"max":float,"min":float}, allowable range of operation
+    #        p: float, P parameter of PID
+    #        i: float, I parameter of PID
+    #        filter: float, filter value
+    #        opt1,opt2 not used set to 0.0
+    #    '''
+    #    opt1, opt2 = kwargs.get('opt1', 0), kwargs.get('opt2', 0)
+    #    ttp = (op_range['max'], op_range['min'], pid_p, pid_filter, pid_i, opt1, opt2)
+    #    self.ctlr.interact('PTC,{0:0.1f},{1:0.1f},{2:0.1f},{3:0.1f},{4:0.1f},{5:0.1f},{6:0.1f}'.format(ttp))
+    
+    #def write_ip_set(self, address, mask, gateway):
+    #    '''
+    #    Write the IP address configuration to the controller
+    #    '''
+    #    self.ctlr.interact('IPSET,{0:s},{1:s},{2:s}'.format(address, mask, gateway))

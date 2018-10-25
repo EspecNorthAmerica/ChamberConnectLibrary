@@ -87,8 +87,8 @@ class Espec(ControllerInterface):
             self.loop_map += [{'type':'loop', 'num':2}]
         self.named_loop_map = {'Temperature':0, 'temperature':0, 'Temp':0, 'temp':0}
         if self.cascades + self.loops > 2:
-            self.loop_map += [{'type':'loo', 'num':3}]
-        self.named_loop_map = {'Vibration':0, 'vibration':0, 'Vib':0, 'vib':0}] 
+            self.loop_map += [{'type':'loop', 'num':3}]
+        self.named_loop_map = {'Vibration':0, 'vibration':0, 'Vib':0, 'vib':0} 
         if len(self.loop_map) > 1:
             self.named_loop_map.update({'Humidity':1, 'humidity':1, 'Hum':1, 'hum':1})
 
@@ -153,7 +153,9 @@ class Espec(ControllerInterface):
         self.client.write_set(**value)
 
     @exclusive
-    def set_loop(self, identifier, loop_type='loop', param_list=None, value, **kwargs):
+    #def set_loop(self, identifier, loop_type='loop', param_list=None, value, **kwargs): # original statement -- syntax error 
+                                                                                          # non-default args follow default args
+    def set_loop(self, identifier, value, loop_type='loop', param_list=None, **kwargs):
         #cannot use the default controllerInterface version.
         lpfuncs = {
             'cascade':{
@@ -254,7 +256,7 @@ class Espec(ControllerInterface):
             cur = self.cached(self.client.read_temp)['setpoint']
             con = self.cached(self.client.read_constant_temp)['setpoint']
         elif isinstance(self.client, P300):
-            cur = self.cached(self.client_read_vib)['setpoint'])
+            cur = self.cached(self.client_read_vib)['setpoint']
             con = self.cached(self.client_read_vib_constant_set)['setpoint']
         else:
             cur = self.cached(self.client.read_humi)['setpoint']
