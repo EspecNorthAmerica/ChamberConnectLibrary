@@ -2,7 +2,8 @@
 Upper level interface for Espec Corp. Controllers (just the P300 for now)
 
 :copyright: (C) Espec North America, INC.
-:license: MIT, see LICENSE for more details.
+:license: MIT, see LICENSE for more details on this. 
+
 '''
 #pylint: disable=R0902,R0904
 import datetime
@@ -29,7 +30,7 @@ class Espec(ControllerInterface):
         cascades (int): The number of cascade control loops the controller has (default=0, max=1)
         lock (RLock): The locking method to use when accessing the controller (default=RLock())
         freshness (int): The length of time (in seconds) a command is cached (default = 0)
-        ctlr_type (str): "SCP220" or "P300" (default = "P300")
+        ctlr_type (str): "SCP220" or "P300" (default = "P300"), or "P300vib" 
     '''
 
     def __init__(self, **kwargs):
@@ -51,30 +52,23 @@ class Espec(ControllerInterface):
             self.temp:self.temp,
             self.humi:self.humi,
             self.vib:self.vib
-        }
+        }   
+        
         self.ctlr_type = kwargs.get('ctlr_type', 'P300')
-        ttp = (self.ctlr_type, self.temp, self.humi)
-        self.lp_exmsg = 'The %s controller only supports 2 loops (%d:temperature,%d:humidity)'%ttp
+        if self.ctlr_type == 'P300vib':
+            ttp = (self.ctlr_type, self.temp, self.vib)
+            self.lp_exmsg = ('The {0:s} controller only supports 2 loops ({1:d}:temperature,{2:d}:vibration)'.format(*ttp))
+        else:         
+            ttp = (self.ctlr_type, self.temp, self.humi)
+            self.lp_exmsg = 'The %s controller only supports 2 loops (%d:temperature,%d:humidity)'%ttp
         ttp = (self.ctlr_type, self.temp)
         self.cs_exmsg = 'The %s controller can only have loop %d as cascade' % ttp
+        self.total_programs = 40 if 'P300' in self.ctlr_type else 30
         self.alarms = 27
         self.profiles = True
         self.events = 12
-        self.total_programs = 40 if self.ctlr_type == 'P300' else 30
         self.__update_loop_map()
-
-        self.ctlr_type = kwargs.get('ctlr_type', 'P300vib')
-        ttp = (self.ctlr_type, self.temp, self.vib)
-        self.lp_exmsg = ('The {0:s} controller only supports 2 loops ({1:d}:temperature,{2:d}:vibration)'
-            .format(ttp))
-        ttp = (self.ctlr_type, self.vib)
-        self.cs_exmsg = ('The {0:s} controller can only have loop {1:d} as cascade'.format(ttp)) 
-        self.alarms = 27
-        self.profiles = True
-        self.events = 12
-        self.total_programs = 40 if self.ctlr_type == 'P300vib' else 30
-        self.__update_loop_map()
-
+       
     def __update_loop_map(self):
         '''
         update the loop map.
@@ -83,21 +77,24 @@ class Espec(ControllerInterface):
             self.loop_map = [{'type':'cascade', 'num':1}]
         else:
             self.loop_map = [{'type':'loop', 'num':1}]
-        if self.cascades + self.loops > 1:
+        self.named_loop_map = {'Temperature':0, 'temperature':0, 'Temp':0, 'temp':0}        
+        if self.cascades + self.loops > 1 and self.ctlr_type == 'P300':
             self.loop_map += [{'type':'loop', 'num':2}]
-        self.named_loop_map = {'Temperature':0, 'temperature':0, 'Temp':0, 'temp':0}
-        if self.cascades + self.loops > 2:
+            self.loop_map.update({'Humidity':1, 'humidity':1, 'Hum':1, 'hum':1})
+        elif self.cascades + self.loops > 1:
             self.loop_map += [{'type':'loop', 'num':3}]
-        self.named_loop_map = {'Vibration':0, 'vibration':0, 'Vib':0, 'vib':0} 
-        if len(self.loop_map) > 1:
-            self.named_loop_map.update({'Humidity':1, 'humidity':1, 'Hum':1, 'hum':1})
+            self.named_loop_map.update({'Vibration':1,'vibration':1,'Vib':1,'vib':1})
 
     def connect(self):
         '''
         connect to the controller using the paramters provided on class initialization
         '''
-        args = {'serialport':self.serialport, 'baudrate':self.baudrate, 'host':self.host,
-                'address':self.adr}
+        args = {
+            'serialport':self.serialport, 
+            'baudrate':self.baudrate, 
+            'host':self.host,
+            'address':self.adr
+            }
         if self.ctlr_type == 'P300':
             self.client = P300(self.interface, **args)
         elif self.ctlr_type == 'P300vib':
@@ -125,7 +122,10 @@ class Espec(ControllerInterface):
         now = time.time()
         incache = func.__name__ not in self.cache
         if incache or (now - self.cache[func.__name__]['timestamp'] > self.freshness):
-            self.cache[func.__name__] = {'timestamp':now, 'values':func(*args, **kwargs)}
+            self.cache[func.__name__] = {
+                'timestamp':now, 
+                'values':func(*args, **kwargs)
+            }
         return self.cache[func.__name__]['values']
 
     @exclusive
@@ -143,20 +143,18 @@ class Espec(ControllerInterface):
             return 'NA:' + emsg[qps[len(qps)-2]+1:qps[len(qps)-1]]
 
     @exclusive
-    def get_refrig(self, value):
-        return self.client.read_constant_ref(value)
+    def get_refrig(self, constant=None):
+        return self.client.read_constant_ref(constant)
 
     @exclusive
+    def set_refrig(self, constant):
+        self.client.write_set(**constant)
 
     @exclusive
-    def set_refrig(self, value):
-        self.client.write_set(**value)
-
-    @exclusive
-    #def set_loop(self, identifier, loop_type='loop', param_list=None, value, **kwargs): # original statement -- syntax error 
-                                                                                          # non-default args follow default args
-    def set_loop(self, identifier, value, loop_type='loop', param_list=None, **kwargs):
-        #cannot use the default controllerInterface version.
+    def set_loop(self, identifier, loop_type='loop', param_list=None, constant=None, **kwargs):
+        '''
+        define loop parameters and functions
+        '''
         lpfuncs = {
             'cascade':{
                 'setpoint':self.set_cascade_sp,
@@ -166,7 +164,8 @@ class Espec(ControllerInterface):
                 'enable':self.set_cascade_en,
                 'deviation':self.set_cascade_deviation,
                 'enable_cascade':self.set_cascade_ctl,
-                'mode': self.set_cascade_mode},
+                'mode': self.set_cascade_mode
+            },
             'loop':{
                 'setpoint':self.set_loop_sp,
                 'setPoint':self.set_loop_sp,
@@ -249,15 +248,16 @@ class Espec(ControllerInterface):
         self.client.write_date(value.year, value.month, value.day, weekday)
 
     @exclusive
-    def get_loop_sp(self, N, value):
+    def get_loop_sp(self, N, constant=None):
         if N not in self.lpd:
             raise ValueError(self.lp_exmsg)
-        if self.lpd[N] == self.temp:
+        if self.lpd.get(N) == self.temp:
             cur = self.cached(self.client.read_temp)['setpoint']
             con = self.cached(self.client.read_constant_temp)['setpoint']
+        # elif isinstance(self.client, P300vib):
         elif isinstance(self.client, P300):
-            cur = self.cached(self.client_read_vib)['setpoint']
-            con = self.cached(self.client_read_vib_constant_set)['setpoint']
+            cur = self.cached(self.client.read_vib)['setpoint']
+            con = self.cached(self.client.read_constant_vib)['setpoint']
         else:
             cur = self.cached(self.client.read_humi)['setpoint']
             con = self.cached(self.client.read_constant_humi)['setpoint']
@@ -266,22 +266,22 @@ class Espec(ControllerInterface):
     @exclusive
     def set_loop_sp(self, N, value):
         value = value['constant'] if isinstance(value, dict) else value
-        if self.lpd[N] == self.temp:
+        if self.lpd.get(N) == self.temp:
             self.client.write_temp(setpoint=value)
-        elif self.lpd[N] == self.humi:
+        elif self.lpd.get(N) == self.humi:
             self.client.write_humi(setpoint=value)
-        elif self.lpd[N] == self.vib:
+        elif self.lpd.get(N) == self.vib:
             self.client.write_vib(setpoint=value)
         else:
             raise ValueError(self.lp_exmsg)
 
     @exclusive
     def get_loop_pv(self, N):
-        if self.lpd[N] == self.temp:
+        if self.lpd.get(N) == self.temp:
             return {'air':self.cached(self.client.read_temp)['processvalue']}
-        elif self.lpd[N] == self.humi:
+        elif self.lpd.get(N) == self.humi:
             return {'air':self.cached(self.client.read_humi)['processvalue']}
-        elif self.lpd[N] == self.vib:
+        elif self.lpd.get(N) == self.vib:
             return {'air':self.cached(self.client.read_vib)['processvalue']}
         else:
             raise ValueError(self.lp_exmsg)
@@ -290,42 +290,45 @@ class Espec(ControllerInterface):
     def set_loop_range(self, N, value):
         if 'max' not in value or 'min' not in value:
             raise AttributeError('missing "max" or "min" property')
-        if self.lpd[N] == self.temp:
+        if self.lpd.get(N) == self.temp:
             self.client.write_temp(min=value['min'], max=value['max'])
-        elif self.lpd[N] == self.humi:
+        elif self.lpd.get(N) == self.humi:
             self.client.write_humi(min=value['min'], max=value['max'])
-        elif self.lpd[N] == self.vib:
+        elif self.lpd.get(N) == self.vib:
             self.client.write_vib(min=value['min'], max=value['max'])
-        else: raise ValueError(self.lp_exmsg)
+        else: 
+            raise ValueError(self.lp_exmsg)
 
     @exclusive
     def get_loop_range(self, N):
-        if self.lpd[N] == self.temp:
+        if self.lpd.get(N) == self.temp:
             return self.cached(self.client.read_temp)['range']
-        elif self.lpd[N] == self.humi:
+        elif self.lpd.get(N) == self.humi:
             return self.cached(self.client.read_humi)['range']
-        elif self.lpd[N] == self.vib:
+        elif self.lpd.get(N) == self.vib:
             return self.cached(self.client.read_vib)['range'] 
-        else: raise ValueError(self.lp_exmsg)
+        else: 
+            raise ValueError(self.lp_exmsg)
 
     @exclusive
-    def get_loop_en(self, N, value):
-        if self.lpd[N] == self.temp:
+    def get_loop_en(self, N, constant=None):
+        if self.lpd.get(N) == self.temp:
             return {'constant':True, 'current':True}
-        elif self.lpd[N] == self.humi:
+        elif self.lpd.get(N) == self.humi:
             return {'current':self.cached(self.client.read_humi)['enable'],
                     'constant':self.cached(self.client.read_constant_humi)['enable']}
-        elif self.lpd[N] == self.vib:
+        elif self.lpd.get(N) == self.vib:
             return {'current':self.cached(self.client.read_vib)['enable'],
-                    'constant':self.cached(self.client.read_vib_constant_set)['enable']}
-        else: raise ValueError(self.lp_exmsg)
+                    'constant':self.cached(self.client.read_constant_vib)['enable']}
+        else: 
+            raise ValueError(self.lp_exmsg)
 
     @exclusive
     def set_loop_en(self, N, value):
         value = value['constant'] if isinstance(value, dict) else value
-        if self.lpd[N] == self.temp:
+        if self.lpd.get(N) == self.temp:
             pass
-        elif self.lpd[N] == self.humi:
+        elif self.lpd.get(N) == self.humi:
             if value:
                 self.client.write_humi(
                     enable=True,
@@ -333,23 +336,24 @@ class Espec(ControllerInterface):
                 )
             else:
                 self.client.write_humi(enable=False)
-        elif self.lpd[N] == self.vib:
+        elif self.lpd.get(N) == self.vib:
             if value:
                 self.client.write_vib(
                     enable=True,
-                    setpoint=self.cached(self.client.read_vib_constant_set)['setpoint']
+                    setpoint=self.cached(self.client.read_constant_vib)['setpoint']
                 )
             else:
                 self.client.write_vib(enable=False)                
-        else: raise ValueError(self.lp_exmsg)
+        else: 
+            raise ValueError(self.lp_exmsg)
 
     @exclusive
     def get_loop_units(self, N):
-        if self.lpd[N] == self.temp:
+        if self.lpd.get(N) == self.temp:
             return u'\xb0C'
-        elif self.lpd[N] == self.humi:
+        elif self.lpd.get(N) == self.humi:
             return u'%RH'
-        elif self.lpd[N] == self.vib:
+        elif self.lpd.get(N) == self.vib:
             return u'Grms'
         else:
             raise ValueError(self.lp_exmsg)
@@ -357,7 +361,7 @@ class Espec(ControllerInterface):
     @exclusive
     def set_loop_mode(self, N, value):
         value = value['constant'] if isinstance(value, dict) else value
-        if N > 2:
+        if N not in self.lpd:
             raise ValueError(self.lp_exmsg)
         if value in ['Off', 'OFF', 'off']:
             self.set_loop_en(N, False, exclusive=False)
@@ -367,43 +371,50 @@ class Espec(ControllerInterface):
             raise ValueError('Mode must be on or off, received:' + value)
 
     @exclusive
-    def get_loop_mode(self, N, value):
-        if N > 2:
-            raise ValueError(self.lp_exmsg)
-        if self.lpd[N] == self.humi:
+    def get_loop_mode(self, N, constant=None):
+        if self.lpd.get(N) == self.temp:
+            cur, con = 'On', 'On'
+        elif self.lpd.get(N) == self.humi:
             cur = 'On' if self.cached(self.client.read_humi)['enable'] else 'Off'
             con = 'On' if self.cached(self.client.read_constant_humi)['enable'] else 'Off'
+        elif self.lpd.get(N) == self.vib:
+            cur = 'On' if self.cached(self.client.read_vib)['enable'] else 'Off'
+            con = 'On' if self.cached(self.client.read_constant_vib)['enable'] else 'Off'
         else:
-            cur = 'On'
-            con = 'On'
+            raise ValueError(self.lp_exmsg)
         if self.client.read_mode() in ['OFF', 'STANDBY']:
             cur = 'Off'
         return {"current": cur, "constant": con}
 
     def get_loop_modes(self, N):
-        if N == 1:
+        if self.lpd.get(N) == self.temp:
             return ['On']
-        elif N == 2:
+        elif self.lpd.get(N) == self.humi:
+            return ['Off', 'On']
+        elif self.lpd.get(N) == self.vib:
             return ['Off', 'On']
         else:
             raise ValueError(self.lp_exmsg)
 
     @exclusive
     def get_loop_power(self, N):
-        if self.lpd[N] == self.temp:
+        if self.lpd.get(N) == self.temp:
             val = self.cached(self.client.read_htr)['dry']
-        elif self.lpd[N] == self.humi:
+        elif self.lpd.get(N) == self.humi:
             val = self.cached(self.client.read_htr)['wet']
+        elif self.lpd.get(N) == self.vib:
+            val = 0        # try None or 0 
         else:
             raise ValueError(self.lp_exmsg)
         return {'current':val, 'constant':val}
 
-    def set_loop_power(self, N, value):
+
+    def set_loop_power(self, N, constant=None):
         raise NotImplementedError
 
     @exclusive
-    def get_cascade_sp(self, N, value):
-        if self.lpd[N] != self.temp:
+    def get_cascade_sp(self, N, constant=None):
+        if self.lpd.get(N) != self.temp:
             raise ValueError(self.cs_exmsg)
         cur = self.cached(self.client.read_temp_ptc)
         enc = cur['enable_cascade']
@@ -417,57 +428,57 @@ class Espec(ControllerInterface):
     @exclusive
     def set_cascade_sp(self, N, value):
         value = value['constant'] if isinstance(value, dict) else value
-        if self.lpd[N] != self.temp:
+        if self.lpd.get(N) != self.temp:
             raise ValueError(self.cs_exmsg)
         self.client.write_temp(setpoint=value)
 
     @exclusive
     def get_cascade_pv(self, N):
-        if self.lpd[N] != self.temp:
+        if self.lpd.get(N) != self.temp:
             raise ValueError(self.cs_exmsg)
         return self.cached(self.client.read_temp_ptc)['processvalue']
 
     @exclusive
     def get_cascade_range(self, N):
-        if self.lpd[N] != self.temp:
+        if self.lpd.get(N) != self.temp:
             raise ValueError(self.cs_exmsg)
         return self.get_loop_range(self.temp, exclusive=False)
 
     @exclusive
     def set_cascade_range(self, N, value):
-        if self.lpd[N] != self.temp:
+        if self.lpd.get(N) != self.temp:
             raise ValueError(self.cs_exmsg)
         self.set_loop_range(self.temp, value, exclusive=False)
 
     @exclusive
     def get_cascade_en(self, N):
-        if self.lpd[N] != self.temp:
+        if self.lpd.get(N) != self.temp:
             raise ValueError(self.cs_exmsg)
         return self.get_loop_en(self.temp, exclusive=False)
 
     @exclusive
     def set_cascade_en(self, N, value):
         value = value['constant'] if isinstance(value, dict) else value
-        if self.lpd[N] != self.temp:
+        if self.lpd.get(N) != self.temp:
             raise ValueError(self.cs_exmsg)
         return self.set_loop_en(self.temp, value, exclusive=False)
 
     @exclusive
     def get_cascade_units(self, N):
-        if self.lpd[N] != self.temp:
+        if self.lpd.get(N) != self.temp:
             raise ValueError(self.cs_exmsg)
         return self.get_loop_units(self.temp, exclusive=False)
 
     @exclusive
-    def set_cascade_mode(self, N, value):
+    def set_cascade_mode(self, N, value): # test save
         value = value['constant'] if isinstance(value, dict) else value
-        if self.lpd[N] != self.temp:
+        if self.lpd.get(N) != self.temp:
             raise ValueError(self.cs_exmsg)
         return self.set_loop_mode(N, value, exclusive=False)
 
     @exclusive
     def get_cascade_mode(self, N):
-        if self.lpd[N] != self.temp:
+        if self.lpd.get(N) != self.temp:
             raise ValueError(self.cs_exmsg)
         return self.get_loop_mode(self.temp, exclusive=False)
 
@@ -475,8 +486,8 @@ class Espec(ControllerInterface):
         return self.get_loop_modes(N)
 
     @exclusive
-    def get_cascade_ctl(self, N, value):
-        if self.lpd[N] != self.temp:
+    def get_cascade_ctl(self, N, constant=None):
+        if self.lpd.get(N) != self.temp:
             raise ValueError(self.cs_exmsg)
         return {
             'current': self.cached(self.client.read_temp_ptc)['enable_cascade'],
@@ -486,21 +497,21 @@ class Espec(ControllerInterface):
     @exclusive
     def set_cascade_ctl(self, N, value):
         value = value['constant'] if isinstance(value, dict) else value
-        if self.lpd[N] != self.temp:
+        if self.lpd.get(N) != self.temp:
             raise ValueError(self.cs_exmsg)
         params = self.cached(self.client.read_temp_ptc)
         params['deviation'].update({'enable':value})
         self.client.write_temp_ptc(**params['deviation'])
 
     @exclusive
-    def get_cascade_deviation(self, N, value):
-        if self.lpd[N] != self.temp:
+    def get_cascade_deviation(self, N, constant=None):
+        if self.lpd.get(N) != self.temp:
             raise ValueError(self.cs_exmsg)
         return self.cached(self.client.read_constant_ptc)['deviation']
 
     @exclusive
     def set_cascade_deviation(self, N, value):
-        if self.lpd[N] != self.temp:
+        if self.lpd.get(N) != self.temp:
             raise ValueError(self.cs_exmsg)
         if 'positive' not in value or 'negative' not in value:
             raise ValueError('value must contain "positive" and "negative" keys')
@@ -508,7 +519,7 @@ class Espec(ControllerInterface):
 
     @exclusive
     def get_cascade_power(self, N):
-        if self.lpd[N] != self.temp:
+        if self.lpd.get(N) != self.temp:
             raise ValueError(self.cs_exmsg)
         return self.get_loop_power(self.temp, exclusive=False)
 
@@ -517,7 +528,7 @@ class Espec(ControllerInterface):
         raise NotImplementedError
 
     @exclusive
-    def get_event(self, N, value):
+    def get_event(self, N, constant=None):
         if N >= 13:
             raise ValueError('There are only 12 events')
         return {
@@ -541,8 +552,12 @@ class Espec(ControllerInterface):
         self.client.write_relay([value if i == N else None for i in range(1, 13)])
 
     @exclusive
-    def get_status(self, detail=False, constant=None):
-        if self.cached(self.client.read_mon)['alarms'] > 0:
+    def  get_status(self, detail=False, ext1=False):
+        #if self.ctlr_type == 'P300vib':
+        #    if self.cached(self.client.read_mon_ext1)['alarms'] > 0 or self.cached(self.client.read_mon_detail)['alarms']> 0:
+        #        return 'Alarm' 
+        #elif self.cached(self.client.read_mon)['alarms'] > 0:
+        if self.cached(self.client.read_mon)['alarms'] > 0: 
             return 'Alarm'
         return {
             'OFF':'Off',
@@ -565,7 +580,7 @@ class Espec(ControllerInterface):
         return {'active':active, 'inactive':inactive}
 
     @exclusive
-    def const_start(self, value):
+    def const_start(self, constant=None):
         self.client.write_mode_constant()
 
     @exclusive
@@ -635,7 +650,7 @@ class Espec(ControllerInterface):
             rtime = self.cached(self.client.read_run_prgm_mon)['time']
             return '%d:%02d:00' % (rtime['hour'], rtime['minute'])
 
-        #counter_a must be the inner counter or the only counter
+        # counter_a must be the inner counter or the only counter
         use_a = pgm['counter_a']['cycles'] != 0
         use_b = pgm['counter_b']['cycles'] != 0
         ae_gte_be = pgm['counter_a']['end'] >= pgm['counter_b']['end']
@@ -683,7 +698,7 @@ class Espec(ControllerInterface):
     def get_prgm_name(self, N):
         return self.cached(self.client.read_prgm_data, N)['name']
 
-    def set_prgm_name(self, N, value):
+    def set_prgm_name(self, N, constant=None):
         raise NotImplementedError
 
     @exclusive
@@ -736,6 +751,14 @@ class Espec(ControllerInterface):
                 self.loops += 1
             msg += 'W/Humidity'
         except EspecError:
+            if update:
+                self.loops += 1
+        try:
+            if update:
+                self.client.read_vib()
+                self.loops += 1
+            msg += 'W/Vibration'
+        except EspecError:
             pass
         self.__update_loop_map()
         return msg
@@ -753,3 +776,9 @@ class Espec(ControllerInterface):
                                      value.get('mask', '0.0.0.0'), value.get('gateway', '0.0.0.0'))
         else:
             self.client.write_ip_set('0.0.0.0', '0.0.0.0', '0.0.0.0')
+
+    @exclusive 
+    def get_constant_vib(self, constant=None):
+        return self.client.read_constant_vib(constant)
+
+    

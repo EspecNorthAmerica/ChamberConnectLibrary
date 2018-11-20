@@ -2,7 +2,7 @@
 A direct implimentation of the P300's communication interface.
 
 :copyright: (C) Espec North America, INC.
-:license: MIT, see LICENSE for more details.
+:license: MIT, see LICENSE for more details on this. 
 '''
 #pylint: disable=W0703
 import re
@@ -427,7 +427,7 @@ class P300(object):
         else:
             return [rsp[1] == 'ON1']
 
-    #cannot be checked with a p300 with stopped plc...
+    # cannot be checked with a p300 with stopped plc...
     def read_relay(self):
         '''
         returns the status of each relay(time signal)
@@ -1738,92 +1738,85 @@ class P300vib(P300):
         address (int): The RS485 address of the chamber to connect to.
         host (str): The IP address or hostname of the chamber when interface="TCP"
     '''
-    def __init__(self, interface, **kwargs):
-        super(P300vib, self).__init__(self, interface, **kwargs)
 
     def read_vib(self):
         '''
         Read and return vibration values
+
+        returns:
+            { 'processvalue': float,
+              'setpoint': float,
+              'enable': boolean,
+              'range': {'max': float, 'min': float}
+            }
         '''
         rsp = self.ctlr.interact('VIB?').split(',')
-        data = {
-            'vibration': float(rsp[0]),
-            'setpoint': float(rsp[1]),
-            'upperalarmvalue': float(rsp[2]),
-            'loweralarmvalue': float(rsp[3])
+        try:
+            hsp = float(rsp[1])
+            enable = True
+        except Exception:
+            hsp = 0
+            enable = False
+        return {
+            'processvalue': float(rsp[0]),
+            'setpoint': hsp,
+            'enable': enable,
+            'range': { 'max': float(rsp[2]), 'min': float(rsp[3]) }
         }
-        return data
 
-    def read_mon(self):
+    def read_mon(self, detail=False, ext1=False):
         '''
-        Return the chamber status and its operation modes
-        '''
-        rsp = self.ctlr.interact('MON?').split(',')
-        data = {
-            'temperature': float(rsp[0]),
-            'mode': rsp[2],
-            'alarms': int(rsp[3])
-        }
-        if rsp[1]:
-            data['humidity'] = float(rsp[1])
-        return data 
+        Returns the conditions inside the chamber
 
-    def read_mon_ext(self):
+        Args:
+            detail: boolean, when True "mode" parameter has additional details
+        returns:
+            {"temperature":float,"vibration":float,"mode":string,"alarms":int}
+            "vibration": only present if chamber has vibration
+            "mode": see read_mode for valid parameters (with and without detail flag).
         '''
-        Return the chamber status and its operation modes
-        '''
-        rsp = self.ctlr.interact('MON?,EXT1').split(',')
-        data = {
-            'temperature': float(rsp[0]),
-            'modes': rsp[2],
-            'alarms': int(rsp[3])
-        }
-        if rsp[1]:
-            data['vibration'] = float(rsp[1])
-        return data 
-
-    def read_mon_detail(self, constant=None):
-        '''
-        Return the chamber status and its operation mode
-        '''
-        rsp = self.ctlr.interact('MON?,DETAIL{0:s}'.format(',CONSTANT' if constant else '')).split(',') 
+        # MON?,EXT1
+        # MON?,DETAIL
+        # MON? 
+        rsp = self.ctlr.interact('MON?{0:s}'.format(',EXT1' if ext1 else (',DETAIL' if detail else '') )).split(',') 
         data = {
             'temperature': float(rsp[0]),
             'mode': rsp[2],
             'alarms': int(rsp[3])
         }
         if rsp[1]:
-            data['vibration'] = float(rsp[1])
-        return data
+            data['vibration'] = flaot(rsp[1])
+        return data 
 
-    def read_htr(self, ext=False):
+    def read_htr(self, ext1=False):
         '''
-        Return the heater outputs and number of controllable heaters.
+        Read the heater outputs and number of controllable heaters.
+
+        returns: 
+            { 
+                'dry': float, 
+                'vib': float,
+                'vib' is only present with vibration chambers
+            }
         '''
-        rsp = self.ctlr.interact('%?{0:s}'.format(',EXT1' if ext else '')).split(',')
-        if ext:
-            data = {
-                'Number of heaters': int(rsp[0]),
-                'Temperature': float(rsp[1]),
-                'Vibration': float(rsp[2])
+        rsp = self.ctlr.interact('%?{0:s}'.format(',EXT1' if ext1 else '')).split(',')
+        if len(rsp) == 3:
+            return {
+                'dry': float(rsp[1]),
+                'vib': float(rsp[2])
             }
         else:
-            if len(rsp) == 3:
-                data = {
-                    'Number of heaters': int(rsp[0]),
-                    'Temperature': float(rsp[1]),
-                    'Humidity': float(rsp[2])
-                }
-            else:
-                data = {
-                    'Number of heaters': int(rsp[0]),
-                    'Temperature': float(rsp[1])
-                }
-        return data 
+            return { 'dry': float(rsp[1]) }
 
-    def read_vib_constant_set(self, constant=None):
+    def read_constant_vib(self, constant=None):
         '''
-        Read vibrating status
+        Read the constant settings for vibration loop.
+
+        returns:
+        {
+            'setpoint': float,
+            'enable': string
+        }
         '''
         if constant in [1, 2, 3]:
             rsp = self.ctlr.interact('CONSTANT SET?, VIB, C{0:d}'.format(constant)).split(',')
@@ -1832,22 +1825,21 @@ class P300vib(P300):
         else:
             raise ValueError("Constant must be None or 1, 2, 3.")
         return {
-            'Vibration': float(rsp[0]),
-            'Control Permission': rsp[1]
+            'setpoint': float(rsp[0]),
+            'enable': rsp[1] == 'ON' 
         }
 
-    def read_prgm_mon(self, ext=False):
+    def read_prgm_mon(self):
         '''
         Read status of running program
 
         Parameters:
-            'step number': int,
+            'pgmstep': int,
             'temperature': float,
-            'humidity': float,
             'vibration': float,
             'time':{'hour':int, 'minute':int},
-            'counter A': int,
-            'counter B': int
+            'counter_a': int,
+            'counter_b': int
 
             Note: 'humidity' is only available on chambers having that feature.
             This means that for chambers with temperature and humidity, return 
@@ -1855,74 +1847,58 @@ class P300vib(P300):
             five parameters. Thus, two types of chambers are those with
             temperature and vibration, temperature and humidity. 
         '''
-        rsp = self.ctlr.interact('PRGM MON?{0:s}'.format(',EXT1' if ext else '')).split(',')
-        if exit:
+        rsp = self.ctlr.interact('PRGM MON?,EXT1').split(',')
+        if len(rsp) == 6:
             time = rsp[3].split(':')
-            data = {
-                'step number': int(rsp[0]),
-                'temp setvalue': float(rsp[1]),
-                'vibration setvalue': float(rsp[2]),
-                'remaining time': {'hour': int(time[0]), 'minute':int(time[1])},
-                'counter A': int(rsp[4]),
-                'counter B': int(rsp[5])
-            }
-        elif len(rsp)==5:
-            time = rsp[2].split(':')
-            data = {
-                'step number': int(rsp[0]),
+            return {
+                'pgmstep': int(rsp[0]),
                 'temperature': float(rsp[1]),
-                'remaining time': {'hour': int(time[0]), 'minute': int(time[1])},
-                'counter A': int(rsp[3]),
-                'counter B': int(rsp[4])
+                'vibration': tryfloat(rsp[2], 0),
+                'time': { 'hour': int(time[0]), 'minute': int(time[1]) },
+                'counter_a': int(rsp[4]),
+                'counter_b': int(rsp[5]) 
             }
         else:
-            time = rsp[3].split(':')
-            data = {
-                'step number': int(rsp[0]),
+            time = rsp[2].split(':')
+            return {
+                'pgmstep': int(rsp[0]),
                 'temperature': float(rsp[1]),
-                'humidity': float(rsp[2]),
-                'remaining time': {'hour': int(time[0]), 'minute':int(time[1])},
-                'counter A': int(rsp[4]),
-                'counter B': int(rsp[5])               
+                'time': { 'hour': int(time[0]), 'minute': int(time[1]) },
+                'counter_a': int(rsp[3]),
+                'counter_b': int(rsp[4])
             }
-        return data  
+ 
+    def read_prgm_data_step(self, pgmnum, pgmstep, ext1=None, air=None):
+        '''
+        get a programs step parameters and air feature
 
-    # NOTE: read_prgm_data, read_prgm_data_step, 
-    #       read_prgm_data_detail are all inherited from the superclass P300.
-    #       Only read_prgm_data that includes vibration reading (with EXT1 command)
-    #       are the new def's for P300vib.
-    #
-    # def read_prgm_data(self, pgmnum, constant=None):
-    #     pdata = self.ctlr.interact('PRGM DATA?,{0}:{1}{2}'.format(self.rom_pgm(pgmnum)))
-    #     return self.parse_prgm_data(pdata)
-    #
-    # def read_prgm_data_step(self, pgmnum, pgmstep, ext=False):
-    #     tmp = self.ctlr.interact('PRGM DATA?,{0}:{1:d},STEP{2:d}{3}'.format 
-    #     (self.rom_pgm(pgmnum), pgmnum, pgmstep, ',EXT1' if ext else '')) 
-    #     return self.parse_prgm_data_step(tmp) 
-    #
-    # def read_prgm_data_detail(self, pgmnum, ext=False):
-    #     tmp = self.ctlr.interact('PRGM DATA?,{0}:{1:d},DETAIL{2}'.format 
-    #     (self.rom_pgm(pgmnum), pgmnum, ',EXT1' if ext else ''))
-    #    return self.parse_prgm_data_detail(tmp) 
-     
-    def read_prgm_data_step_ext(self, pgmnum, pgmstep):
-        pdata = self.ctlr.interact('PRGM DATA?,{0}:{1:d},STEP{2:d},EXT1'.format
-        (self.rom_pgm(pgmnum), pgmnum, pgmstep))
-        return self.parse_prgm_data_step_ext(pdata) # need to write parse def 
+        Args:
+            pgmnum: int, the program to read from
+            pgmstep: int, the step to read from
+        returns:
+            {
+                "number":int,
+                "time":{"hour":int, "minute":int},
+                "paused":boolean,
+                "granty":boolean,
+                "refrig":{"mode":string, "setpoint":int},
+                "temperature":{"setpoint":float, "ramp":boolean},
+                "humidity":{"setpoint":float, "enable":boolean, "ramp":boolean},
+                "relay":[int]
+            }
+        '''
+        tmp = self.ctlr.interact('PRGM DATA?,{0}:{1:d},STEP{2:d}{3:s}'.format( self.rom_pgm(pgmnum), 
+            pgmnum, pgmstep, ',EXT1' if ext1 else (',AIR' if air else '')) ) 
+        return self.parse_prgm_data_step(tmp) # need to write parse def 
 
-    def read_prgm_data_detail_ext(self, pgmnum): 
-        pdata = self.ctlr.interact('PRGM DATA?,{0}:{1:d},DETAIL,EXT1'.format 
-        (self.rom_pgm(pgmnum), pgmnum)) 
-        return self.parse_prgm_data_detail_ext(pdata) # need to write parse def  
-
-    def parse_prgm_data_step_ext(self, arg):
+    def parse_prgm_data_step(self, arg):
         '''
         Parse the program parameters with vibration feature
         '''
         parsed = re.search(
-            r'(\d+),TEMP([0-9.-]+),TEMP RAMP (\w+),VIB([0-9.-]+),VIB RAMP (\w+)'
-            r',TIME(\d+):(\d+),GRANTY (\w+),REF(\w+)(?:,RELAY ON([0-9.]+))?,PAUSE (\w+)',
+            r'(\d+),TEMP([0-9.-]+),TEMP RAMP (\w+)(?:,PTC (\w+))?,VIB([0-9.-]+),VIB RAMP (\w+)'
+            r',TIME(\d+):(\d+),GRANTY (\w+),REF(\w+)(?:,RELAY ON([0-9.]+))?'
+            r'(?:,PAUSE (\w+))?(?:,DEVP([0-9.-]+),DEVN([0-9.-]+))?', 
             arg
         )
         # command data and response data
@@ -1932,80 +1908,126 @@ class P300vib(P300):
         # cmd> PRGM DATA?,RAM:1,STEP1,EXT1
         # rsp> 1,TEMP25.0,TEMP RAMP ON,VIB0.0,VIB RAMP OFF,TIME1:30,GRANTY OFF,REF9,PAUSE OFF
         #      1      2              3     4            5      6  7          8    9  (10)  11
-        base = {
-            'number':int(parsed.group(1)),          # step number
-            'time':{
-                'hour':int(parsed.group(6)),        # time: hour
-                'minute':int(parsed.group(7))       # time: minute
-            },
-            'paused':parsed.group(11) == 'ON', 'granty':parsed.group(8) == 'ON',
-            'refrig':self.reflookup.get(
-                'REF' + parsed.group(9),            # refrig number
-                    { 'mode':'manual', 'setpoint':0 }
-            ),
-            'temperature':{
-                'setpoint':float(parsed.group(2)),  # temp setpoint
-                'ramp':parsed.group(3) == 'ON'      # ramp on
-            }, 
-            'vibration':{
-                'setpoint':float(parsed.group(4)),  # vibration setpoint
-                'ramp':parsed.group(5) == 'ON'      # vibration ramp
+
+        base = {'number':int(parsed.group(1)),
+                'time':{'hour':int(parsed.group(7)),
+                        'minute':int(parsed.group(8))},
+                'paused':parsed.group(12) == 'ON',
+                'granty':parsed.group(9) == 'ON',
+                'refrig':self.reflookup.get(
+                    'REF' + parsed.group(10),
+                    {'mode':'manual', 'setpoint':0}
+                ),
+                'temperature':{'setpoint':float(parsed.group(2)),
+                               'ramp':parsed.group(3) == 'ON'}}
+        if parsed.group(5):
+            base['vibration'] = {
+                'setpoint':tryfloat(parsed.group(5), 0.0),
+                'enable':parsed.group(5) != ' OFF',
+                'ramp':parsed.group(6) == 'ON'
             }
-        }
-        if parsed.group(10):
-            relays = parsed.group(10).split('.')
+        if parsed.group(4):
+            base['temperature'].update({
+                'enable_cascade':parsed.group(4) == 'ON',
+                'deviation': {
+                    'positive':float(parsed.group(13)),
+                    'negative':float(parsed.group(14))
+                }
+            })
+        if parsed.group(11):
+            relays = parsed.group(11).split('.')
             base['relay'] = [str(i) in relays for i in range(1, 13)]
         else:
             base['relay'] = [False for i in range(1, 13)]
         return base
 
-    def parse_prgm_data_detail_ext(self, arg):
+    def read_prgm_data_detail(self, pgmnum): 
         '''
-        parse program parameters
+        get the conditions a program will start with and its operational range
+
+        Args:
+            pgmnum: int, the program to get
+        returns:
+            {
+                "temperature":{"range":{"max":float, "min":float},"mode":string,"setpoint":float},
+                "vibration":{"range":{"max":float,"min":float},"mode":string,"setpoint":float}
+            }
+        '''
+        pdata = self.ctlr.interact('PRGM DATA?,{0}:{1:d},DETAIL,EXT1'.format( self.rom_pgm(pgmnum), 
+            pgmnum)) 
+        return self.parse_prgm_data_detail(pdata) # need to write parse def  
+
+    def parse_prgm_data_detail(self, arg):
+        '''
+        Parse the program data command with details flag
         '''
         parsed = re.search(
-            r'([0-9.-]+),([0-9.-]+),([0-9.-]+),([0-9.-]+),TEMP(\w+)'
-            r'(?:,([0-9.-]+))?,VIB(\w+)(?:,([0-9.-]+))?',
+            r'([0-9.-]+),([0-9.-]+),(?:(\d+),(\d+),)?TEMP(\w+)'
+            r'(?:,([0-9.-]+))?(?:,VIB(\w+)(?:,(\d+))?)?',
             arg
         )
-        # general cmd/rsp pattern: 
-        # cmd> PRGM DATA?,RAM:2,DETAIL,EXT1
-        # rsp> 180.0,-50.0,110.0,0.0,TEMPSV,26.0,VIBOFF
-        # cmd> PRGM DATA?,RAM:3,DETAIL,EXT1
-        # rsp> 180.0,-50.0,110.0,0.0,TEMPSV,26.0,VIBSV,2.5
-        # cmd> PRGM DATA?,RAM:1,DETAIL,EXT1 
-        # rsp> 265.0,-115.0,110.0,0.0,TEMPOFF,VIBOFF
-        # cmd> PRGM DATA?,RAM:2,DETAIL,EXT1
-        # rsp> 180.0,-50.0,110.0,0.0,TEMPSV,26.0,VIBOFF
         ret = {
             'tempDetail':{
-                'range':{
-                    'max':float(parsed.group(1)), 'min':float(parsed.group(2))
-                    },
-                'mode':parsed.group(5)
-            },
-            'vibrationDetail':{
-                'range':{
-                    'max':float(parsed.group(3)), 'min':float(parsed.group(4))
-                },
-                'mode':parsed.group(7)
+                'range':{'max':float(parsed.group(1)), 'min':float(parsed.group(2))},
+                'mode':parsed.group(5),
+                'setpoint':parsed.group(6)
             }
         }
-        if parsed.group(6):
-            ret['tempDetail'] = {
-                'range':{
-                    'max':float(parsed.group(1)), 'min':float(parsed.group(2))
-                },
-                'mode':parsed.group(5), 'setpoint':parsed.group(6)
-            }
-        if parsed.group(8):
-            ret['vibrationDetail'] = {
-                'range':{
-                    'max':float(parsed.group(3)), 'min':float(parsed.group(4))
-                },
-                'mode':parsed.group(7), 'setpoint':parsed.group(8)
+        if parsed.group(3):
+            ret['vibDetail'] = {
+                'range':{'max':float(parsed.group(3)), 'min':float(parsed.group(4))},
+                'mode':parsed.group(7),
+                'setpoint':parsed.group(8)
             }
         return ret
+
+    # def parse_prgm_data_detail(self, arg):
+    #     '''
+    #     parse program parameters
+    #     '''
+    #     parsed = re.search(
+    #         r'([0-9.-]+),([0-9.-]+),([0-9.-]+),([0-9.-]+),TEMP(\w+)'
+    #         r'(?:,([0-9.-]+))?,VIB(\w+)(?:,([0-9.-]+))?',
+    #         arg
+    #     )
+    #     # general cmd/rsp pattern: 
+    #     # cmd> PRGM DATA?,RAM:2,DETAIL,EXT1
+    #     # rsp> 180.0,-50.0,110.0,0.0,TEMPSV,26.0,VIBOFF
+    #     # cmd> PRGM DATA?,RAM:3,DETAIL,EXT1
+    #     # rsp> 180.0,-50.0,110.0,0.0,TEMPSV,26.0,VIBSV,2.5
+    #     # cmd> PRGM DATA?,RAM:1,DETAIL,EXT1 
+    #     # rsp> 265.0,-115.0,110.0,0.0,TEMPOFF,VIBOFF
+    #     # cmd> PRGM DATA?,RAM:2,DETAIL,EXT1
+    #     # rsp> 180.0,-50.0,110.0,0.0,TEMPSV,26.0,VIBOFF
+    #     ret = {
+    #         'tempDetail':{
+    #             'range':{
+    #                 'max':float(parsed.group(1)), 'min':float(parsed.group(2))
+    #                 },
+    #             'mode':parsed.group(5)
+    #         },
+    #         'vibrationDetail':{
+    #             'range':{
+    #                 'max':float(parsed.group(3)), 'min':float(parsed.group(4))
+    #             },
+    #             'mode':parsed.group(7)
+    #         }
+    #     }
+    #     if parsed.group(6):
+    #         ret['tempDetail'] = {
+    #             'range':{
+    #                 'max':float(parsed.group(1)), 'min':float(parsed.group(2))
+    #             },
+    #             'mode':parsed.group(5), 'setpoint':parsed.group(6)
+    #         }
+    #     if parsed.group(8):
+    #         ret['vibrationDetail'] = {
+    #             'range':{
+    #                 'max':float(parsed.group(3)), 'min':float(parsed.group(4))
+    #             },
+    #             'mode':parsed.group(7), 'setpoint':parsed.group(8)
+    #         }
+    #     return ret
 
     def write_vib(self, constant=None, **kwargs):
         '''
@@ -2044,8 +2066,7 @@ class P300vib(P300):
                     self.ctlr.interact('VIB, H{0:0.1f}'.format(maximum))
             else:
                 raise ValueError("Constant must be None or 1, 2 or 3")
-    # program to write prgm data for vibration feature
-    # written/modified: 10/19/2018
+
     def write_prgm_data_details(self, pgmnum, constant=None, **pgmdetail):
         '''
         write the various program wide parameters to the controller
@@ -2057,12 +2078,12 @@ class P300vib(P300):
         if 'counter_a' in pgmdetail and pgmdetail['counter_a']['cycles'] > 0:
             ttp = (pgmnum, pgmdetail['counter_a']['start'], pgmdetail['counter_a']['end'],
                    pgmdetail['counter_a']['cycles'])
-            tmp = 'PRGM DATA WRITE,PGM{0:d},COUNT,A({1:d}.{2:d}.{3:d})'.format(ttp)
+            tmp = ('PRGM DATA WRITE,PGM{0:d},COUNT,A({1:d}.{2:d}.{3:d})'.format(ttp))
             if 'counter_b' in pgmdetail and pgmdetail['counter_b']['cycles'] > 0:
                 ttp = (tmp, pgmdetail['counter_b']['start'], pgmdetail['counter_b']['end'],
                        pgmdetail['counter_b']['cycles'])
                 #tmp = '%s,B(%d.%d.%d)' % ttp
-                tmp = '{0:s},B({1:d}.{2:d}.{3:d})'.format(ttp)
+                tmp = ('{0:s},B({1:d}.{2:d}.{3:d})'.format(ttp))
             self.ctlr.interact(tmp)
         elif 'counter_b' in pgmdetail and pgmdetail['counter_b']['cycles'] > 0:
             ttp = (pgmnum, pgmdetail['counter_b']['start'], pgmdetail['counter_b']['end'],
@@ -2070,8 +2091,7 @@ class P300vib(P300):
             self.ctlr.interact('PRGM DATA WRITE,PGM{0:d},COUNT,B({1:d}.{2:d}.{3:d})'.format(ttp))
         if 'name' in pgmdetail:
             self.ctlr.interact('PRGM DATA WRITE,PGM{0:d},NAME,{1:s}'.format(pgmnum, pgmdetail['name']))
-        
-        # Add new parameter after program ends
+
         if 'end' in pgmdetail:
             if pgmdetail['end'] != 'RUN' and constant in [1,2,3]: 
                 ttp = (pgmnum, '{0:s},CONSTANT{1:d}'.format(pgmdetail['end'], constant))
@@ -2216,39 +2236,4 @@ class P300vib(P300):
             cmd = '{0:s} RELAYOFF,{1:s}'.format(cmd, ','.join(str(v) for v in rlys['off'])) 
         if constant is not None: 
             cmd = '{0:s} AIR{1:d}'.format(cmd, constant)
-
         self.ctlr.interact(cmd)
-    # NOTE: The following data commands for vibration are null:
-    # PRGM DATA ERASE, RUN PRGM, PRGM SET?, PRGM USE?, and PRGM DATA PTC?
-    #
-    #def write_temp_ptc(self, enable, positive, negative):
-    #    '''
-    #    set product temperature control settings
-    #    Args:
-    #        enable: boolean, True(on)/False(off)
-    #        positive: float, maximum positive deviation
-    #        negative: float, maximum negative deviation
-    #    '''
-    #    ttp = ('ON' if enable else 'OFF', positive, negative)
-    #    self.ctlr.interact('TEMP PTC,PTC{0:s},DEVP{1:0.1f},DEVN{2:0.1f}'.format(ttp)
-    
-    #def write_ptc(self, op_range, pid_p, pid_filter, pid_i, **kwargs):
-    #    '''
-    #    write product temp control parameters to controller
-    #
-    #    Args:
-    #        range: {"max":float,"min":float}, allowable range of operation
-    #        p: float, P parameter of PID
-    #        i: float, I parameter of PID
-    #        filter: float, filter value
-    #        opt1,opt2 not used set to 0.0
-    #    '''
-    #    opt1, opt2 = kwargs.get('opt1', 0), kwargs.get('opt2', 0)
-    #    ttp = (op_range['max'], op_range['min'], pid_p, pid_filter, pid_i, opt1, opt2)
-    #    self.ctlr.interact('PTC,{0:0.1f},{1:0.1f},{2:0.1f},{3:0.1f},{4:0.1f},{5:0.1f},{6:0.1f}'.format(ttp))
-    
-    #def write_ip_set(self, address, mask, gateway):
-    #    '''
-    #    Write the IP address configuration to the controller
-    #    '''
-    #    self.ctlr.interact('IPSET,{0:s},{1:s},{2:s}'.format(address, mask, gateway))
