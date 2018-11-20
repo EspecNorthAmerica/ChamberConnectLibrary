@@ -333,7 +333,7 @@ class P300(object):
         returns:
             detail=Faslse: string "OFF" or "STANDBY" or "CONSTANT" or "RUN"
             detail=True: string (one of the following):
-                "OFF""STANDBY" or "CONSTANT" or "RUN" or "RUN PAUSE" or "RUN END HOLD" or
+                "OFF" or "STANDBY" or "CONSTANT" or "RUN" or "RUN PAUSE" or "RUN END HOLD" or
                 "RMT RUN" or "RMT RUN PAUSE" or "RMT RUN END HOLD"
         '''
         return self.ctlr.interact('MODE?%s' % (',DETAIL' if detail else ''))

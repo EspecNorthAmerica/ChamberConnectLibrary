@@ -825,6 +825,27 @@ class ControllerInterface:
         pass
 
     @abstractmethod
+    def get_air_speed(self):
+        '''
+        Get the state of the programmable air speed
+
+        returns:
+            {"current": int, "constant": int}
+        '''
+        pass
+
+    @abstractmethod
+    def set_air_speed(self, value): 
+        ''' 
+        Set value for the chamber air speed
+
+        Args: 
+            speed (int): The number of constant output 
+            constant (int): The number of constant speed mode 
+        '''
+        pass
+
+    @abstractmethod
     def get_status(self):
         '''
         Get the chamber status.
@@ -1079,6 +1100,13 @@ class ControllerInterface:
                 ret['refrig'] = self.get_refrig(exclusive=False)
             except NotImplementedError:
                 ret['refrig'] = None
+        if kwargs.get('get_air_speed', False):
+            try:
+                ret['air'] = self.get_air_speed(exclusive=False)
+            except NotImplementedError:
+                ret['air'] = None
+            except ControllerInterfaceError:
+                ret['air'] = None
         return ret
 
     @abstractmethod

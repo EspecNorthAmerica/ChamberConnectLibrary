@@ -543,6 +543,14 @@ class WatlowF4(ControllerInterface):
         self.client.write_holding(2000 + 10*(N-1), 1 if value else 0)
 
     @exclusive
+    def get_air_speed(self):
+        raise NotImplementedError
+
+    @exclusive
+    def set_air_speed(self, value): 
+        raise NotImplementedError
+
+    @exclusive
     def get_status(self):
         if len(self.get_alarm_status(exclusive=False)['active']) > 0:
             return 'Alarm'

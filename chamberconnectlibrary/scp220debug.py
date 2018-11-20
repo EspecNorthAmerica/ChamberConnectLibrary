@@ -7,8 +7,9 @@ SCP220 debug port handler.
 import struct
 import serial
 from serial import SerialException
+from controllerinterface import ControllerInterfaceError
 
-class SCP220DebugError(Exception):
+class SCP220DebugError(ControllerInterfaceError):
     '''generic error'''
     pass
 

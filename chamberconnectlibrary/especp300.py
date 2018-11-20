@@ -1,5 +1,5 @@
 ﻿'''
-Upper level interface for Espec Corp. Controllers (just the P300 for now)
+Upper level interface for Espec Corp. P300 Controller (original command set)
 
 :copyright: (C) Espec North America, INC.
 :license: MIT, see LICENSE for more details.
@@ -10,12 +10,11 @@ import time
 from chamberconnectlibrary.controllerinterface import ControllerInterface, exclusive
 from chamberconnectlibrary.controllerinterface import ControllerInterfaceError
 from chamberconnectlibrary.p300 import P300
-from chamberconnectlibrary.scp220 import SCP220
 from chamberconnectlibrary.especinteract import EspecError
 
-class Espec(ControllerInterface):
+class EspecP300(ControllerInterface):
     '''
-    A class for interfacing with Espec controllers (P300, SCP220)
+    A class for interfacing with Espec controllers (P300)
 
     Kwargs:
         interface (str): The connection method::
@@ -29,11 +28,9 @@ class Espec(ControllerInterface):
         cascades (int): The number of cascade control loops the controller has (default=0, max=1)
         lock (RLock): The locking method to use when accessing the controller (default=RLock())
         freshness (int): The length of time (in seconds) a command is cached (default = 0)
-        ctlr_type (str): "SCP220" or "P300" (default = "P300")
     '''
 
     def __init__(self, **kwargs):
-        print 'Warning: Espec Class is no longer being maintained as of version 2.3.0; use EspecP300 or EspecSCP220 classes instead.'
         self.client, self.loops, self.cascades = None, None, None
         self.init_common(**kwargs)
         self.freshness = kwargs.get('freshness', 0)
@@ -49,16 +46,20 @@ class Espec(ControllerInterface):
             self.temp:self.temp,
             self.humi:self.humi
         }
-        self.ctlr_type = kwargs.get('ctlr_type', 'P300')
-        ttp = (self.ctlr_type, self.temp, self.humi)
-        self.lp_exmsg = 'The %s controller only supports 2 loops (%d:temperature,%d:humidity)'%ttp
-        ttp = (self.ctlr_type, self.temp)
-        self.cs_exmsg = 'The %s controller can only have loop %d as cascade' % ttp
+        ttp = (self.temp, self.humi)
+        self.lp_exmsg = 'The P300 controller only supports 2 loops (%d:temperature,%d:humidity)'%ttp
+        self.cs_exmsg = 'The P300 controller can only have loop %d as cascade' % self.temp
         self.alarms = 27
         self.profiles = True
         self.events = 12
-        self.total_programs = 40 if self.ctlr_type == 'P300' else 30
+        self.total_programs = 40
         self.__update_loop_map()
+        self.connect_args = {
+            'serialport':self.serialport,
+            'baudrate':self.baudrate,
+            'host':self.host,
+            'address':self.adr
+        }
 
 
     def __update_loop_map(self):
@@ -77,16 +78,9 @@ class Espec(ControllerInterface):
 
     def connect(self):
         '''
-        connect to the controller using the paramters provided on class initialization
+        connect to the controller using the parameters provided on class initialization
         '''
-        args = {'serialport':self.serialport, 'baudrate':self.baudrate, 'host':self.host,
-                'address':self.adr}
-        if self.ctlr_type == 'P300':
-            self.client = P300(self.interface, **args)
-        elif self.ctlr_type == 'SCP220':
-            self.client = SCP220(self.interface, **args)
-        else:
-            raise ValueError('"%s" is not a supported controller type' % self.ctlr_type)
+        self.client = P300(self.interface, **self.connect_args)
 
     def close(self):
         '''
@@ -488,7 +482,7 @@ class Espec(ControllerInterface):
         raise NotImplementedError
 
     @exclusive
-    def set_air_speed(self, value): 
+    def set_air_speed(self, value):
         raise NotImplementedError
 
     @exclusive

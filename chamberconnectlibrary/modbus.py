@@ -10,8 +10,9 @@ import struct
 import time
 import collections
 import serial
+from controllerinterface import ControllerInterfaceError
 
-class ModbusError(Exception):
+class ModbusError(ControllerInterfaceError):
     '''Generic Modbus exception.'''
     pass
 

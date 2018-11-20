@@ -8,6 +8,7 @@ Handle the actual communication with Espec Corp. Controllers
 import socket
 import serial
 import time
+from controllerinterface import ControllerInterfaceError
 
 ERROR_DESCIPTIONS = {
     'CMD ERR':'Unrocognized command',
@@ -40,7 +41,7 @@ ERROR_DESCIPTIONS = {
     'CHB NOT READY':'Could not act on given command.'
 }
 
-class EspecError(Exception):
+class EspecError(ControllerInterfaceError):
     '''
     Generic Espec Corp controller error
     '''

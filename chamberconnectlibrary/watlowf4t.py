@@ -523,7 +523,13 @@ class WatlowF4T(ControllerInterface):
         else:
             self.client.write_holding(kpress, self.inv_watlow_val_dict('up'))
 
+    @exclusive
+    def get_air_speed(self):
+        raise NotImplementedError
 
+    @exclusive
+    def set_air_speed(self, value): 
+        raise NotImplementedError
 
     @exclusive
     def get_status(self):
