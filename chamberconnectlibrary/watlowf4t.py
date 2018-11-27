@@ -172,7 +172,7 @@ class WatlowF4T(ControllerInterface):
         '''
         connect to the controller using the paramters provided on class initialization
         '''
-        if self.interface == "RTU":
+        if self.interface in ["RTU", "Serial"]:
             self.client = ModbusRTU(address=self.adr, port=self.serialport, baud=self.baudrate)
         else:
             self.client = ModbusTCP(self.adr, self.host)
@@ -525,6 +525,10 @@ class WatlowF4T(ControllerInterface):
 
     @exclusive
     def get_air_speed(self):
+        raise NotImplementedError
+
+    @exclusive
+    def get_air_speeds(self):
         raise NotImplementedError
 
     @exclusive
@@ -1005,7 +1009,7 @@ class WatlowF4T(ControllerInterface):
         try:
             tlist = ['absoluteTemperature', 'relativeTemperature', 'notsourced']
             if self.watlow_val_dict[profpv] in tlist:
-                tval = self.client.read_holding(14080 if self.interface == "RTU" else 6730, 1)[0]
+                tval = self.client.read_holding(14080 if self.interface in ["RTU", "Serial"] else 6730, 1)[0]
                 return u'\xb0%s' % self.watlow_val_dict[tval]
             else:
                 return u'%s' % self.watlow_val_dict[profpv]

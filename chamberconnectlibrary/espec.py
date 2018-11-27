@@ -1,4 +1,4 @@
-﻿'''
+'''
 Upper level interface for Espec Corp. Controllers (just the P300 for now)
 
 :copyright: (C) Espec North America, INC.
@@ -485,6 +485,10 @@ class Espec(ControllerInterface):
 
     @exclusive
     def get_air_speed(self):
+        raise NotImplementedError
+
+    @exclusive
+    def get_air_speeds(self):
         raise NotImplementedError
 
     @exclusive

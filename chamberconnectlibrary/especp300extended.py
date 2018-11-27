@@ -41,5 +41,9 @@ class EspecP300Extended(EspecP300):
         }
 
     @exclusive
+    def get_air_speeds(self):
+        return self.client.read_air()['options']
+
+    @exclusive
     def set_air_speed(self, value):
         self.client.write_air(value)

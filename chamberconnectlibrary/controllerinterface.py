@@ -835,6 +835,16 @@ class ControllerInterface:
         pass
 
     @abstractmethod
+    def get_air_speeds(self):
+        '''
+        Get the available air speeds for the programmable air speed.
+
+        returns:
+            [int]
+        '''
+        pass
+
+    @abstractmethod
     def set_air_speed(self, value): 
         ''' 
         Set value for the chamber air speed

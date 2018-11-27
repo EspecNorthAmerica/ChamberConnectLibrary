@@ -482,6 +482,10 @@ class EspecP300(ControllerInterface):
         raise NotImplementedError
 
     @exclusive
+    def get_air_speeds(self):
+        raise NotImplementedError
+
+    @exclusive
     def set_air_speed(self, value):
         raise NotImplementedError
 
