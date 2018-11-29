@@ -165,6 +165,12 @@ class P300Extended(P300):
             'deviation': {'positive':float(rsp[1]), 'negative':float(rsp[2])}
         }
 
+    def read_prgm(self, pgmnum, with_ptc=False):
+        pgm = super(P300Extended, self).read_prgm(pgmnum, with_ptc)
+        if pgmnum == 0 and self.enable_air_speed:
+            pgm['steps'][0]['air'] = self.read_air()
+        return pgm
+
     def read_prgm_data(self, pgmnum):
         '''
         get the parameters for a given program
