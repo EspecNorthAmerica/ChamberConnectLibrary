@@ -1764,7 +1764,7 @@ class P300vib(P300):
             'range': { 'max': float(rsp[2]), 'min': float(rsp[3]) }
         }
 
-    def read_mon(self, detail=False, ext1=False):
+    def read_mon(self, detail=False):
         '''
         Returns the conditions inside the chamber
 
@@ -1778,14 +1778,14 @@ class P300vib(P300):
         # MON?,EXT1
         # MON?,DETAIL
         # MON? 
-        rsp = self.ctlr.interact('MON?{0:s}'.format(',EXT1' if ext1 else (',DETAIL' if detail else '') )).split(',') 
+        rsp = self.ctlr.interact('MON?{0:s}'.format(',DETAIL' if detail else ',EXT1')).split(',') 
         data = {
             'temperature': float(rsp[0]),
             'mode': rsp[2],
             'alarms': int(rsp[3])
         }
         if rsp[1]:
-            data['vibration'] = flaot(rsp[1])
+            data['vibration'] = float(rsp[1])
         return data 
 
     def read_htr(self, ext1=False):
@@ -1868,7 +1868,7 @@ class P300vib(P300):
                 'counter_b': int(rsp[4])
             }
  
-    def read_prgm_data_step(self, pgmnum, pgmstep, ext1=None, air=None):
+    def read_prgm_data_step(self, pgmnum, pgmstep, air=None):
         '''
         get a programs step parameters and air feature
 
@@ -1883,12 +1883,12 @@ class P300vib(P300):
                 "granty":boolean,
                 "refrig":{"mode":string, "setpoint":int},
                 "temperature":{"setpoint":float, "ramp":boolean},
-                "humidity":{"setpoint":float, "enable":boolean, "ramp":boolean},
+                "vibration":{"setpoint":float, "enable":boolean, "ramp":boolean},
                 "relay":[int]
             }
         '''
-        tmp = self.ctlr.interact('PRGM DATA?,{0}:{1:d},STEP{2:d}{3:s}'.format( self.rom_pgm(pgmnum), 
-            pgmnum, pgmstep, ',EXT1' if ext1 else (',AIR' if air else '')) ) 
+        tmp = self.ctlr.interact('PRGM DATA?,{0}:{1:d},STEP{2:d},EXT1'.format( self.rom_pgm(pgmnum), 
+            pgmnum, pgmstep)) 
         return self.parse_prgm_data_step(tmp) # need to write parse def 
 
     def parse_prgm_data_step(self, arg):
@@ -1901,6 +1901,8 @@ class P300vib(P300):
             r'(?:,PAUSE (\w+))?(?:,DEVP([0-9.-]+),DEVN([0-9.-]+))?', 
             arg
         )
+        print (arg) 
+
         # command data and response data
         # cmd> PRGM DATA?,RAM:3,STEP3,EXT1
         # rsp> 3,TEMP30.0,TEMP RAMP ON,VIB2.5,VIB RAMP ON,TIME0:03,GRANTY OFF,REF9,RELAY ON1.2,PAUSE OFF
@@ -1962,10 +1964,21 @@ class P300vib(P300):
         Parse the program data command with details flag
         '''
         parsed = re.search(
-            r'([0-9.-]+),([0-9.-]+),(?:(\d+),(\d+),)?TEMP(\w+)'
-            r'(?:,([0-9.-]+))?(?:,VIB(\w+)(?:,(\d+))?)?',
+            r'([0-9.-]+),([0-9.-]+),([0-9.-]+),([0-9.-]+),TEMP(\w+)'
+            r'(?:,([0-9.-]+))?,VIB(\w+)(?:,([0-9.-]+))?',
             arg
         )
+    
+        # general cmd/rsp pattern: 
+        # cmd> PRGM DATA?,RAM:2,DETAIL,EXT1
+        # rsp> 180.0,-50.0,110.0,0.0,TEMPSV,26.0,VIBOFF
+        # cmd> PRGM DATA?,RAM:3,DETAIL,EXT1
+        # rsp> 180.0,-50.0,110.0,0.0,TEMPSV,26.0,VIBSV,2.5
+        # cmd> PRGM DATA?,RAM:1,DETAIL,EXT1 
+        # rsp> 265.0,-115.0,110.0,0.0,TEMPOFF,VIBOFF
+        # cmd> PRGM DATA?,RAM:2,DETAIL,EXT1
+        # rsp> 180.0,-50.0,110.0,0.0,TEMPSV,26.0,VIBOFF
+
         ret = {
             'tempDetail':{
                 'range':{'max':float(parsed.group(1)), 'min':float(parsed.group(2))},
@@ -1981,92 +1994,6 @@ class P300vib(P300):
             }
         return ret
 
-    # def parse_prgm_data_detail(self, arg):
-    #     '''
-    #     parse program parameters
-    #     '''
-    #     parsed = re.search(
-    #         r'([0-9.-]+),([0-9.-]+),([0-9.-]+),([0-9.-]+),TEMP(\w+)'
-    #         r'(?:,([0-9.-]+))?,VIB(\w+)(?:,([0-9.-]+))?',
-    #         arg
-    #     )
-    #     # general cmd/rsp pattern: 
-    #     # cmd> PRGM DATA?,RAM:2,DETAIL,EXT1
-    #     # rsp> 180.0,-50.0,110.0,0.0,TEMPSV,26.0,VIBOFF
-    #     # cmd> PRGM DATA?,RAM:3,DETAIL,EXT1
-    #     # rsp> 180.0,-50.0,110.0,0.0,TEMPSV,26.0,VIBSV,2.5
-    #     # cmd> PRGM DATA?,RAM:1,DETAIL,EXT1 
-    #     # rsp> 265.0,-115.0,110.0,0.0,TEMPOFF,VIBOFF
-    #     # cmd> PRGM DATA?,RAM:2,DETAIL,EXT1
-    #     # rsp> 180.0,-50.0,110.0,0.0,TEMPSV,26.0,VIBOFF
-    #     ret = {
-    #         'tempDetail':{
-    #             'range':{
-    #                 'max':float(parsed.group(1)), 'min':float(parsed.group(2))
-    #                 },
-    #             'mode':parsed.group(5)
-    #         },
-    #         'vibrationDetail':{
-    #             'range':{
-    #                 'max':float(parsed.group(3)), 'min':float(parsed.group(4))
-    #             },
-    #             'mode':parsed.group(7)
-    #         }
-    #     }
-    #     if parsed.group(6):
-    #         ret['tempDetail'] = {
-    #             'range':{
-    #                 'max':float(parsed.group(1)), 'min':float(parsed.group(2))
-    #             },
-    #             'mode':parsed.group(5), 'setpoint':parsed.group(6)
-    #         }
-    #     if parsed.group(8):
-    #         ret['vibrationDetail'] = {
-    #             'range':{
-    #                 'max':float(parsed.group(3)), 'min':float(parsed.group(4))
-    #             },
-    #             'mode':parsed.group(7), 'setpoint':parsed.group(8)
-    #         }
-    #     return ret
-
-    def write_vib(self, constant=None, **kwargs):
-        '''
-        Update the vibration parameters
-        '''
-        setpoint, maximum, minimum = kwargs.get('setpoint'), kwargs.get('max'), kwargs.get('min')
-    
-        if setpoint is not None and minimum is not None and maximum is not None:
-            if constant is None:
-				self.ctlr.interact('VIB, S{0:0.1f} H{1:0.1f} L{2:0.1f}'.format(setpoint, maximum, minimum))				
-            elif constant in [1, 2, 3]:
-        
-				self.ctlr.interact('VIB, S{0:0.1f} H{1:0.1f} L{2:0.1f}, C{3:d}'.format 
-                        (setpoint, maximum, minimum, constant))
-            else:
-                raise ValueError("Constant must be None or 1, 2 or 3")
-        else:
-            if constant in [1, 2, 3]:
-                if setpoint is not None:
-                    self.ctlr.interact('VIB, S{0:0.1f}, C{1:d}'.format(setpoint, constant))
-
-                if minimum is not None:
-                    self.ctlr.interact('VIB, L{0:0.1f}, C{1:d}'.format(minimum, constant))
-
-                if maximum is not None:
-                    self.ctlr.interact('VIB, H{0:0.1f}, C{1:d}'.format(maximum, constant))
-
-            elif constant is None:
-                if setpoint is not None:
-                    self.ctlr.interact('VIB, S{0:0.1f}'.format(setpoint))
-
-                if minimum is not None:
-                    self.ctlr.interact('VIB, L{0:0.1f}'.format(minimum))
-
-                if maximum is not None:
-                    self.ctlr.interact('VIB, H{0:0.1f}'.format(maximum))
-            else:
-                raise ValueError("Constant must be None or 1, 2 or 3")
-
     def write_prgm_data_details(self, pgmnum, constant=None, **pgmdetail):
         '''
         write the various program wide parameters to the controller
@@ -2078,17 +2005,17 @@ class P300vib(P300):
         if 'counter_a' in pgmdetail and pgmdetail['counter_a']['cycles'] > 0:
             ttp = (pgmnum, pgmdetail['counter_a']['start'], pgmdetail['counter_a']['end'],
                    pgmdetail['counter_a']['cycles'])
-            tmp = ('PRGM DATA WRITE,PGM{0:d},COUNT,A({1:d}.{2:d}.{3:d})'.format(ttp))
+            tmp = ('PRGM DATA WRITE,PGM{0:d},COUNT,A({1:d}.{2:d}.{3:d})'.format(*ttp))
             if 'counter_b' in pgmdetail and pgmdetail['counter_b']['cycles'] > 0:
                 ttp = (tmp, pgmdetail['counter_b']['start'], pgmdetail['counter_b']['end'],
                        pgmdetail['counter_b']['cycles'])
                 #tmp = '%s,B(%d.%d.%d)' % ttp
-                tmp = ('{0:s},B({1:d}.{2:d}.{3:d})'.format(ttp))
+                tmp = ('{0:s},B({1:d}.{2:d}.{3:d})'.format(*ttp))
             self.ctlr.interact(tmp)
         elif 'counter_b' in pgmdetail and pgmdetail['counter_b']['cycles'] > 0:
             ttp = (pgmnum, pgmdetail['counter_b']['start'], pgmdetail['counter_b']['end'],
                    pgmdetail['counter_b']['cycles'])
-            self.ctlr.interact('PRGM DATA WRITE,PGM{0:d},COUNT,B({1:d}.{2:d}.{3:d})'.format(ttp))
+            self.ctlr.interact('PRGM DATA WRITE,PGM{0:d},COUNT,B({1:d}.{2:d}.{3:d})'.format(*ttp))
         if 'name' in pgmdetail:
             self.ctlr.interact('PRGM DATA WRITE,PGM{0:d},NAME,{1:s}'.format(pgmnum, pgmdetail['name']))
 
@@ -2098,47 +2025,34 @@ class P300vib(P300):
             elif pgmdetail['end'] != 'RUN' and constant is None:
                 ttp = (pgmnum, pgmdetail['end'])     
             else:
-                ttp = (pgmnum, 'RUN,PTN{0:s}'.format(pgmdetail['next_prgm']))
-            self.ctlr.interact('PRGM DATA WRITE,PGM{0:d},END,{1:s}'.format(ttp)) 
+                ttp = (pgmnum, 'RUN,PTN{0:d}'.format(pgmdetail['next_prgm']))
+            self.ctlr.interact('PRGM DATA WRITE,PGM{0:d},END,{1:s}'.format(*ttp)) 
 
         if 'tempDetail' in pgmdetail:
             if 'range' in pgmdetail['tempDetail']:
                 ttp = (pgmnum, pgmdetail['tempDetail']['range']['max'])
-                self.ctlr.interact('PRGM DATA WRITE,PGM{0:d},HTEMP,{1:0.1f}'.format(ttp))
+                self.ctlr.interact('PRGM DATA WRITE,PGM{0:d},HTEMP,{1:0.1f}'.format(*ttp))
                 ttp = (pgmnum, pgmdetail['tempDetail']['range']['min'])
-                self.ctlr.interact('PRGM DATA WRITE,PGM{0:d},LTEMP,{1:0.1f}'.format(ttp))
+                self.ctlr.interact('PRGM DATA WRITE,PGM{0:d},LTEMP,{1:0.1f}'.format(*ttp))
             if 'mode' in pgmdetail['tempDetail']:
                 ttp = (pgmnum, pgmdetail['tempDetail']['mode'])
-                self.ctlr.interact('PRGM DATA WRITE,PGM{0:d},PRE MODE,TEMP,{1:s}'.format(ttp))
+                self.ctlr.interact('PRGM DATA WRITE,PGM{0:d},PRE MODE,TEMP,{1:s}'.format(*ttp))
             if 'setpoint' in pgmdetail['tempDetail'] and pgmdetail['tempDetail']['mode'] == 'SV':
                 ttp = (pgmnum, pgmdetail['tempDetail']['setpoint'])
-                self.ctlr.interact('PRGM DATA WRITE,PGM{0:d},PRE TSV,{1:0.1f}'.format(ttp))
+                self.ctlr.interact('PRGM DATA WRITE,PGM{0:d},PRE TSV,{1:0.1f}'.format(*ttp))
 
-        if 'humiDetail' in pgmdetail:
-            if 'range' in pgmdetail['humiDetail']:     
-                ttp = (pgmnum, pgmdetail['humiDetail']['range']['max'])
-                self.ctlr.interact('PRGM DATA WRITE,PGM{0:d},HHUMI,{1:0.0f}'.format(ttp))
-                ttp = (pgmnum, pgmdetail['humiDetail']['range']['min'])
-                self.ctlr.interact('PRGM DATA WRITE,PGM{0:d},LHUMI,{1:0.0f}'.format(ttp))
-            if 'mode' in pgmdetail['humiDetail']:
-                ttp = (pgmnum, pgmdetail['humiDetail']['mode'])
-                self.ctlr.interact('PRGM DATA WRITE,PGM{0:d},PRE MODE,HUMI,{1:s}'.format(ttp))
-            if 'setpoint' in pgmdetail['humiDetail'] and pgmdetail['humiDetail']['mode'] == 'SV':
-                ttp = (pgmnum, pgmdetail['humiDetail']['setpoint'])
-                self.ctlr.interact('PRGM DATA WRITE,PGM{0:d},PRE HSV,{1:0.0f}'.format(ttp)) 
-
-        if 'vibrationDetail' in pgmdetail:
-            if 'range' in pgmdetail['vibrationDetail']:
-                ttp = (pgmnum, pgmdetail['vibrationDetail']['range']['max'])
-                self.ctlr.interact('PRGM DATA WRITE,PGM{0:d},HVIB,{1:0.1f}'.format(ttp))
-                ttp = (pgmnum, pgmdetail['vibrationDetail']['range']['min'])
-                self.ctlr.interact('PRGM DATA WRITE,PGM{0:d},LVIB,{1:0.1f}'.format(ttp))
-            if 'mode' in pgmdetail['vibrationDetail']:
-                ttp = (pgmnum, pgmdetail['vibrationDetail']['mode'])
-                self.ctlr.interact('PRGM DATA WRITE,PGM{0:d},PRE MODE,VIB,{1:s}'.format(ttp))
-            if 'setpoint' in pgmdetail['vibrationDetail'] and pgmdetail['vibrationDetail']['mode'] == 'SV':
-                ttp = (pgmnum, pgmdetail['vibrationDetail']['setpoint'])
-                self.ctlr.interact('PRGM DATA WRITE,PGM{0:d},PRE VSV,{1:0.1f}'.format(ttp))   
+        if 'vibDetail' in pgmdetail:
+            if 'range' in pgmdetail['vibDetail']:     
+                ttp = (pgmnum, pgmdetail['vibDetail']['range']['max'])
+                self.ctlr.interact('PRGM DATA WRITE,PGM{0:d},HVIB,{1:0.1f}'.format(*ttp))
+                ttp = (pgmnum, pgmdetail['vibDetail']['range']['min'])
+                self.ctlr.interact('PRGM DATA WRITE,PGM{0:d},LVIB,{1:0.1f}'.format(*ttp))
+            if 'mode' in pgmdetail['vibDetail']:
+                ttp = (pgmnum, pgmdetail['vibDetail']['mode'])
+                self.ctlr.interact('PRGM DATA WRITE,PGM{0:d},PRE MODE,VIB,{1:s}'.format(*ttp))
+            if 'setpoint' in pgmdetail['vibDetail'] and pgmdetail['vibDetail']['mode'] == 'SV':
+                ttp = (pgmnum, pgmdetail['vibDetail']['setpoint'])
+                self.ctlr.interact('PRGM DATA WRITE,PGM{0:d},PRE VSV,{1:0.1f}'.format(*ttp)) 
 
     def write_prgm_data_step(self, pgmnum, **pgmstep):
         '''
@@ -2172,25 +2086,17 @@ class P300vib(P300):
                 ttp = (cmd, pgmstep['temperature']['deviation']['positive'],
                        pgmstep['temperature']['deviation']['negative'])
                 cmd = '{0:s},DEVP{1:0.1f},DEVN{2:0.1f}'.format(ttp)
-        if 'humidity' in pgmstep:
-            if 'setpoint' in pgmstep['humidity']:
-                if pgmstep['humidity']['enable']:
-                    htmp = '{0:0.0f}'.format(pgmstep['humidity']['setpoint'])
-                else:
-                    htmp = 'OFF'
-                cmd = '{0:s},HUMI{1:s}'.format(cmd, htmp)
-            if 'ramp' in pgmstep['humidity'] and pgmstep['humidity']['enable']:
-                cmd = '{0:s},HRAMP{1:s}'.format(cmd, 'ON' if pgmstep['humidity']['ramp'] else 'OFF')
+
         if 'vibration' in pgmstep:
             if 'setpoint' in pgmstep['vibration']:
                 if pgmstep['vibration']['enable']:
-                    vtmp = ('{0:0.1f}'.format(pgmstep['vibration']['setpoint']))
+                    vtmp = '{0:0.1f}'.format(pgmstep['vibration']['setpoint'])
                 else:
                     vtmp = 'OFF'
-                cmd = ('{0:s},VIB{1:s}'.format(cmd, vtmp)) 
+                cmd = '{0:s},VIB{1:s}'.format(cmd, vtmp)
             if 'ramp' in pgmstep['vibration'] and pgmstep['vibration']['enable']:
-                cmd = ('{0:s},VRAMP{1:s}'
-                    .format(cmd, 'ON' if pgmstep['vibration']['ramp'] else 'OFF'))
+                cmd = '{0:s},VRAMP{1:s}'.format(cmd, 'ON' if pgmstep['vibration']['ramp'] else 'OFF')
+
         if 'relay' in pgmstep:
             rlys = self.parse_relays(pgmstep['relay'])
             if rlys['on']:
@@ -2208,7 +2114,7 @@ class P300vib(P300):
         '''
         self.ctlr.interact('PRGM ERASE,{0:s}:{1:d}'.format(self.rom_pgm(pgmnum), pgmnum))
 
-    def write_run_prgm(self, temp, hour, minute, gotemp=None, humi=None, gohumi=None, relays=None, constant=None):
+    def write_run_prgm(self, temp, hour, minute, gotemp=None, vib=None, govib=None, relays=None, constant=None):
         '''
         Run a remote program (single step program)
 
@@ -2217,8 +2123,8 @@ class P300vib(P300):
             hour: int, # of hours to run the step
             minute: int, # of minutes to run the step
             gotemp: float, temperature to end the step at(optional for ramping)
-            humi: float, the humidity to use at the start of the step (optional)
-            gohumi: float, the humidity to end the step at (optional for ramping)
+            vib: float, the humidity to use at the start of the step (optional)
+            govib: float, the humidity to end the step at (optional for ramping)
             relays: [boolean], True= turn relay on, False=turn relay off, None=Do nothing
             air: int, # of air speed to provide to system to operate
         '''
@@ -2226,9 +2132,9 @@ class P300vib(P300):
         if gotemp is not None:
             cmd = '{0:s} GOTEMP{1:0.1f}'.format(cmd, gotemp)
         if humi is not None:
-            cmd = '{0:s} HUMI{1:0.0f}'.format(cmd, humi)
+            cmd = '{0:s} VIB{1:0.1f}'.format(cmd, vib)
         if gohumi is not None:
-            cmd = '{0:s} GOHUMI{1:0.0f}'.format(cmd, gohumi)
+            cmd = '{0:s} GOVIB{1:0.1f}'.format(cmd, govib)
         rlys = self.parse_relays(relays) if relays is not None else {'on':None, 'off':None}
         if rlys['on']:
             cmd = '{0:s} RELAYON,{1:s}'.format(cmd, ','.join(str(v) for v in rlys['on']))
@@ -2237,3 +2143,144 @@ class P300vib(P300):
         if constant is not None: 
             cmd = '{0:s} AIR{1:d}'.format(cmd, constant)
         self.ctlr.interact(cmd)
+
+    def write_vib(self, constant=None, **kwargs):
+        '''
+        update the vibration parameters
+
+        Args:
+            enable: boolean
+            setpoint: float
+            max: float
+            min: float
+            range: {"max":float,"min":float}
+        '''
+        setpoint, maximum, minimum = kwargs.get('setpoint'), kwargs.get('max'), kwargs.get('min')
+        enable = kwargs.get('enable')
+        if enable is False:
+            spstr = 'SOFF'
+        elif setpoint is not None:
+            # spstr = ' S%0.1f' % setpoint
+            spstr = ('S{0:0.1f}'.format(setpoint))
+        else:
+            spstr = None
+
+        if spstr is not None and minimum is not None and maximum is not None:
+            if constant is None:
+                self.ctlr.interact('VIB, {0:s} H{1:0.1f} L{2:0.1f}'.format(spstr, maximum, minimum))
+            elif constant in [1, 2, 3]:
+                self.ctlr.interact('VIB, {0:s} H{1:0.1f} L{2:0.1f},C{3:d}'.format(spstr, maximum, minimum, constant))
+            else:
+                raise ValueError("Constant must be None or 1, 2 or 3")
+        else:
+            if constant in [1, 2, 3]:
+                if spstr is not None:
+                    self.ctlr.interact('VIB,' + spstr + ',C{0:d}'.format(constant))
+                if minimum is not None: 
+                    self.ctlr.interact('VIB, L{0:0.1f}, C{1:d}'.format(minimum, constant)) 
+                if maximum is not None: 
+                    self.ctlr.interact('VIB, H{0:0.1f}, C{1:d}'.format(maximum, constant))
+            elif constant is None:
+                if spstr is not None: 
+                    self.ctlr.interact('VIB,' + spstr) 
+                if minimum is not None: 
+                    self.ctlr.interact('VIB, L{0:0.1f}'.format(minimum))
+                if maximum is not None:
+                    self.ctlr.interact('VIB, H{0:0.1f}'.format(maximum)) 
+            else:
+                raise ValueError("Constant must be None or 1, 2 or 3") 
+    # COMMENT THIS OUT TO TEST THE ABOVE OE 
+    # def write_vib(self, constant=None, **kwargs):
+    #     '''
+    #     Update the vibration parameters
+    #     '''
+    #     setpoint, maximum, minimum = kwargs.get('setpoint'), kwargs.get('max'), kwargs.get('min')
+    
+    #     if setpoint is not None and minimum is not None and maximum is not None:
+    #         if constant is None:
+	# 			self.ctlr.interact('VIB, S{0:0.1f} H{1:0.1f} L{2:0.1f}'.format(setpoint, maximum, minimum))				
+    #         elif constant in [1, 2, 3]:
+        
+	# 			self.ctlr.interact('VIB, S{0:0.1f} H{1:0.1f} L{2:0.1f}, C{3:d}'.format 
+    #                     (setpoint, maximum, minimum, constant))
+    #         else:
+    #             raise ValueError("Constant must be None or 1, 2 or 3")
+    #     else:
+    #         if constant in [1, 2, 3]:
+    #             if setpoint is not None:
+    #                 self.ctlr.interact('VIB, S{0:0.1f}, C{1:d}'.format(setpoint, constant))
+
+    #             if minimum is not None:
+    #                 self.ctlr.interact('VIB, L{0:0.1f}, C{1:d}'.format(minimum, constant))
+
+    #             if maximum is not None:
+    #                 self.ctlr.interact('VIB, H{0:0.1f}, C{1:d}'.format(maximum, constant))
+
+    #         elif constant is None:
+    #             if setpoint is not None:
+    #                 self.ctlr.interact('VIB, S{0:0.1f}'.format(setpoint))
+
+    #             if minimum is not None:
+    #                 self.ctlr.interact('VIB, L{0:0.1f}'.format(minimum))
+
+    #             if maximum is not None:
+    #                 self.ctlr.interact('VIB, H{0:0.1f}'.format(maximum))
+    #         else:
+    #             raise ValueError("Constant must be None or 1, 2 or 3")
+
+    def read_prgm(self, pgmnum, with_ptc=False):
+        '''
+        read an entire program helper method
+        '''
+        if pgmnum > 0 and pgmnum <= 40:
+            pgm = self.read_prgm_data_ptc(pgmnum) if with_ptc else self.read_prgm_data(pgmnum)
+            if with_ptc:
+                try:
+                    pgm.update(self.read_prgm_data_ptc_detail(pgmnum))
+                except NotImplementedError:
+                    pass #SCP-220 does not have the detail command
+                tmp = [self.read_prgm_data_ptc_step(pgmnum, i) for i in range(1, pgm['steps']+1)]
+            else:
+                try:
+                    pgm.update(self.read_prgm_data_detail(pgmnum))
+                except NotImplementedError:
+                    pass #SCP-220 does not have the detail command
+                tmp = [self.read_prgm_data_step(pgmnum, i) for i in range(1, pgm['steps']+1)]
+            pgm['steps'] = tmp
+        elif pgmnum == 0:
+            pgm = {
+                'counter_a':{'cycles':0, 'end':0, 'start':0},
+                'counter_b':{'cycles':0, 'end':0, 'start':0},
+                'end':'OFF',
+                'name':'',
+                'next_prgm':0,
+                'tempDetail':{'mode':'OFF', 'setpoint':None, 'range':self.read_temp()['range']},
+                'steps':[
+                    {
+                        'granty':False,
+                        'number':1,
+                        'paused':False,
+                        'refrig':{'mode':'auto', 'setpoint':0},
+                        'time':{'hour':1, 'minute':0},
+                        'relay':[False for i in range(12)],
+                        'temperature':{'ramp':False, 'setpoint':0.0}
+                    }
+                ]
+            }
+            if with_ptc:
+                pgm['steps'][0]['temperature'].update({
+                    'deviation':self.read_temp_ptc()['deviation'],
+                    'enable_cascade':False
+                })
+            try:
+                pgm['vibDetail'] = {
+                    'mode':'OFF',
+                    'setpoint':None,
+                    'range':self.read_vib()['range']
+                }
+                pgm['steps'][0]['vibration'] = {'enable':False, 'ramp':False, 'setpoint':0.0}
+            except Exception:
+                pass
+        else:
+            raise ValueError('pgmnum must be 0-40')
+        return pgm

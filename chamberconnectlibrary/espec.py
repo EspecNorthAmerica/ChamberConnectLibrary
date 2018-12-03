@@ -403,7 +403,7 @@ class Espec(ControllerInterface):
         elif self.lpd.get(N) == self.humi:
             val = self.cached(self.client.read_htr)['wet']
         elif self.lpd.get(N) == self.vib:
-            val = 0        # try None or 0 
+            val = self.cached(self.client.read_htr)['vib']
         else:
             raise ValueError(self.lp_exmsg)
         return {'current':val, 'constant':val}
@@ -553,10 +553,6 @@ class Espec(ControllerInterface):
 
     @exclusive
     def  get_status(self, detail=False, ext1=False):
-        #if self.ctlr_type == 'P300vib':
-        #    if self.cached(self.client.read_mon_ext1)['alarms'] > 0 or self.cached(self.client.read_mon_detail)['alarms']> 0:
-        #        return 'Alarm' 
-        #elif self.cached(self.client.read_mon)['alarms'] > 0:
         if self.cached(self.client.read_mon)['alarms'] > 0: 
             return 'Alarm'
         return {
@@ -777,8 +773,8 @@ class Espec(ControllerInterface):
         else:
             self.client.write_ip_set('0.0.0.0', '0.0.0.0', '0.0.0.0')
 
-    @exclusive 
-    def get_constant_vib(self, constant=None):
-        return self.client.read_constant_vib(constant)
+    # @exclusive 
+    # def get_constant_vib(self, constant=None):
+    #     return self.client.read_constant_vib(constant)
 
     
