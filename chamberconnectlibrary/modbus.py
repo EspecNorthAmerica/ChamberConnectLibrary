@@ -1,4 +1,4 @@
-﻿'''
+'''
 Copyright (C) Espec North America, INC. - All Rights Reserved
 Written by Myles Metzler mmetzler@espec.com, Feb. 2016
 

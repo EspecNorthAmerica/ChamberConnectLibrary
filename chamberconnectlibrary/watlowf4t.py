@@ -1,4 +1,4 @@
-﻿'''
+'''
 Upper level interface for the Watlow F4T controller
 
 :copyright: (C) Espec North America, INC.

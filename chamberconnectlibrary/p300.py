@@ -1,4 +1,4 @@
-﻿'''
+'''
 A direct implimentation of the P300's communication interface.
 
 :copyright: (C) Espec North America, INC.

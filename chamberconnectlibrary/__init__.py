@@ -8,6 +8,7 @@ Espec North America uses.
 from espec import Espec
 from especp300 import EspecP300
 from especp300extended import EspecP300Extended
+from especp300vib import EspecP300Vib
 from especscp220 import EspecSCP220
 from watlowf4 import WatlowF4
 from watlowf4t import WatlowF4T

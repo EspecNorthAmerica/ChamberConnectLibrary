@@ -1,4 +1,4 @@
-﻿'''
+'''
 Common interface for all All ChamberConnectLibrary upper level interfaces
 
 :copyright: (C) Espec North America, INC.

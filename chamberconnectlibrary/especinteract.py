@@ -1,4 +1,4 @@
-﻿'''
+'''
 Handle the actual communication with Espec Corp. Controllers
 
 :copyright: (C) Espec North America, INC.

@@ -1,4 +1,4 @@
-﻿'''
+'''
 Upper level interface for Espec Corp. P300 Controller (original command set)
 
 :copyright: (C) Espec North America, INC.
@@ -194,11 +194,11 @@ class EspecP300(ControllerInterface):
                 raise ValueError(self.lp_exmsg)
         if 'deviation' in param_list and 'enable_cascade' in param_list:
             if isinstance(param_list['enable_cascade'], dict):
-                params = {'enable':param_list.pop('enable_cascade')['constant']}
+                cparams = {'enable':param_list.pop('enable_cascade')['constant']}
             else:
-                params = {param_list.pop('enable_cascade')}
-            params.update(param_list.pop('deviation'))
-            self.client.write_temp_ptc(**params)
+                cparams = {param_list.pop('enable_cascade')}
+            cparams.update(param_list.pop('deviation'))
+            self.client.write_temp_ptc(**cparams)
         for key, val in param_list.items():
             params = {'value':val}
             params.update({'exclusive':False, 'N':loop_number})
@@ -219,14 +219,14 @@ class EspecP300(ControllerInterface):
 
     @exclusive
     def get_loop_sp(self, N):
-        if N not in self.lpd:
-            raise ValueError(self.lp_exmsg)
         if self.lpd[N] == self.temp:
             cur = self.cached(self.client.read_temp)['setpoint']
             con = self.cached(self.client.read_constant_temp)['setpoint']
-        else:
+        elif self.lpd[N] == self.humi:
             cur = self.cached(self.client.read_humi)['setpoint']
             con = self.cached(self.client.read_constant_humi)['setpoint']
+        else:
+            raise ValueError(self.lp_exmsg)
         return {'constant':con, 'current':cur}
 
     @exclusive
@@ -256,7 +256,8 @@ class EspecP300(ControllerInterface):
             self.client.write_temp(min=value['min'], max=value['max'])
         elif self.lpd[N] == self.humi:
             self.client.write_humi(min=value['min'], max=value['max'])
-        else: raise ValueError(self.lp_exmsg)
+        else:
+            raise ValueError(self.lp_exmsg)
 
     @exclusive
     def get_loop_range(self, N):
@@ -264,16 +265,20 @@ class EspecP300(ControllerInterface):
             return self.cached(self.client.read_temp)['range']
         elif self.lpd[N] == self.humi:
             return self.cached(self.client.read_humi)['range']
-        else: raise ValueError(self.lp_exmsg)
+        else:
+            raise ValueError(self.lp_exmsg)
 
     @exclusive
     def get_loop_en(self, N):
         if self.lpd[N] == self.temp:
             return {'constant':True, 'current':True}
         elif self.lpd[N] == self.humi:
-            return {'current':self.cached(self.client.read_humi)['enable'],
-                    'constant':self.cached(self.client.read_constant_humi)['enable']}
-        else: raise ValueError(self.lp_exmsg)
+            return {
+                'current':self.cached(self.client.read_humi)['enable'],
+                'constant':self.cached(self.client.read_constant_humi)['enable']
+            }
+        else:
+            raise ValueError(self.lp_exmsg)
 
     @exclusive
     def set_loop_en(self, N, value):
@@ -302,8 +307,6 @@ class EspecP300(ControllerInterface):
     @exclusive
     def set_loop_mode(self, N, value):
         value = value['constant'] if isinstance(value, dict) else value
-        if N > 2:
-            raise ValueError(self.lp_exmsg)
         if value in ['Off', 'OFF', 'off']:
             self.set_loop_en(N, False, exclusive=False)
         elif value in ['On', 'ON', 'on']:
@@ -313,22 +316,21 @@ class EspecP300(ControllerInterface):
 
     @exclusive
     def get_loop_mode(self, N):
-        if N > 2:
-            raise ValueError(self.lp_exmsg)
-        if self.lpd[N] == self.humi:
+        if self.lpd[N] == self.temp:
+            cur, con = 'On', 'On'
+        elif self.lpd[N] == self.humi:
             cur = 'On' if self.cached(self.client.read_humi)['enable'] else 'Off'
             con = 'On' if self.cached(self.client.read_constant_humi)['enable'] else 'Off'
         else:
-            cur = 'On'
-            con = 'On'
+            raise ValueError(self.lp_exmsg)
         if self.client.read_mode() in ['OFF', 'STANDBY']:
             cur = 'Off'
         return {"current": cur, "constant": con}
 
     def get_loop_modes(self, N):
-        if N == 1:
+        if self.lpd[N] == self.temp:
             return ['On']
-        elif N == 2:
+        elif self.lpd[N] == self.humi:
             return ['Off', 'On']
         else:
             raise ValueError(self.lp_exmsg)
