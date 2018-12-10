@@ -333,7 +333,10 @@ class P300Vib(P300Extended):
         if 'paused' in pgmstep:
             cmd = '{0:s},PAUSE {1:s}'.format(cmd, 'ON' if pgmstep['paused'] else 'OFF')
         if 'air' in pgmstep:
-            cmd = '{0:s}{1:s}'.format(cmd, ',AIR3' if pgmstep['air'] else '')
+            if isinstance (pgmstep['air'], dict): # added to test...
+                cmd = '{0:s},AIR{1:d}'.format(cmd, pgmstep['air']['selected'])
+            else:
+                cmd = '{0:s},AIR{1:d}'.format(cmd, pgmstep['air'])
         if 'refrig' in pgmstep:
             cmd = '{0:s},{1:s}'.format(cmd, self.encode_refrig(**pgmstep['refrig']))
         if 'granty' in pgmstep:
