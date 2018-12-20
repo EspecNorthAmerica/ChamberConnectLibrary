@@ -304,7 +304,9 @@ class P300Vib(P300Extended):
                 self.ctlr.interact('PRGM DATA WRITE,PGM{0:d},PRE MODE,TEMP,{1:s}'.format(*ttp))
             if 'setpoint' in pgmdetail['tempDetail'] and pgmdetail['tempDetail']['mode'] == 'SV':
                 ttp = (pgmnum, pgmdetail['tempDetail']['setpoint'])
-                self.ctlr.interact('PRGM DATA WRITE,PGM{0:d},PRE TSV,{1:0.1f}'.format(*ttp))
+                (td, tsetp) = ttp   # splitting a tuple of mixed data type into individual arguments
+                self.ctlr.interact('PRGM DATA WRITE,PGM{0:d},PRE TSV,{1:0.1f}'.format(td, float(tsetp)) )
+                # self.ctlr.interact('PRGM DATA WRITE,PGM{0:d},PRE TSV,{1:0.1f}'.format(*ttp))
 
         if 'vibDetail' in pgmdetail:
             if 'range' in pgmdetail['vibDetail']:
@@ -317,7 +319,8 @@ class P300Vib(P300Extended):
                 self.ctlr.interact('PRGM DATA WRITE,PGM{0:d},PRE MODE,VIB,{1:s}'.format(*ttp))
             if 'setpoint' in pgmdetail['vibDetail'] and pgmdetail['vibDetail']['mode'] == 'SV':
                 ttp = (pgmnum, pgmdetail['vibDetail']['setpoint'])
-                self.ctlr.interact('PRGM DATA WRITE,PGM{0:d},PRE VSV,{1:0.1f}'.format(*ttp))
+                (vd, vsetp) = ttp  # splitting a tuple of mixed data type into individual arguments 
+                self.ctlr.interact('PRGM DATA WRITE,PGM{0:d},PRE VSV,{1:0.1f}'.format(vd, float(vsetp)) )
 
     def write_prgm_data_step(self, pgmnum, **pgmstep):
         '''
