@@ -40,9 +40,8 @@ def exclusive(func):
             return func(self, *args, **kwargs)
     return wrapper
 
-class ControllerInterface:
+class ControllerInterface(metaclass=ABCMeta):
     '''Abstract class for a controller implimentation of the chamberconnectlibrary'''
-    __metaclass__ = ABCMeta
 
     loop_map = []
     named_loop_map = {}
@@ -180,7 +179,7 @@ class ControllerInterface:
             }
         }
 
-        if isinstance(identifier, basestring):
+        if isinstance(identifier, str):
             my_loop_map = self.loop_map[self.named_loop_map[identifier]]
             loop_number = my_loop_map['num']
             loop_type = my_loop_map['type']
@@ -197,7 +196,7 @@ class ControllerInterface:
             )
 
         if param_list is None:
-            param_list = loop_functions[loop_type].keys()
+            param_list = list(loop_functions[loop_type].keys())
             excludes = ['setPoint', 'setValue', 'processValue']
             param_list = [x for x in param_list if x not in excludes]
         elif len(param_list) >= 1 and \
@@ -260,11 +259,11 @@ class ControllerInterface:
         }
         if param_list is None:
             param_list = kwargs
-        if isinstance(identifier, basestring):
+        if isinstance(identifier, str):
             my_loop_map = self.loop_map[self.named_loop_map[identifier]]
             loop_number = my_loop_map['num']
             loop_type = my_loop_map['type']
-        elif isinstance(identifier, (int, long)):
+        elif isinstance(identifier, int):
             loop_number = identifier
         else:
             raise ValueError(
@@ -280,7 +279,7 @@ class ControllerInterface:
                 N=loop_number,
                 value=param_list.pop('mode')
             )
-        for key, val in param_list.items():
+        for key, val in list(param_list.items()):
             try:
                 loop_functions[loop_type][key](
                     exclusive=False,
@@ -1135,311 +1134,311 @@ class ControllerInterface:
             '''
             Format an Exception for printing
             '''
-            print '\n'.join(['\t' + l for l in trce.split('\n')])
+            print('\n'.join(['\t' + l for l in trce.split('\n')]))
 
-        print 'process_controller():'
+        print('process_controller():')
         try:
-            print '\t%r' % self.process_controller()
+            print('\t%r' % self.process_controller())
         except Exception:
             print_exception(traceback.format_exc())
 
-        print 'get_datetime:'
+        print('get_datetime:')
         try:
-            print '\t%r' % self.get_datetime()
+            print('\t%r' % self.get_datetime())
         except Exception:
             print_exception(traceback.format_exc())
 
-        print 'set_datetime:'
+        print('set_datetime:')
         try:
             self.set_datetime(self.get_datetime())
-            print '\tok'
+            print('\tok')
         except Exception:
             print_exception(traceback.format_exc())
 
-        print 'get_operation:'
+        print('get_operation:')
         try:
-            print '\t%r' % self.get_operation()
+            print('\t%r' % self.get_operation())
         except Exception:
             print_exception(traceback.format_exc())
 
         for lpi in range(loops):
             i = lpi + 1
-            print 'get_loop_sp(%d):' % i
+            print('get_loop_sp(%d):' % i)
             try:
-                print '\t%r' % self.get_loop_sp(i)
+                print('\t%r' % self.get_loop_sp(i))
             except Exception:
                 print_exception(traceback.format_exc())
-            print 'set_loop_sp(%d):' %i
+            print('set_loop_sp(%d):' %i)
             try:
                 self.set_loop_sp(i, self.get_loop_sp(i)['constant'])
-                print '\tok'
+                print('\tok')
             except Exception:
                 print_exception(traceback.format_exc())
 
-            print 'get_loop_pv(%d):' % i
+            print('get_loop_pv(%d):' % i)
             try:
-                print '\t%r' % self.get_loop_pv(i)
+                print('\t%r' % self.get_loop_pv(i))
             except Exception:
                 print_exception(traceback.format_exc())
 
-            print 'get_loop_range(%d):' % i
+            print('get_loop_range(%d):' % i)
             try:
-                print '\t%r' % self.get_loop_range(i)
+                print('\t%r' % self.get_loop_range(i))
             except Exception:
                 print_exception(traceback.format_exc())
-            print 'set_loop_range(%d):' %i
+            print('set_loop_range(%d):' %i)
             try:
                 self.set_loop_range(i, self.get_loop_range(i))
-                print '\tok'
+                print('\tok')
             except Exception:
                 print_exception(traceback.format_exc())
 
-            print 'get_loop_en(%d):' % i
+            print('get_loop_en(%d):' % i)
             try:
-                print '\t%r' % self.get_loop_en(i)
+                print('\t%r' % self.get_loop_en(i))
             except Exception:
                 print_exception(traceback.format_exc())
-            print 'set_loop_en(%d):' %i
+            print('set_loop_en(%d):' %i)
             try:
                 self.set_loop_en(i, self.get_loop_en(i)['constant'])
-                print '\tok'
+                print('\tok')
             except Exception:
                 print_exception(traceback.format_exc())
 
-            print 'get_loop_units(%d):' % i
+            print('get_loop_units(%d):' % i)
             try:
-                print '\t%r' % self.get_loop_units(i)
+                print('\t%r' % self.get_loop_units(i))
             except Exception:
                 print_exception(traceback.format_exc())
 
-            print 'get_loop_mode(%d):' % i
+            print('get_loop_mode(%d):' % i)
             try:
-                print '\t%r' % self.get_loop_mode(i)
+                print('\t%r' % self.get_loop_mode(i))
             except Exception:
                 print_exception(traceback.format_exc())
 
-            print 'get_loop_power(%d):' % i
+            print('get_loop_power(%d):' % i)
             try:
-                print '\t%r' % self.get_loop_power(i)
+                print('\t%r' % self.get_loop_power(i))
             except Exception:
                 print_exception(traceback.format_exc())
 
         for csi in range(cascades):
             i = csi + 1
-            print 'get_cascade_sp[%d]:' % i
+            print('get_cascade_sp[%d]:' % i)
             try:
-                print '\t%r' % self.get_cascade_sp(i)
+                print('\t%r' % self.get_cascade_sp(i))
             except Exception:
                 print_exception(traceback.format_exc())
-            print 'set_cascade_sp(%d):' %i
+            print('set_cascade_sp(%d):' %i)
             try:
                 self.set_cascade_sp(i, self.get_cascade_sp(i)['constant'])
-                print '\tok'
+                print('\tok')
             except Exception:
                 print_exception(traceback.format_exc())
 
-            print 'get_cascade_pv(%d):' % i
+            print('get_cascade_pv(%d):' % i)
             try:
-                print '\t%r' % self.get_cascade_pv(i)
+                print('\t%r' % self.get_cascade_pv(i))
             except Exception:
                 print_exception(traceback.format_exc())
 
-            print 'get_cascade_range(%d):' % i
+            print('get_cascade_range(%d):' % i)
             try:
-                print '\t%r' % self.get_cascade_range(i)
+                print('\t%r' % self.get_cascade_range(i))
             except Exception:
                 print_exception(traceback.format_exc())
-            print 'set_cascade_range[%d]:' %i
+            print('set_cascade_range[%d]:' %i)
             try:
                 self.set_cascade_range(i, self.get_cascade_range(i))
-                print '\tok'
+                print('\tok')
             except Exception:
                 print_exception(traceback.format_exc())
 
-            print 'get_cascade_en[%d]:' % i
+            print('get_cascade_en[%d]:' % i)
             try:
-                print '\t%r' % self.get_cascade_en(i)
+                print('\t%r' % self.get_cascade_en(i))
             except Exception:
                 print_exception(traceback.format_exc())
-            print 'set_cascade_en(%d):' %i
+            print('set_cascade_en(%d):' %i)
             try:
                 self.set_cascade_en(i, self.get_cascade_en(i)['constant'])
-                print '\tok'
+                print('\tok')
             except Exception:
                 print_exception(traceback.format_exc())
 
-            print 'get_cascade_units(%d):' % i
+            print('get_cascade_units(%d):' % i)
             try:
-                print '\t%r' % self.get_cascade_units(i)
+                print('\t%r' % self.get_cascade_units(i))
             except Exception:
                 print_exception(traceback.format_exc())
 
-            print 'get_cascade_mode(%d):' % i
+            print('get_cascade_mode(%d):' % i)
             try:
-                print '\t%r' % self.get_cascade_mode(i)
+                print('\t%r' % self.get_cascade_mode(i))
             except Exception:
                 print_exception(traceback.format_exc())
 
-            print 'get_cascade_ctl(%d):' % i
+            print('get_cascade_ctl(%d):' % i)
             try:
-                print '\t%r' % self.get_cascade_ctl(i)
+                print('\t%r' % self.get_cascade_ctl(i))
             except Exception:
                 print_exception(traceback.format_exc())
-            print 'set_cascade_ctl(%d):' %i
+            print('set_cascade_ctl(%d):' %i)
             try:
                 self.set_cascade_ctl(i, self.get_cascade_ctl(i))
-                print '\tok'
+                print('\tok')
             except Exception:
                 print_exception(traceback.format_exc())
 
-            print 'get_cascade_deviation(%d):' % i
+            print('get_cascade_deviation(%d):' % i)
             try:
-                print '\t%r' % self.get_cascade_deviation(i)
+                print('\t%r' % self.get_cascade_deviation(i))
             except Exception:
                 print_exception(traceback.format_exc())
-            print 'set_cascade_deviation(%d):' %i
+            print('set_cascade_deviation(%d):' %i)
             try:
                 self.set_cascade_deviation(i, self.get_cascade_deviation(i))
-                print '\tok'
+                print('\tok')
             except Exception:
                 print_exception(traceback.format_exc())
 
         for i in range(1, 13):
-            print 'get_event(%d):' % i
+            print('get_event(%d):' % i)
             try:
-                print '\t%r' % self.get_event(i)
+                print('\t%r' % self.get_event(i))
             except Exception:
                 print_exception(traceback.format_exc())
-            print 'set_event(%d):' %i
+            print('set_event(%d):' %i)
             try:
                 self.set_event(i, self.get_event(i)['current'])
-                print '\tok'
+                print('\tok')
             except Exception:
                 print_exception(traceback.format_exc())
 
-        print 'get_status:'
+        print('get_status:')
         try:
-            print '\t%r' % self.get_status()
+            print('\t%r' % self.get_status())
         except Exception:
             print_exception(traceback.format_exc())
 
-        print 'get_alarm_status:'
+        print('get_alarm_status:')
         try:
-            print '\t%r' % self.get_alarm_status()
+            print('\t%r' % self.get_alarm_status())
         except Exception:
             print_exception(traceback.format_exc())
 
-        print 'get_prgm_cur:'
+        print('get_prgm_cur:')
         try:
-            print '\t%r' % self.get_prgm_cur()
+            print('\t%r' % self.get_prgm_cur())
         except Exception:
             print_exception(traceback.format_exc())
 
-        print 'get_prgm_cstep:'
+        print('get_prgm_cstep:')
         try:
-            print '\t%r' % self.get_prgm_cstep()
+            print('\t%r' % self.get_prgm_cstep())
         except Exception:
             print_exception(traceback.format_exc())
 
-        print 'get_prgm_cstime:'
+        print('get_prgm_cstime:')
         try:
-            print '\t%r' % self.get_prgm_cstime()
+            print('\t%r' % self.get_prgm_cstime())
         except Exception:
             print_exception(traceback.format_exc())
 
-        print 'get_prgm_time:'
+        print('get_prgm_time:')
         try:
-            print '\t%r' % self.get_prgm_time()
+            print('\t%r' % self.get_prgm_time())
         except Exception:
             print_exception(traceback.format_exc())
 
         for i in range(1, 6): #do 5 programs only
-            print 'get_prgm_name(%d):' % i
+            print('get_prgm_name(%d):' % i)
             try:
-                print '\t%r' % self.get_prgm_name(i)
+                print('\t%r' % self.get_prgm_name(i))
             except Exception:
                 print_exception(traceback.format_exc())
 
-            print 'get_prgm_steps(%d):' % i
+            print('get_prgm_steps(%d):' % i)
             try:
-                print '\t%r' % self.get_prgm_steps(i)
+                print('\t%r' % self.get_prgm_steps(i))
             except Exception:
                 print_exception(traceback.format_exc())
 
-        print 'get_prgms:'
+        print('get_prgms:')
         try:
-            print '\t%r' % self.get_prgms()
+            print('\t%r' % self.get_prgms())
         except Exception:
             print_exception(traceback.format_exc())
 
-        print 'get_prgm(1):'
+        print('get_prgm(1):')
         try:
-            print '\t%r' % self.get_prgm(1)
+            print('\t%r' % self.get_prgm(1))
         except Exception:
             print_exception(traceback.format_exc())
-        print 'set_prgm(1):'
+        print('set_prgm(1):')
         try:
             self.set_prgm(2, self.get_prgm(1))
-            print '\tok'
+            print('\tok')
         except Exception:
             print_exception(traceback.format_exc())
 
-        print 'get_network_settings:'
+        print('get_network_settings:')
         try:
-            print '\t%r' % self.get_network_settings()
+            print('\t%r' % self.get_network_settings())
         except Exception:
             print_exception(traceback.format_exc())
-        print 'set_network_settings:'
+        print('set_network_settings:')
         try:
             self.set_network_settings(self.get_network_settings())
-            print '\tok'
+            print('\tok')
         except Exception:
             print_exception(traceback.format_exc())
 
-        print 'call const_start():'
+        print('call const_start():')
         try:
             self.const_start()
             time.sleep(5)
-            print '\tok'
+            print('\tok')
         except Exception:
             print_exception(traceback.format_exc())
 
-        print 'call stop():'
+        print('call stop():')
         try:
             self.stop()
             time.sleep(5)
-            print '\tok'
+            print('\tok')
         except Exception:
             print_exception(traceback.format_exc())
 
-        print 'call prgm_start(1,1):'
+        print('call prgm_start(1,1):')
         try:
             self.prgm_start(1, 1)
             time.sleep(5)
-            print '\tok'
+            print('\tok')
         except Exception:
             print_exception(traceback.format_exc())
 
-        print 'call prgm_pause():'
+        print('call prgm_pause():')
         try:
             self.prgm_pause()
             time.sleep(5)
-            print '\tok'
+            print('\tok')
         except Exception:
             print_exception(traceback.format_exc())
 
-        print 'call prgm_resume():'
+        print('call prgm_resume():')
         try:
             self.prgm_resume()
             time.sleep(5)
-            print '\tok'
+            print('\tok')
         except Exception:
             print_exception(traceback.format_exc())
 
-        print 'call sample():'
+        print('call sample():')
         try:
-            print '\t%r' % self.sample()
+            print('\t%r' % self.sample())
         except Exception:
             print_exception(traceback.format_exc())
 
-        print 'Testing Complete'
+        print('Testing Complete')

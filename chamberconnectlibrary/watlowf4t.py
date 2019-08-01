@@ -77,7 +77,7 @@ class WatlowF4T(ControllerInterface):
         self.__update_loop_map()
         self.watlow_val_dict = {
             1:'2', 2:'3', 3:'50Hz', 4:'60Hz', 9:'ambientError',
-            10:'auto', 11:'b', 13: 'both', 15:u'C', 17:'closeOnAlarm',
+            10:'auto', 11:'b', 13: 'both', 15:'C', 17:'closeOnAlarm',
             22:'current', 23:'d', 24:'deviationAlarm', 26:'e', 27:'end', 28:'error',
             30:'F', 31:'factory', 32:'fail', 34:'fixedTimeBase', 37:'high', 39:'hours',
             40:'hundredths', 44:'inputDryContact', 46:'j', 47:'hold', 48:'k', 49:'latching',
@@ -132,7 +132,7 @@ class WatlowF4T(ControllerInterface):
         try:
             return self.iwatlow_val_dict[key]
         except Exception:
-            self.iwatlow_val_dict = {v: k for k, v in self.watlow_val_dict.items()}
+            self.iwatlow_val_dict = {v: k for k, v in list(self.watlow_val_dict.items())}
             return self.iwatlow_val_dict[key]
 
     def __update_loop_map(self):
@@ -853,7 +853,7 @@ class WatlowF4T(ControllerInterface):
         try:
             self.client.write_holding(18888, N) #set active profile
             self.client.write_holding(18890, self.inv_watlow_val_dict('delete')) #delete profile
-        except ModbusError, exp:
+        except ModbusError as exp:
             exp.message = 'Cannot delete program. (original message: %s)' % exp.message
             raise # something else went wrong pass the exception on up.
 
@@ -1000,11 +1000,11 @@ class WatlowF4T(ControllerInterface):
             tlist = ['absoluteTemperature', 'relativeTemperature', 'notsourced']
             if self.watlow_val_dict[profpv] in tlist:
                 tval = self.client.read_holding(14080 if self.interface == "RTU" else 6730, 1)[0]
-                return u'\xb0%s' % self.watlow_val_dict[tval]
+                return '\xb0%s' % self.watlow_val_dict[tval]
             else:
-                return u'%s' % self.watlow_val_dict[profpv]
+                return '%s' % self.watlow_val_dict[profpv]
         except LookupError:
-            return u'ERROR'
+            return 'ERROR'
 
     def __get_prgm_empty(self):
         '''

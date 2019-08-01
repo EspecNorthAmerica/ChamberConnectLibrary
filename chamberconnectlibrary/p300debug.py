@@ -53,4 +53,4 @@ if __name__ == '__main__':
     tst = P300Debug(port=11, baud=38400)
     tmp = tst.read_items(pkt)
     for i in tmp:
-        print i # pylint: disable=E1601
+        print(i) # pylint: disable=E1601
