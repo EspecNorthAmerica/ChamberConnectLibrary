@@ -11,7 +11,7 @@ import time
 from controllerinterface import ControllerInterfaceError
 
 ERROR_DESCIPTIONS = {
-    'CMD ERR':'Unrocognized command',
+    'CMD ERR':'Unrecognized command',
     'ADDR ERR':'Bad address',
     'CONT NOT READY-1':'Chamber does not support PTCON/Humidity',
     'CONT NOT READY-2':'Chamber is not running a program',
@@ -19,24 +19,24 @@ ERROR_DESCIPTIONS = {
     'CONT NOT READY-4':'Keys may not be locked while controller is off',
     'CONT NOT READY-5':'Specified time signal is not enabled',
     'DATA NOT READY':'Specified program does not exist',
-    'PARA ERR':'Parameter missing or unrecognizable',
-    'DATA OUT OF RANGE':'Data not with in valid range',
-    'PROTECT ON':'Controller data protection is anabled via hmi',
-    'PRGM WRITE ERR-1':'Program slot is read only',
+    'PARA ERR':'Unrecognizable or missing parameter',
+    'DATA OUT OF RANGE':'Data not within valid range',
+    'PROTECT ON':'Controller data protection is enabled via HMI',
+    'PRGM WRITE ERR-1':'Program slot is read-only',
     'PRGM WRITE ERR-2':'Not in program edit/overwrite mode',
     'PRGM WRITE ERR-3':'Edit request not allowed not in edit mode',
     'PRGM WRITE ERR-4':'A program is already being edited',
     'PRGM WRITE ERR-5':'A program is already being edited',
     'PRGM WRITE ERR-6':'Not in overwrite mode',
-    'PRGM WRITE ERR-7':'Cannot edit program other thant the one in edit mode',
+    'PRGM WRITE ERR-7':'Cannot edit program other than the one in edit mode',
     'PRGM WRITE ERR-8':'Steps must be entered in order',
     'PRGM WRITE ERR-9':'Invalid counter configuration',
     'PRGM WRITE ERR-10':'Cannot edit a running program',
     'PRGM WRITE ERR-11':'Missing data for counter or end mode',
-    'PRGM WRITE ERR-12':'Program is being edited on hmi',
+    'PRGM WRITE ERR-12':'Program is being edited on HMI',
     'PRGM WRITE ERR-13':'Invalid step data',
     'PRGM WRITE ERR-14':'Cannot set exposure time while ramp control is on.',
-    'PRGM WRITE ERR-15':'Humidity must be enabled for humidity ramo mode',
+    'PRGM WRITE ERR-15':'Humidity must be enabled for humidity ramp mode',
     'INVALID REQ':'Unsupported function',
     'CHB NOT READY':'Could not act on given command.'
 }
@@ -103,7 +103,7 @@ class EspecSerial(object):
                 recv += rbuff
             if recv.startswith('NA:'):
                 errmsg = recv[3:0-len(self.delimeter)]
-                msg = 'EspecError: command:"%s" genarated Error:"%s"(%s)' % (
+                msg = 'EspecError: command:"%s" generated Error:"%s"(%s)' % (
                     message, errmsg, ERROR_DESCIPTIONS.get(errmsg, 'missing description')
                 )
                 raise EspecError(msg)
@@ -157,7 +157,7 @@ class EspecTCP(object):
             recv += self.socket.recv(1)
         if recv.startswith('NA:'):
             errmsg = recv[3:0-len(self.delimeter)]
-            msg = 'EspecError: command:"%s" genarated Error:"%s"(%s)' % (
+            msg = 'EspecError: command:"%s" generated Error:"%s"(%s)' % (
                 message, errmsg, ERROR_DESCIPTIONS.get(errmsg, 'missing description')
             )
             raise EspecError(msg)

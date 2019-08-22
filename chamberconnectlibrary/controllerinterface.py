@@ -6,6 +6,7 @@ Common interface for all All ChamberConnectLibrary upper level interfaces
 '''
 #pylint: disable=W0703,W0201,R0902,W0232,R0904,C0103
 from abc import ABCMeta, abstractmethod
+from datetime import datetime 
 from threading import RLock
 import traceback
 import time

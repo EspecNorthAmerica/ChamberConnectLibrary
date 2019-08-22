@@ -3,13 +3,16 @@ Upper level interface for Espec Corp. P300 Controller (original command set)
 
 :copyright: (C) Espec North America, INC.
 :license: MIT, see LICENSE for more details.
+:authors: Myles Metzler, Paul Nong-Laolam
+:Modified to include ES102 operation features, May 2019
 '''
 #pylint: disable=R0902,R0904
-import datetime
+import datetime # from datetime import datetime
 import time
 from chamberconnectlibrary.controllerinterface import ControllerInterface, exclusive
 from chamberconnectlibrary.controllerinterface import ControllerInterfaceError
 from chamberconnectlibrary.p300 import P300
+from chamberconnectlibrary.es102 import ES102
 from chamberconnectlibrary.especinteract import EspecError
 
 class EspecP300(ControllerInterface):
@@ -544,20 +547,36 @@ class EspecP300(ControllerInterface):
         prgm_set = self.client.read_prgm_set()
         prgm_data = self.client.read_prgm_data(prgm_set['number'])
         prgm_mon = self.client.read_prgm_mon()
-        ret = [
-            {
-                'name':'A',
-                'remaining':prgm_mon['counter_a'],
-                'count':prgm_data['counter_a']['cycles'] - prgm_mon['counter_a']
-            },
-            {
-                'name':'B',
-                'remaining':prgm_mon['counter_b'],
-                'count':prgm_data['counter_b']['cycles'] - prgm_mon['counter_b']
-            }
-        ]
-        ret[0].update(prgm_data['counter_a'])
-        ret[1].update(prgm_data['counter_b'])
+        try: 
+            # SCP220/P300 both have two counters that can operate
+            # as inner and outer loops (one inside anthoer) or two separate loops
+            # Loop 1: counter_a
+            # Loop 2: counter_b 
+            ret = [
+                {
+                    'name':'A',
+                    'remaining':prgm_mon['counter_a'],
+                    'count':prgm_data['counter_a']['cycles'] - prgm_mon['counter_a']
+                },
+                {
+                    'name':'B',
+                    'remaining':prgm_mon['counter_b'],
+                    'count':prgm_data['counter_b']['cycles'] - prgm_mon['counter_b']
+                }
+            ]
+            ret[0].update(prgm_data['counter_a'])
+            ret[1].update(prgm_data['counter_b'])
+        except: 
+            # ES102, unlike SCP220/P300, has only one counter with a single loop.
+            # Loop name: counter_a; assigned to be consistent with that used for P300.  
+            ret = [
+                {
+                    'name':'A',
+                    'remaining':prgm_mon['counter_a'],
+                    'count':prgm_data['counter_a']['cycles'] - prgm_mon['counter_a']
+                }
+            ]
+            ret[0].update(prgm_data['counter_a'])
         return ret
 
     @exclusive
@@ -586,48 +605,69 @@ class EspecP300(ControllerInterface):
             rtime = self.cached(self.client.read_run_prgm_mon)['time']
             return '%d:%02d:00' % (rtime['hour'], rtime['minute'])
 
-        #counter_a must be the inner counter or the only counter
-        use_a = pgm['counter_a']['cycles'] != 0
-        use_b = pgm['counter_b']['cycles'] != 0
-        ae_gte_be = pgm['counter_a']['end'] >= pgm['counter_b']['end']
-        as_lte_bs = pgm['counter_a']['start'] <= pgm['counter_b']['start']
-        same_end = pgm['counter_a']['end'] == pgm['counter_b']['end']
+        try: # set for scp220 and p300 which have two counter loops
+            #counter_a must be the inner counter or the only counter 
+            use_a = pgm['counter_a']['cycles'] != 0
+            use_b = pgm['counter_b']['cycles'] != 0
+            ae_gte_be = pgm['counter_a']['end'] >= pgm['counter_b']['end']
+            as_lte_bs = pgm['counter_a']['start'] <= pgm['counter_b']['start']
+            same_end = pgm['counter_a']['end'] == pgm['counter_b']['end']
 
-        if (ae_gte_be and as_lte_bs) or not use_a and use_b:
-            pgm['counter_a'], pgm['counter_b'] = pgm['counter_b'], pgm['counter_a']
-            pgms['counter_a'], pgms['counter_b'] = pgms['counter_b'], pgms['counter_a']
-            use_a, use_b = use_b, use_a
+            if (ae_gte_be and as_lte_bs) or not use_a and use_b:
+                pgm['counter_a'], pgm['counter_b'] = pgm['counter_b'], pgm['counter_a']
+                pgms['counter_a'], pgms['counter_b'] = pgms['counter_b'], pgms['counter_a']
+                use_a, use_b = use_b, use_a
 
-        nested = use_a and use_b and pgm['counter_a']['start'] >= pgm['counter_b']['start']
-        nested = nested and pgm['counter_a']['end'] <= pgm['counter_b']['end']
-        tminutes, tta, ttb = -1, 0, 0
-        if use_a:
-            for i in range(pgm['counter_a']['start']-1, pgm['counter_a']['end']):
-                tta += pgm['steps'][i]['time']['hour']*60 + pgm['steps'][i]['time']['minute']
-        if use_b:
-            for i in range(pgm['counter_b']['start']-1, pgm['counter_b']['end']):
-                if nested and i >= pgm['counter_a']['start']-1 and i < pgm['counter_a']['end']-1:
-                    pass
-                elif nested and i >= pgm['counter_a']['start']-1 and i == pgm['counter_a']['end']-1:
-                    ttb += tta*(pgm['counter_a']['cycles'] + 1)
-                else:
-                    ttb += pgm['steps'][i]['time']['hour']*60 + pgm['steps'][i]['time']['minute']
+            nested = use_a and use_b and pgm['counter_a']['start'] >= pgm['counter_b']['start']
+            nested = nested and pgm['counter_a']['end'] <= pgm['counter_b']['end']
+            tminutes, tta, ttb = -1, 0, 0
+            if use_a:
+                for i in range(pgm['counter_a']['start']-1, pgm['counter_a']['end']):
+                    tta += pgm['steps'][i]['time']['hour']*60 + pgm['steps'][i]['time']['minute']
+            if use_b:
+                for i in range(pgm['counter_b']['start']-1, pgm['counter_b']['end']):
+                    if nested and i >= pgm['counter_a']['start']-1 and i < pgm['counter_a']['end']-1:
+                        pass
+                    elif nested and i >= pgm['counter_a']['start']-1 and i == pgm['counter_a']['end']-1:
+                        ttb += tta*(pgm['counter_a']['cycles'] + 1)
+                    else:
+                        ttb += pgm['steps'][i]['time']['hour']*60 + pgm['steps'][i]['time']['minute']
 
-        # correct for p300 not resetting the nested counter until it hits counter.start
-        if nested and pgms['pgmstep'] < pgm['counter_a']['start']:
-            count_a = pgm['counter_a']['cycles']
-        else:
-            count_a = pgms['counter_a']
-        for i in range(pgms['pgmstep']-1, len(pgm['steps'])): #ensure that this is not off by 1
-            if tminutes == -1:
-                tminutes = pgms['time']['hour']*60 + pgms['time']['minute']
+            # correct for p300 not resetting the nested counter until it hits counter.start
+            if nested and pgms['pgmstep'] < pgm['counter_a']['start']:
+                count_a = pgm['counter_a']['cycles']
             else:
-                mystep = pgm['steps'][i]
-                tminutes += mystep['time']['hour']*60 + mystep['time']['minute']
-            if use_a and i == pgm['counter_a']['end']-1:
-                tminutes += tta*count_a
-            if use_b and i == pgm['counter_b']['end']-1:
-                tminutes += ttb*pgms['counter_b']
+                count_a = pgms['counter_a']
+            for i in range(pgms['pgmstep']-1, len(pgm['steps'])): #ensure that this is not off by 1
+                if tminutes == -1:
+                    tminutes = pgms['time']['hour']*60 + pgms['time']['minute']
+                else:
+                    mystep = pgm['steps'][i]
+                    tminutes += mystep['time']['hour']*60 + mystep['time']['minute']
+                if use_a and i == pgm['counter_a']['end']-1:
+                    tminutes += tta*count_a
+                if use_b and i == pgm['counter_b']['end']-1:
+                    tminutes += ttb*pgms['counter_b']
+        except: 
+            # es102 has only one counter (counter_a/loop)
+            textmsg = 'Testing ES102 on especp300.py...print out values of loops:'
+            use_a = pgm['counter_a']['cycles'] != 0
+            tta, tminutes = -1, 0
+            count_a = pgms['counter_a']
+            if use_a:
+                for i in range(pgm['counter_a']['start']-1, pgm['counter_a']['end']):
+                    tta += pgm['steps'][i]['time']['hour']*60 + pgm['steps'][i]['time']['minute']
+                    print ('{} loop={}'.format(textmsg, count_a)) # test statement 
+
+            for i in range(pgms['pgmstep']-1, len(pgm['steps'])):
+                if tminutes == -1:
+                    tminutes = pgms['time']['hour']*60 + pgms['time']['minute']
+                else:
+                    mystep = pgm['steps'][i]
+                    tminutes += mystep['time']['hour']*60 + mystep['time']['minute']
+                if use_a and i == pgm['counter_a']['end']-1:
+                    tminutes += tta*count_a
+
         return "%d:%02d:00" % (int(tminutes/60), tminutes%60)
 
     @exclusive
@@ -635,7 +675,7 @@ class EspecP300(ControllerInterface):
         return self.cached(self.client.read_prgm_data, N)['name']
 
     def set_prgm_name(self, N, value):
-        raise NotImplementedError
+        raise NotImplementedError('Test Note: This should be errmsg of set_prgm_name')
 
     @exclusive
     def get_prgm_steps(self, N):
@@ -672,7 +712,8 @@ class EspecP300(ControllerInterface):
         if update:
             self.loops = 0
             self.cascades = 0
-        msg = 'P300 ' if self.client.read_rom().startswith('P3') else 'SCP-220 '
+        #msg = 'P300 ' if self.client.read_rom().startswith('P3') else 'SCP-220 '
+        msg = 'P300 ' if self.client.read_rom().startswith('P3') else 'SCP-220 ' if self.client.read_rom().startswith('JPC') else 'ES102 '
         try:
             if update:
                 self.client.read_temp_ptc()

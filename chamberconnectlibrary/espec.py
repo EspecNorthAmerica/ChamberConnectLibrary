@@ -2,7 +2,7 @@
 Upper level interface for Espec Corp. Controllers (just the P300 for now)
 
 :copyright: (C) Espec North America, INC.
-:license: MIT, see LICENSE for more details.
+:license: MIT, see LICENSE for more details. 
 '''
 #pylint: disable=R0902,R0904
 import datetime
@@ -11,11 +11,12 @@ from chamberconnectlibrary.controllerinterface import ControllerInterface, exclu
 from chamberconnectlibrary.controllerinterface import ControllerInterfaceError
 from chamberconnectlibrary.p300 import P300
 from chamberconnectlibrary.scp220 import SCP220
+from chamberconnectlibrary.es102 import ES102
 from chamberconnectlibrary.especinteract import EspecError
 
 class Espec(ControllerInterface):
     '''
-    A class for interfacing with Espec controllers (P300, SCP220)
+    A class for interfacing with Espec controllers (P300, SCP220, ES102)
 
     Kwargs:
         interface (str): The connection method::
@@ -49,7 +50,8 @@ class Espec(ControllerInterface):
             self.temp:self.temp,
             self.humi:self.humi
         }
-        self.ctlr_type = kwargs.get('ctlr_type', 'P300')
+        #self.ctlr_type = kwargs.get('ctlr_type', 'ES102') # try this on es102
+        self.ctlr_type = kwargs.get('ctlr_type', 'P300') 
         ttp = (self.ctlr_type, self.temp, self.humi)
         self.lp_exmsg = 'The %s controller only supports 2 loops (%d:temperature,%d:humidity)'%ttp
         ttp = (self.ctlr_type, self.temp)
@@ -57,9 +59,9 @@ class Espec(ControllerInterface):
         self.alarms = 27
         self.profiles = True
         self.events = 12
-        self.total_programs = 40 if self.ctlr_type == 'P300' else 30
+        #self.total_programs = 40 if self.ctlr_type == 'P300' else 30 if self.ctlr_type == 'SCP220' else 1
+        self.total_programs = 1 if self.ctlr_type == 'ES102' else 40 if self.ctlr_type == 'P300' else 30
         self.__update_loop_map()
-
 
     def __update_loop_map(self):
         '''
@@ -85,6 +87,8 @@ class Espec(ControllerInterface):
             self.client = P300(self.interface, **args)
         elif self.ctlr_type == 'SCP220':
             self.client = SCP220(self.interface, **args)
+        elif self.ctlr_type == 'ES102':
+            self.client = ES102(self.interface, **args)
         else:
             raise ValueError('"%s" is not a supported controller type' % self.ctlr_type)
 
@@ -676,7 +680,8 @@ class Espec(ControllerInterface):
         if update:
             self.loops = 0
             self.cascades = 0
-        msg = 'P300 ' if self.client.read_rom().startswith('P3') else 'SCP-220 '
+        #msg = 'P300 ' if self.client.read_rom().startswith('P3') else 'SCP-220 '
+        msg = 'P300 ' if self.client.read_rom().startswith('P3') else 'ES102 ' if self.client.read_rom().startswith('JLC') else 'SCP-220 '
         try:
             if update:
                 self.client.read_temp_ptc()

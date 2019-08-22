@@ -38,7 +38,7 @@ class P300(object):
             'REF6':{'mode':'manual', 'setpoint':100},
             'REF9':{'mode':'auto', 'setpoint':0}
         }
-        self.ramprgms = 40
+        self.ramprgms = 40 
         if interface == 'Serial':
             self.ctlr = EspecSerial(
                 port=kwargs.get('serialport'),
@@ -1497,7 +1497,7 @@ class P300(object):
         '''
         max_write = 40 if self.ramprgms == 40 else 20 #SCP220 has 20 programs P300 40
         if pgmnum > max_write:
-            raise ValueError('Program #%d is readonly and connot be saved over.' % pgmnum)
+            raise ValueError('Program #%d is read-only and cannot be saved over.' % pgmnum)
         self.write_prgm_data_edit(pgmnum, 'START')
         try:
             set_humi = False
