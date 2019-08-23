@@ -1,5 +1,5 @@
 '''
-A direct implimentation of the ES102's command and instruction
+A direct implementation of the ES102's command and instruction
 set for communication interface.
 
 Copyright (C) April 2019 ESPEC North America, INC. - All rights reserved 
@@ -220,8 +220,6 @@ class ES102(SCP220):
         '''
         #rsp = '0'.split(',') # fake data, no signals set to on. 
         #rsp = self.ctlr.interact('CONSTANT SET?,RELAY').split(',') 
-        print ('Test print relay signals (read_relay): ')
-        #print rsp 
         #return [str(i) in rsp[1:] for i in range(1,13)]
         raise NotImplementedError('RELAY is an unsupported command')
 
@@ -235,37 +233,13 @@ class ES102(SCP220):
     # undocumented in the manual
     # eg: constant set?,humi 
 
-    def read_constant_ref(self):
-        '''
-        fetch constant settings for the refrigeration system.
-        ES102 has two identical cmds : 
-            - CONSTANT SET?,REF
-            - SET? 
-        They both yield identical response: REF# 
-            e.g.: REF9 
-        ES102 supports REF9 for auto refrig, full feature. 
-        '''
-        rsp = self.ctlr.interact('CONSTANT SET?,REF')
-        try:
-            return {
-                'mode':'manual',
-                'setpoint':float(rsp)
-            }
-        except Exception:
-            return {
-                'mode':rsp.lower(),
-                'setpoint':0
-            }
+    # def read_constant_ref(self) inherits from P300
+    # fetch constant settings for the refrigeration system.
+    # ES102 has two identical cmds: CONSTANT SET?,REF; SET? 
+    # They both yield identical response: REF#; e.g.: REF9 
 
-    def read_constant_relay(self):
-        '''
-        fetch the time signals of relay switch
-        '''
-        rsp = self.ctlr.interact('CONSTANT SET?,RELAY').split(',') 
-        print ('Test print constant relay settings: ')
-        print rsp 
-        return [str(i) in rsp[1:] for i in range(1,13)]
-        # read result: [False,False,...] 
+    # def read_constant_relay(self) inherits from P300
+    # read result: [False,False,...] ES102 does not support relay feature 
 
     def read_constant_ptc(self):
         '''
@@ -378,13 +352,13 @@ class ES102(SCP220):
             pgmnum: the program to read
 
         returns:
-            { "name": PGM
-              "date": {
-                  "year": int,
-                  "month": int,
-                  "day": int
+            {   "name": PGM
+                "date": {
+                    "year": int,
+                    "month": int,
+                    "day": int
                 
-              }
+                }
             }
         '''
         if self.ctlr.interact('PRGM DATA?,PGM:1').startswith('NA:'):
@@ -614,7 +588,7 @@ class ES102(SCP220):
         rsp = self.ctlr.interact('RUN PRGM?')
         # response pattern of ES102 is slightly different from P300:
         # P300: RELAYON
-        # ES102: RELAY ON
+        # ES102: RELAY ON 
         # sample rsp:
         # TEMP55.2 GOTEMP43.0 HUMI50 GOHUMI85 TIME1:00 REF9 RELAY ON,1
         parsed = re.search(
@@ -635,6 +609,7 @@ class ES102(SCP220):
         }
         if parsed.group(3):
             ret['humidity'] = {'start':float(parsed.group(3)), 'end':float(parsed.group(4))}
+        
         if parsed.group(8):
             relays = parsed.group(8).split(',')
             ret['relay'] = [str(i) in relays for i in range(1, 13)]
@@ -697,6 +672,9 @@ class ES102(SCP220):
             setpoint: int,20 or 50 or 100
         '''
         #self.ctlr.interact('SET,%s' % self.encode_refrig(mode, setpoint))
+        # Note: Since this command will neve rget called, the following does not
+        # necessarily apply. However, an exception has been added to ensure 
+        # its functionality.
         try: 
             print ('Attempting to write relay signals to ES102.') 
             vals = self.parse_relays(relays)
@@ -707,7 +685,6 @@ class ES102(SCP220):
         except:
             print('Error occurred...ES102 does not support "relay set cmd".')
             raise NotImplementedError(self.es102err + self.errmsg['relay'])
-
 
     def write_prgm_run(self, pgmnum, pgmstep):
         '''
@@ -737,6 +714,8 @@ class ES102(SCP220):
         '''
         skip to the next step of a currently running program
         NOTE: ES102 advance cmd inherits from SCP220/P300; however, ES102 has only 9 steps.
+              Exception was added to ensure last step is check if end mode is HOLD Last Step
+              and user attempts to move past the last the step.
         '''
         try: 
             self.ctlr.interact('PRGM,ADVANCE')
@@ -790,10 +769,11 @@ class ES102(SCP220):
             self.ctlr.interact('PRGM DATA WRITE,PGM:1,END,{0:s}'.format(pgmdetail['end']) )
         print ('Test print: pgmdetail info: {}:'.format(pgmdetail))
 
-    def write_prgm_data_step(self, pgmnum, **pgmstep): # major reimplementation!!
+    def write_prgm_data_step(self, pgmnum, **pgmstep):
         '''
         write a program step to the ES102 controller
-        NOTE: ES102 allows up to 9 steps in a program
+        NOTE: ES102 allows up to 9 steps in a program; we will set this limit at 
+              the front-end level in the Javascript file. 
 
         args:
             pgmstep: the program parameters, see read_prgm_data_step for parameters
@@ -823,8 +803,10 @@ class ES102(SCP220):
 
         if 'time' in pgmstep:
             cmd = '{0:s},TIME{1:d}:{2:d}'.format(cmd, pgmstep['time']['hour'], pgmstep['time']['minute'])
+        
         if 'granty' in pgmstep:
             cmd = '{0:s},GRANTY {1:s}'.format(cmd, 'ON' if pgmstep['granty'] else 'OFF')
+        
         if 'refrig' in pgmstep:
             cmd = '{0:s},{1:s}'.format(cmd, self.encode_refrig(**pgmstep['refrig']))
         
@@ -842,8 +824,8 @@ class ES102(SCP220):
         #       raise NotImplementedError('Relay setting cannot be done.') 
 
         self.ctlr.interact(cmd)
-        print('prgm data step...successful.')
-        print cmd 
+        print('prgm data step...successful.') # will remove in the final code 
+        print cmd                             # will remove in the final code 
 
     def write_prgm_erase(self, pgmnum):
         '''
