@@ -415,7 +415,7 @@ class ModbusRTU(Modbus):
         time.sleep(self.pause)
         head = self.serial.read(2)
         if len(head) == 0:
-            raise ModbusError("The slave device did not respond.")
+            raise ModbusError("The slave device did not respond. Check Chamber/Controller selection.")
         raddress = struct.unpack('>B', head[0])[0]
         fcode = struct.unpack('>B', head[1])[0]
         if fcode == 16 or fcode == 6:
