@@ -19,7 +19,7 @@ setup(
     packages=['chamberconnectlibrary'],
     install_requires=['pyserial'],
     zip_safe=False,
-    keywords='Espec P300 SCP220 F4T F4',
+    keywords='Espec P300 SCP220 ES102 F4T F4',
     include_package_data=True,
     scripts=['bin/chamberconnectlibrary-test.py']
 )
