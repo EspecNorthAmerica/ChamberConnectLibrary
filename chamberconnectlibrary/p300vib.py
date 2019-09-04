@@ -170,6 +170,11 @@ class P300Vib(P300Extended):
             rtrn['air'] = self.parse_prgm_data_step(self.ctlr.interact(cmd + ',AIR'))['air']
         return rtrn
 
+    def read_prgm_data_ptc_step(self, pgmnum, pgmstep):
+        data = self.read_prgm_data_step(pgmnum, pgmstep)
+        data.update(super(P300Vib, self).read_prgm_data_ptc_step(pgmnum, pgmstep))
+        return data
+
     def parse_prgm_data_step(self, arg):
         '''
         Parse the program parameters with vibration feature
@@ -235,6 +240,9 @@ class P300Vib(P300Extended):
         pdata = self.ctlr.interact('PRGM DATA?,{0}:{1:d},DETAIL,EXT1'.format( self.rom_pgm(pgmnum),
             pgmnum))
         return self.parse_prgm_data_detail(pdata) # need to write parse def
+
+    def read_prgm_data_ptc_detail(self, pgmnum):
+        return self.read_prgm_data_detail(pgmnum)
 
     def parse_prgm_data_detail(self, arg):
         '''
