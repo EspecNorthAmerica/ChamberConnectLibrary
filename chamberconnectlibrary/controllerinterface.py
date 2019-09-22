@@ -1042,10 +1042,11 @@ class ControllerInterface(metaclass=ABCMeta):
                 items = ['setpoint', 'processvalue', 'enable', 'mode', 'power', 'units', 'range']
                 if tmap['type'] == 'cascade':
                     items += ['enable_cascade', 'deviation']
-                lkps = [lkp for lkp in lookup[tmap['type']] if lkp['number'] == tmap['num']]
-                lpdata = lkps[0].copy() if lookup else {}
-                lpdata.update(self.get_loop(tmap['num'], tmap['type'], items, exclusive=False))
-                ret['loops'].append(lpdata)
+                if lookup:
+                    lkps = [lkp for lkp in lookup[tmap['type']] if lkp['number'] == tmap['num']]
+                    lpdata = lkps[0].copy() if lookup else {}
+                    lpdata.update(self.get_loop(tmap['num'], tmap['type'], items, exclusive=False))
+                    ret['loops'].append(lpdata)
         if kwargs.get('get_status', True) or kwargs.get('get_program_status', False):
             ret['status'] = self.get_status(exclusive=False)
         if kwargs.get('get_alarms', False):
