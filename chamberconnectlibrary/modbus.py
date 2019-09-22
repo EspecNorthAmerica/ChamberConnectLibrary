@@ -335,19 +335,19 @@ class Modbus(object):
 
     def _decode_packet(self, packet, spacket):
         '''Decode the modbus request packet.'''
-        fcode = struct.unpack(">B", packet[1])[0]
-        addr = struct.unpack(">B", packet[0])[0]
+        fcode = struct.unpack_from(">B", packet, 1)[0]
+        addr = struct.unpack_from(">B", packet, 0)[0]
         if self.address != addr:
             shex = ":".join("{:02x}".format(ord(c) for c in spacket))
             rhex = ":".join("{:02x}".format(ord(c) for c in packet))
             raise ModbusError("Address error; Sent=%s, Recieved=%s" % (shex, rhex))
         if fcode > 127:
-            ecode = struct.unpack(">B", packet[2])[0]
+            ecode = struct.unpack_from(">B", packet, 2)[0]
             ttp = (ecode, self.error_messages.get(ecode, 'Unknown error code'))
             raise ModbusError('Modbus Error: Exception code = %d(%s)' % ttp)
 
         if fcode in [3, 4]: #Read input/holding register(s)
-            cnt = struct.unpack(">B", packet[2])[0]/2
+            cnt = struct.unpack_from(">B", packet, 2)[0]/2
             return struct.unpack(">%dH" % cnt, packet[3:])
         elif fcode == 6:
             pass #nothing is required
