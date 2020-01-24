@@ -33,6 +33,7 @@ class EspecP300(ControllerInterface):
     def __init__(self, **kwargs):
         self.client, self.loops, self.cascades = None, None, None
         self.init_common(**kwargs)
+        self.port = kwargs.get('port', 10001)
         self.freshness = kwargs.get('freshness', 0)
         self.cache = {}
         self.temp, self.humi = 1, 2
@@ -58,7 +59,8 @@ class EspecP300(ControllerInterface):
             'serialport':self.serialport,
             'baudrate':self.baudrate,
             'host':self.host,
-            'address':self.adr
+            'address':self.adr,
+            'port':self.port
         }
 
 

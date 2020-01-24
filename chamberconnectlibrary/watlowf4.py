@@ -40,6 +40,7 @@ class WatlowF4(ControllerInterface):
     def __init__(self, **kwargs):
         self.iwatlow_val_dict, self.client, self.loops, self.cascades = None, None, None, None
         self.init_common(**kwargs)
+        self.port = kwargs.get('port', 502)
         self.cond_event = kwargs.get('cond_event')
         self.limits = kwargs.get('limits', [])
 
@@ -278,7 +279,7 @@ class WatlowF4(ControllerInterface):
                 timeout=10.0
             )
         else:
-            self.client = ModbusTCP(self.adr, self.host, timeout=10.0)
+            self.client = ModbusTCP(self.adr, self.host, self.port, timeout=10.0)
 
     def close(self):
         '''

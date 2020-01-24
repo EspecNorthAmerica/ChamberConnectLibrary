@@ -47,6 +47,7 @@ class WatlowF4T(ControllerInterface):
     def __init__(self, **kwargs):
         self.iwatlow_val_dict, self.client, self.loops, self.cascades = None, None, None, None
         self.init_common(**kwargs)
+        self.port = kwargs.get('port', 502)
         self.cond_event = kwargs.get('cond_event', 9)
         self.cond_event_toggle = kwargs.get('cond_event_toggle', False)
 
@@ -175,7 +176,7 @@ class WatlowF4T(ControllerInterface):
         if self.interface in ["RTU", "Serial"]:
             self.client = ModbusRTU(address=self.adr, port=self.serialport, baud=self.baudrate)
         else:
-            self.client = ModbusTCP(self.adr, self.host)
+            self.client = ModbusTCP(self.adr, self.host, self.port)
 
     def close(self):
         '''

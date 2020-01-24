@@ -48,7 +48,8 @@ class P300(object):
         else:
             self.ctlr = EspecTCP(
                 host=kwargs.get('host'),
-                address=kwargs.get('address')
+                address=kwargs.get('address'),
+                port=kwargs.get('port', 10001)
             )
 
     def __del__(self):
@@ -1392,18 +1393,35 @@ class P300(object):
             r'(?:,([0-9.-]+))?(?:,HUMI(\w+)(?:,(\d+))?)?',
             arg
         )
+        if parsed:
+            ret = {
+                'tempDetail':{
+                    'range':{'max':float(parsed.group(1)), 'min':float(parsed.group(2))},
+                    'mode':parsed.group(5),
+                    'setpoint':parsed.group(6)
+                }
+            }
+            if parsed.group(3):
+                ret['humiDetail'] = {
+                    'range':{'max':float(parsed.group(3)), 'min':float(parsed.group(4))},
+                    'mode':parsed.group(7),
+                    'setpoint':parsed.group(8)
+                }
+            return ret
+        #P310 hack
+        parsed = re.search(r'([0-9.-]+),([0-9.-]+),(?:(\d+),(\d+),)?OFF', arg)
         ret = {
             'tempDetail':{
                 'range':{'max':float(parsed.group(1)), 'min':float(parsed.group(2))},
-                'mode':parsed.group(5),
-                'setpoint':parsed.group(6)
+                'mode':'OFF',
+                'setpoint':0.0
             }
         }
         if parsed.group(3):
             ret['humiDetail'] = {
                 'range':{'max':float(parsed.group(3)), 'min':float(parsed.group(4))},
-                'mode':parsed.group(7),
-                'setpoint':parsed.group(8)
+                'mode':'OFF',
+                'setpoint':0
             }
         return ret
 
