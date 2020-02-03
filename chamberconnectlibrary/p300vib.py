@@ -5,6 +5,7 @@ A direct implementation of the SCP220's communication interface.
 :license: MIT, see LICENSE for more details.
 '''
 import re
+from especinteract import EspecError
 from p300extended import P300Extended, tryfloat
 
 class P300Vib(P300Extended):
@@ -186,8 +187,6 @@ class P300Vib(P300Extended):
             r'(?:,AIR(\d+)\/(\d+))?',
             arg
         )
-        print arg
-        print parsed
         base = {'number':int(parsed.group(1)),
                 'time':{'hour':int(parsed.group(7)),
                         'minute':int(parsed.group(8))},
@@ -444,6 +443,11 @@ class P300Vib(P300Extended):
         else:
             spstr = None
 
+        try:
+            ptc = self.read_temp_ptc()
+        except EspecError:
+            ptc = {'enable_cascade': False}
+
         if spstr is not None and minimum is not None and maximum is not None:
             self.ctlr.interact('VIB, {0:s} H{1:0.1f} L{2:0.1f},C{3:d}'.format(spstr, maximum, minimum, constant))
         else:
@@ -453,6 +457,9 @@ class P300Vib(P300Extended):
                 self.ctlr.interact('VIB, L%0.1f, C%d' % (minimum, constant))
             if maximum is not None:
                 self.ctlr.interact('VIB, H%0.1f, C%d' % (maximum, constant))
+        if ptc['enable_cascade']:
+            self.write_temp_ptc(ptc['enable_cascade'], ptc['deviation']['positive'], 0-ptc['deviation']['positive'], constant)
+
 
     def read_prgm(self, pgmnum, with_ptc=False):
         '''

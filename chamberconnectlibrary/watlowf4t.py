@@ -548,13 +548,12 @@ class WatlowF4T(ControllerInterface):
                 return "Constant (Program Calendar Start)"
             else:
                 return "Standby (Program Calendar Start)"
-        elif not self.get_alarm_status(exclusive=False)['active']:
-            if self.__read_io(self.run_module, self.run_io, exclusive=False):
-                return "Constant"
-            else:
-                return "Standby"
-        else:
+        elif self.__read_io(self.run_module, self.run_io, exclusive=False):
+            return "Constant"
+        elif self.get_alarm_status(exclusive=False)['active']:
             return "Alarm"
+        else:
+            return "Standby"
 
     @exclusive
     def get_alarm_status(self):
