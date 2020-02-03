@@ -5,6 +5,7 @@ A direct implementation of the SCP220's communication interface.
 :license: MIT, see LICENSE for more details.
 '''
 import re
+import time
 from especinteract import EspecError
 from p300extended import P300Extended, tryfloat
 
@@ -444,6 +445,7 @@ class P300Vib(P300Extended):
             spstr = None
 
         try:
+            time.sleep(0.1) # ensure P300 has had time to update after a wrte_temp_ptc
             ptc = self.read_temp_ptc()
         except EspecError:
             ptc = {'enable_cascade': False}
