@@ -1,4 +1,4 @@
-﻿'''
+'''
 Common interface for all All ChamberConnectLibrary upper level interfaces
 
 :copyright: (C) Espec North America, INC.
@@ -825,6 +825,37 @@ class ControllerInterface:
         pass
 
     @abstractmethod
+    def get_air_speed(self):
+        '''
+        Get the state of the programmable air speed
+
+        returns:
+            {"current": int, "constant": int}
+        '''
+        pass
+
+    @abstractmethod
+    def get_air_speeds(self):
+        '''
+        Get the available air speeds for the programmable air speed.
+
+        returns:
+            [int]
+        '''
+        pass
+
+    @abstractmethod
+    def set_air_speed(self, value): 
+        ''' 
+        Set value for the chamber air speed
+
+        Args: 
+            speed (int): The number of constant output 
+            constant (int): The number of constant speed mode 
+        '''
+        pass
+
+    @abstractmethod
     def get_status(self):
         '''
         Get the chamber status.
@@ -1044,7 +1075,7 @@ class ControllerInterface:
                 if tmap['type'] == 'cascade':
                     items += ['enable_cascade', 'deviation']
                 lkps = [lkp for lkp in lookup[tmap['type']] if lkp['number'] == tmap['num']]
-                lpdata = lkps[0].copy() if lookup else {}
+                lpdata = lkps[0].copy() if lkps else {}
                 lpdata.update(self.get_loop(tmap['num'], tmap['type'], items, exclusive=False))
                 ret['loops'].append(lpdata)
         if kwargs.get('get_status', True) or kwargs.get('get_program_status', False):
@@ -1079,6 +1110,13 @@ class ControllerInterface:
                 ret['refrig'] = self.get_refrig(exclusive=False)
             except NotImplementedError:
                 ret['refrig'] = None
+        if kwargs.get('get_air_speed', False):
+            try:
+                ret['air'] = self.get_air_speed(exclusive=False)
+            except NotImplementedError:
+                ret['air'] = None
+            except ControllerInterfaceError:
+                ret['air'] = None
         return ret
 
     @abstractmethod

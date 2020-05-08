@@ -1,4 +1,4 @@
-﻿'''
+'''
 Copyright (C) Espec North America, INC. - All Rights Reserved
 Written by Myles Metzler mmetzler@espec.com, Feb. 2016
 
@@ -10,8 +10,9 @@ import struct
 import time
 import collections
 import serial
+from controllerinterface import ControllerInterfaceError
 
-class ModbusError(Exception):
+class ModbusError(ControllerInterfaceError):
     '''Generic Modbus exception.'''
     pass
 

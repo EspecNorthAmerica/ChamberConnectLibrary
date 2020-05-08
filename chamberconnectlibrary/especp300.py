@@ -1,5 +1,5 @@
 '''
-Upper level interface for Espec Corp. Controllers (just the P300 for now)
+Upper level interface for Espec Corp. P300 Controller (original command set)
 
 :copyright: (C) Espec North America, INC.
 :license: MIT, see LICENSE for more details.
@@ -10,12 +10,11 @@ import time
 from chamberconnectlibrary.controllerinterface import ControllerInterface, exclusive
 from chamberconnectlibrary.controllerinterface import ControllerInterfaceError
 from chamberconnectlibrary.p300 import P300
-from chamberconnectlibrary.scp220 import SCP220
 from chamberconnectlibrary.especinteract import EspecError
 
-class Espec(ControllerInterface):
+class EspecP300(ControllerInterface):
     '''
-    A class for interfacing with Espec controllers (P300, SCP220)
+    A class for interfacing with Espec controllers (P300)
 
     Kwargs:
         interface (str): The connection method::
@@ -29,13 +28,12 @@ class Espec(ControllerInterface):
         cascades (int): The number of cascade control loops the controller has (default=0, max=1)
         lock (RLock): The locking method to use when accessing the controller (default=RLock())
         freshness (int): The length of time (in seconds) a command is cached (default = 0)
-        ctlr_type (str): "SCP220" or "P300" (default = "P300")
     '''
 
     def __init__(self, **kwargs):
-        print 'Warning: Espec Class is no longer being maintained as of version 2.3.0; use EspecP300 or EspecSCP220 classes instead.'
         self.client, self.loops, self.cascades = None, None, None
         self.init_common(**kwargs)
+        self.port = kwargs.get('port', 10001)
         self.freshness = kwargs.get('freshness', 0)
         self.cache = {}
         self.temp, self.humi = 1, 2
@@ -49,16 +47,21 @@ class Espec(ControllerInterface):
             self.temp:self.temp,
             self.humi:self.humi
         }
-        self.ctlr_type = kwargs.get('ctlr_type', 'P300')
-        ttp = (self.ctlr_type, self.temp, self.humi)
-        self.lp_exmsg = 'The %s controller only supports 2 loops (%d:temperature,%d:humidity)'%ttp
-        ttp = (self.ctlr_type, self.temp)
-        self.cs_exmsg = 'The %s controller can only have loop %d as cascade' % ttp
+        ttp = (self.temp, self.humi)
+        self.lp_exmsg = 'The P300 controller only supports 2 loops (%d:temperature,%d:humidity)'%ttp
+        self.cs_exmsg = 'The P300 controller can only have loop %d as cascade' % self.temp
         self.alarms = 27
         self.profiles = True
         self.events = 12
-        self.total_programs = 40 if self.ctlr_type == 'P300' else 30
+        self.total_programs = 40
         self.__update_loop_map()
+        self.connect_args = {
+            'serialport':self.serialport,
+            'baudrate':self.baudrate,
+            'host':self.host,
+            'address':self.adr,
+            'port':self.port
+        }
 
 
     def __update_loop_map(self):
@@ -77,16 +80,9 @@ class Espec(ControllerInterface):
 
     def connect(self):
         '''
-        connect to the controller using the paramters provided on class initialization
+        connect to the controller using the parameters provided on class initialization
         '''
-        args = {'serialport':self.serialport, 'baudrate':self.baudrate, 'host':self.host,
-                'address':self.adr}
-        if self.ctlr_type == 'P300':
-            self.client = P300(self.interface, **args)
-        elif self.ctlr_type == 'SCP220':
-            self.client = SCP220(self.interface, **args)
-        else:
-            raise ValueError('"%s" is not a supported controller type' % self.ctlr_type)
+        self.client = P300(self.interface, **self.connect_args)
 
     def close(self):
         '''
@@ -200,11 +196,11 @@ class Espec(ControllerInterface):
                 raise ValueError(self.lp_exmsg)
         if 'deviation' in param_list and 'enable_cascade' in param_list:
             if isinstance(param_list['enable_cascade'], dict):
-                params = {'enable':param_list.pop('enable_cascade')['constant']}
+                cparams = {'enable':param_list.pop('enable_cascade')['constant']}
             else:
-                params = {param_list.pop('enable_cascade')}
-            params.update(param_list.pop('deviation'))
-            self.client.write_temp_ptc(**params)
+                cparams = {param_list.pop('enable_cascade')}
+            cparams.update(param_list.pop('deviation'))
+            self.client.write_temp_ptc(**cparams)
         for key, val in param_list.items():
             params = {'value':val}
             params.update({'exclusive':False, 'N':loop_number})
@@ -225,14 +221,14 @@ class Espec(ControllerInterface):
 
     @exclusive
     def get_loop_sp(self, N):
-        if N not in self.lpd:
-            raise ValueError(self.lp_exmsg)
         if self.lpd[N] == self.temp:
             cur = self.cached(self.client.read_temp)['setpoint']
             con = self.cached(self.client.read_constant_temp)['setpoint']
-        else:
+        elif self.lpd[N] == self.humi:
             cur = self.cached(self.client.read_humi)['setpoint']
             con = self.cached(self.client.read_constant_humi)['setpoint']
+        else:
+            raise ValueError(self.lp_exmsg)
         return {'constant':con, 'current':cur}
 
     @exclusive
@@ -262,7 +258,8 @@ class Espec(ControllerInterface):
             self.client.write_temp(min=value['min'], max=value['max'])
         elif self.lpd[N] == self.humi:
             self.client.write_humi(min=value['min'], max=value['max'])
-        else: raise ValueError(self.lp_exmsg)
+        else:
+            raise ValueError(self.lp_exmsg)
 
     @exclusive
     def get_loop_range(self, N):
@@ -270,16 +267,20 @@ class Espec(ControllerInterface):
             return self.cached(self.client.read_temp)['range']
         elif self.lpd[N] == self.humi:
             return self.cached(self.client.read_humi)['range']
-        else: raise ValueError(self.lp_exmsg)
+        else:
+            raise ValueError(self.lp_exmsg)
 
     @exclusive
     def get_loop_en(self, N):
         if self.lpd[N] == self.temp:
             return {'constant':True, 'current':True}
         elif self.lpd[N] == self.humi:
-            return {'current':self.cached(self.client.read_humi)['enable'],
-                    'constant':self.cached(self.client.read_constant_humi)['enable']}
-        else: raise ValueError(self.lp_exmsg)
+            return {
+                'current':self.cached(self.client.read_humi)['enable'],
+                'constant':self.cached(self.client.read_constant_humi)['enable']
+            }
+        else:
+            raise ValueError(self.lp_exmsg)
 
     @exclusive
     def set_loop_en(self, N, value):
@@ -308,8 +309,6 @@ class Espec(ControllerInterface):
     @exclusive
     def set_loop_mode(self, N, value):
         value = value['constant'] if isinstance(value, dict) else value
-        if N > 2:
-            raise ValueError(self.lp_exmsg)
         if value in ['Off', 'OFF', 'off']:
             self.set_loop_en(N, False, exclusive=False)
         elif value in ['On', 'ON', 'on']:
@@ -319,22 +318,21 @@ class Espec(ControllerInterface):
 
     @exclusive
     def get_loop_mode(self, N):
-        if N > 2:
-            raise ValueError(self.lp_exmsg)
-        if self.lpd[N] == self.humi:
+        if self.lpd[N] == self.temp:
+            cur, con = 'On', 'On'
+        elif self.lpd[N] == self.humi:
             cur = 'On' if self.cached(self.client.read_humi)['enable'] else 'Off'
             con = 'On' if self.cached(self.client.read_constant_humi)['enable'] else 'Off'
         else:
-            cur = 'On'
-            con = 'On'
+            raise ValueError(self.lp_exmsg)
         if self.client.read_mode() in ['OFF', 'STANDBY']:
             cur = 'Off'
         return {"current": cur, "constant": con}
 
     def get_loop_modes(self, N):
-        if N == 1:
+        if self.lpd[N] == self.temp:
             return ['On']
-        elif N == 2:
+        elif self.lpd[N] == self.humi:
             return ['Off', 'On']
         else:
             raise ValueError(self.lp_exmsg)
@@ -492,7 +490,7 @@ class Espec(ControllerInterface):
         raise NotImplementedError
 
     @exclusive
-    def set_air_speed(self, value): 
+    def set_air_speed(self, value):
         raise NotImplementedError
 
     @exclusive

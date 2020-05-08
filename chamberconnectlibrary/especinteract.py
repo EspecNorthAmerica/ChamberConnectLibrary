@@ -1,4 +1,4 @@
-﻿'''
+'''
 Handle the actual communication with Espec Corp. Controllers
 
 :copyright: (C) Espec North America, INC.
@@ -8,6 +8,7 @@ Handle the actual communication with Espec Corp. Controllers
 import socket
 import serial
 import time
+from controllerinterface import ControllerInterfaceError
 
 ERROR_DESCIPTIONS = {
     'CMD ERR':'Unrocognized command',
@@ -40,7 +41,7 @@ ERROR_DESCIPTIONS = {
     'CHB NOT READY':'Could not act on given command.'
 }
 
-class EspecError(Exception):
+class EspecError(ControllerInterfaceError):
     '''
     Generic Espec Corp controller error
     '''
@@ -144,20 +145,20 @@ class EspecTCP(object):
         raises:
             EspecError
         '''
-        message = message.encode('ascii', 'ignore')
-        # TCP forwarder doesnt handle address properly so we are ignoring it.
-        # if self.address:
-        #     self.socket.send('%d,%s%s'%(self.address, message, self.delimeter))
-        # else:
-        #     self.socket.send('%s%s'%(message, self.delimeter))
-        self.socket.send('%s%s'%(message, self.delimeter))
-        recv = ''
-        while recv[0-len(self.delimeter):] != self.delimeter:
-            recv += self.socket.recv(1)
-        if recv.startswith('NA:'):
-            errmsg = recv[3:0-len(self.delimeter)]
-            msg = 'EspecError: command:"%s" genarated Error:"%s"(%s)' % (
-                message, errmsg, ERROR_DESCIPTIONS.get(errmsg, 'missing description')
-            )
-            raise EspecError(msg)
-        return recv[:-2]
+        if not isinstance(message, (list, tuple)):
+            message = [message]
+        recvs = []
+        for msg in message:
+            msg = msg.encode('ascii', 'ignore')
+            self.socket.send('%s%s'%(msg, self.delimeter))
+            recv = ''
+            while recv[0-len(self.delimeter):] != self.delimeter:
+                recv += self.socket.recv(1)
+            if recv.startswith('NA:'):
+                errmsg = recv[3:0-len(self.delimeter)]
+                msg = 'EspecError: command:"%s" genarated Error:"%s"(%s)' % (
+                    message, errmsg, ERROR_DESCIPTIONS.get(errmsg, 'missing description')
+                )
+                raise EspecError(msg)
+            recvs.append(recv[:-1*len(self.delimeter)])
+        return recvs if len(recvs) > 1 else recvs[0]
