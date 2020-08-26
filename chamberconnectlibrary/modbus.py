@@ -401,7 +401,7 @@ class ModbusRTU(Modbus):
         crc = 0xFFFF
         for i in data:
             crc = crc ^ ord(i)
-            for _ in xrange(8):
+            for _ in range(8):
                 tmp = crc & 1
                 crc = crc >> 1
                 if tmp:
@@ -499,4 +499,4 @@ if __name__ == '__main__':
     tst = ModbusRTU(1, 3, baud=38400, low_word_first=True)
     tmp = tst.read_items(pkt)
     for i in tmp:
-        print i # pylint: disable=E1601
+        print(i) # pylint: disable=E1601
