@@ -91,10 +91,10 @@ class EspecSerial(object):
         for msg in message:
             msg = msg.encode('ascii', 'ignore')
             if self.address:
-                self.serial.write('%d,%s%s'%(self.address, msg, self.delimeter))
+                self.serial.write('{},{}{}'.format(self.address, msg, self.delimeter))
             else:
-                self.serial.write('%s%s' % (msg, self.delimeter))
-            recv = ''
+                self.serial.write('{}{}'.format(msg, self.delimeter))
+            recv = ''.encode()
             while recv[0-len(self.delimeter):] != self.delimeter:
                 rbuff = self.serial.read(1)
                 if len(rbuff) == 0:
@@ -102,7 +102,7 @@ class EspecSerial(object):
                 recv += rbuff
             if recv.startswith('NA:'):
                 errmsg = recv[3:0-len(self.delimeter)]
-                msg = 'EspecError: command:"%s" genarated Error:"%s"(%s)' % (
+                msg = 'EspecError: command:"{}" genarated Error:"{}"({})'.format(
                     message, errmsg, ERROR_DESCIPTIONS.get(errmsg, 'missing description')
                 )
                 raise EspecError(msg)
