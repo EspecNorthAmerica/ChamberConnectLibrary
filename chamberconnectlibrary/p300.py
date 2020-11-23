@@ -10,7 +10,7 @@ update notice:
 '''
 #pylint: disable=W0703
 import re
-from .especinteract import EspecSerial, EspecTCP
+from especinteract import EspecSerial, EspecTCP
 
 def tryfloat(val, default):
     '''
