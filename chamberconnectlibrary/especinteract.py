@@ -8,6 +8,7 @@ Handle the actual communication with Espec Corp. Controllers
 import socket
 import serial
 import time
+from controllerinterface import ControllerInterfaceError
 
 ERROR_DESCIPTIONS = {
     'CMD ERR':'Unrocognized command',
@@ -52,7 +53,7 @@ class EspecSerial(object):
     '''
     def __init__(self, **kwargs):
         self.address = kwargs.get('address', None)
-        self.delimeter = kwargs.get('delimeter', '\r\n')
+        self.delimiter = kwargs.get('delimiter', '\r\n')
         self.serial = serial.Serial(
             port=kwargs.get('port'),
             baudrate=kwargs.get('baud', 9600),
@@ -89,24 +90,25 @@ class EspecSerial(object):
             message = [message]
         recvs = []
         for msg in message:
-            msg = msg.encode('ascii', 'ignore')
+            str_cmd1 = ('{},{}{}'.format(self.address, msg, self.delimiter))
+            str_cmd2 = ('{}{}'.format(msg, self.delimiter))
             if self.address:
-                self.serial.write('{},{}{}'.format(self.address, msg, self.delimeter))
+                self.serial.write(str_cmd1.encode('ascii', 'ignore'))
             else:
-                self.serial.write('{}{}'.format(msg, self.delimeter))
-            recv = ''.encode()
-            while recv[0-len(self.delimeter):] != self.delimeter:
+                self.serial.write(str_cmd2.encode('ascii', 'ignore'))
+            recv = ''.encode('ascii', 'ignore')
+            while recv[0-len(self.delimiter):] != self.delimiter:
                 rbuff = self.serial.read(1)
                 if len(rbuff) == 0:
                     raise EspecError('The chamber did not respond in time')
                 recv += rbuff
             if recv.startswith('NA:'):
-                errmsg = recv[3:0-len(self.delimeter)]
-                msg = 'EspecError: command:"{}" genarated Error:"{}"({})'.format(
+                errmsg = recv[3:0-len(self.delimiter)]
+                msg = 'EspecError: command:"{}" generated Error:"{}"({})'.format(
                     message, errmsg, ERROR_DESCIPTIONS.get(errmsg, 'missing description')
                 )
                 raise EspecError(msg)
-            recvs.append(recv[:-1*len(self.delimeter)])
+            recvs.append(recv[:-1*len(self.delimiter)])
         return recvs if len(recvs) > 1 else recvs[0]
 
 class EspecTCP(object):
@@ -118,7 +120,7 @@ class EspecTCP(object):
         self.socket.setblocking(True)
         self.socket.connect((kwargs.get('host'), kwargs.get('port', 10001)))
         self.address = kwargs.get('address', None)
-        self.delimeter = kwargs.get('delimeter', '\r\n')
+        self.delimiter = kwargs.get('delimiter', '\r\n')
 
     def __del__(self):
         try:
@@ -144,19 +146,14 @@ class EspecTCP(object):
         raises:
             EspecError
         '''
-        message = message.encode('ascii', 'ignore')
-        # TCP forwarder doesnt handle address properly so we are ignoring it.
-        # if self.address:
-        #     self.socket.send('%d,%s%s'%(self.address, message, self.delimeter))
-        # else:
-        #     self.socket.send('%s%s'%(message, self.delimeter))
-        self.socket.send('%s%s'%(message, self.delimeter))
-        recv = ''
-        while recv[0-len(self.delimeter):] != self.delimeter:
+        str_cmd = ('{}{}'.format(message, self.delimiter))
+        self.socket.send(str_cmd.encode('ascii', 'ignore'))
+        recv = ''.encode('ascii', 'ignore') 
+        while recv[0-len(self.delimiter):] != self.delimiter:
             recv += self.socket.recv(1)
         if recv.startswith('NA:'):
-            errmsg = recv[3:0-len(self.delimeter)]
-            msg = 'EspecError: command:"%s" genarated Error:"%s"(%s)' % (
+            errmsg = recv[3:0-len(self.delimiter)]
+            msg = 'EspecError: command:"{}" generated Error:"{}"({})'.format(
                 message, errmsg, ERROR_DESCIPTIONS.get(errmsg, 'missing description')
             )
             raise EspecError(msg)
