@@ -672,7 +672,7 @@ class WatlowF4(ControllerInterface):
                 stepi += 1
         rtime[1] += int(rtime[2]/60)
         rtime[2] = int(rtime[2]%60)
-        rtime[0] += int(rtime[2]/60)
+        rtime[0] += int(rtime[1]/60)
         rtime[1] = int(rtime[1]%60)
         return '%d:%02d:%02d' % tuple(rtime)
 
