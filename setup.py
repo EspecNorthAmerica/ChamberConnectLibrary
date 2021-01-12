@@ -9,7 +9,7 @@ def readme():
 
 setup(
     name='chamberconnectlibrary',
-    version='2.2.5',
+    version='2.3.0',
     description='A library for interfacing with Espec North America chambers',
     long_description=readme(),
     url='https://github.com/EspecNorthAmerica/ChamberConnectLibrary',
