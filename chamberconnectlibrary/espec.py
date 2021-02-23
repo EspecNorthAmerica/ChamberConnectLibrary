@@ -153,11 +153,11 @@ class Espec(ControllerInterface):
         }
         if param_list is None:
             param_list = kwargs
-        if isinstance(identifier, basestring):
+        if isinstance(identifier, str):
             my_loop_map = self.loop_map[self.named_loop_map[identifier]]
             loop_number = my_loop_map['num']
             loop_type = my_loop_map['type']
-        elif isinstance(identifier, (int, long)):
+        elif isinstance(identifier, int):
             loop_number = identifier
         else:
             raise ValueError(
@@ -204,7 +204,7 @@ class Espec(ControllerInterface):
                 params = {param_list.pop('enable_cascade')}
             params.update(param_list.pop('deviation'))
             self.client.write_temp_ptc(**params)
-        for key, val in param_list.items():
+        for key, val in list(param_list.items()):
             params = {'value':val}
             params.update({'exclusive':False, 'N':loop_number})
             try:
@@ -298,9 +298,9 @@ class Espec(ControllerInterface):
     @exclusive
     def get_loop_units(self, N):
         if self.lpd[N] == self.temp:
-            return u'\xb0C'
+            return '\xb0C'
         elif self.lpd[N] == self.humi:
-            return u'%RH'
+            return '%RH'
         else:
             raise ValueError(self.lp_exmsg)
 

@@ -4,7 +4,7 @@ A direct implimentation of the SCP220's communication interface.
 :copyright: (C) Espec North America, INC.
 :license: MIT, see LICENSE for more details.
 '''
-from p300 import P300
+from .p300 import P300
 
 class SCP220(P300):
     '''
