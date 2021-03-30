@@ -12,7 +12,9 @@ For Python 3, it may require installing pip3, then run the ''pip3 install'' comm
 Python 3 also requires running pyserial.
 
 On Linux or Windows, run
+
 pip install --upgrade pip3
+
 pip3 install pyserial
 
 ## Updating
