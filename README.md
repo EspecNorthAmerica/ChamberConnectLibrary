@@ -2,7 +2,7 @@
 Python library for interfacing with Espec North America chambers with P300, SCP-220, Watlow F4T &amp; Watlow F4S/D controllers.
 
 ## Requirements
-python 3.5.x
+Python 3.5.x
 
 ## Installation
 ```pip install chamberconnectlibrary```
