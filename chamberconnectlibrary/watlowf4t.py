@@ -1023,7 +1023,7 @@ class WatlowF4T(ControllerInterface):
         haswaits = self.waits[0] != '' or self.waits[1] != ''
         haswaits = haswaits or self.waits[2] != '' or self.waits[3] != ''
         gsd, ldata, evd, wdata = [], [], [], []
-        for _ in range(self.loops):
+        for _ in range(self.loops + self.cascades):
             gsd.append({'value':3.0})
         for j in range(self.loops + self.cascades):
             lpdata = {'target':0, 'rate':0, 'mode':'', 'gsoak': False, 'cascade': False,
