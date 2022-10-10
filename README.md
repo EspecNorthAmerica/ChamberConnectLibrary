@@ -2,26 +2,31 @@
 Python library for interfacing with Espec North America chambers with P300, SCP-220, Watlow F4T &amp; Watlow F4S/D controllers.
 
 ## Requirements
-Python 3.5.x
+Python 3.6.8 and above
 
 ## Installation
-```pip install chamberconnectlibrary```
+```pip install py3-chamberconnectlibrary```
 
-For Python 3, it may require installing pip3, then run the ''pip3 install'' command.
+Note: Above script requires that your system has Python 3.6.8 (or above) installed and its pip3 has been linked to pip. 
 
-Python 3 also requires running pyserial.
+One way to check and confirm this is to run: 
 
-On Linux or Windows, run
+```pip --version``` 
 
-pip install --upgrade pip3
+and 
 
-pip3 install pyserial
+```pip3 --version```
+
+Both results point to the same directory. Modify it as necessary to meet the requirement. 
+
 
 ## Updating
 Do to some renaming to make the library pep8 compliant some files have been renamed from version 1.x to 2.0.0.
+
 To ensure that the current version is used uninstall and then reinstall the library:
-```pip uninstall chamberconnectlibrary```
-```pip install chamberconnectlibrary```
+
+```pip uninstall py3-chamberconnectlibrary```
+```pip install py3-chamberconnectlibrary```
 
 ## Testing
 
