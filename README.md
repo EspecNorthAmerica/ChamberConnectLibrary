@@ -26,6 +26,9 @@ Do to some renaming to make the library pep8 compliant some files have been rena
 To ensure that the current version is used uninstall and then reinstall the library:
 
 ```pip uninstall py3-chamberconnectlibrary```
+
+and 
+
 ```pip install py3-chamberconnectlibrary```
 
 ## Testing
