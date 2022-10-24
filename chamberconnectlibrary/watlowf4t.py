@@ -344,7 +344,6 @@ class WatlowF4T(ControllerInterface):
             value = value['constant']
         self.client.write_holding_float(2784+(N-1)*160, value)
 
-
     @exclusive
     def get_cascade_sp(self, N):
         self.__range_check(N, 1, self.cascades)
@@ -522,8 +521,6 @@ class WatlowF4T(ControllerInterface):
             self.client.write_holding(kpress, self.inv_watlow_val_dict('down'))
         else:
             self.client.write_holding(kpress, self.inv_watlow_val_dict('up'))
-
-
 
     @exclusive
     def get_status(self):
