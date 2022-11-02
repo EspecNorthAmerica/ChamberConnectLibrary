@@ -527,24 +527,6 @@ class WatlowF4T(ControllerInterface):
             self.client.write_holding(kpress, self.inv_watlow_val_dict('up'))
 
     @exclusive
-    def set_eventST(self, N, value):
-        '''the purpose of this method is to manually control event setting
-           operation: off 
-        '''
-        #62=0ff, 63=on
-        #      prof1  prof2  prof3  prof4  prof5  prof6  prof7  prof8  key1  key2  key3  key4
-        reg = [16594, 16596, 16598, 16600, 16822, 16824, 16826, 16828, 6844, 6864, 6884, 6904][N-1]
-        kpress = 6850 +(N-8-1)*20 #down=1457, #up = 1456
-        self.__range_check(N, 1, 12)
-        if N <= 8:
-            if value == 62:
-                self.client.write_holding(reg, self.inv_watlow_val_dict('off'))
-            else: 
-                print ('Unsupported feature.')
-        else:
-            print ('Unsupported feature.') 
-
-    @exclusive
     def get_status(self):
         prgmstate = self.client.read_holding(16568, 1)[0]
         if prgmstate == 149:

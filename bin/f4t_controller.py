@@ -24,6 +24,8 @@ The programmer may add the additional program section to call the library for
 the exact feature(s) not implemented here to meet their requirement. Thus, the 
 following program serves as a starting point on how to utilize our 
 ChamberConnectLibrary in the Python 3 environment. 
+
+Tested: Python 3.6.8; requires at least Python 3.6
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 '''
 import time,re
@@ -151,25 +153,25 @@ def progMode(mode):
     else:
         print (nlist['nact']) 
 
-def setTS(value):
+def setTS_on():
     '''Set TS value on the selected TS number
     '''
     try:
         ts_num = int(input('Enter TS number: '))
         if isinstance(ts_num, int) and ts_num in range(1,9):
-            CONTROLLER.set_event(ts_num,value)
+            CONTROLLER.set_event(ts_num,True)
             print ('\nrsp> DONE') 
         else:
             print ('\nrsp> Invalid TS number.')
     except ValueError:
         print ('Invalid TS number.')
 
-def setOff(value):
+def setTS_off():
     '''turn off time signal (Event#)'''
     try:
         ts_num = int(input('Enter TS number: '))
         if isinstance(ts_num, int) and ts_num in range(1,9):
-            CONTROLLER.set_eventST(ts_num,value)
+            CONTROLLER.set_event(ts_num,False)
             print ('\nrsp> DONE') 
         else:
             print ('\nrsp> Invalid TS number.')
@@ -250,8 +252,8 @@ def eventCtrl():
         '''
         return {
             'r': lambda: readTS(),
-            's': lambda: setTS(63),
-            'o': lambda: setOff(62),
+            's': lambda: setTS_on(),
+            'o': lambda: setTS_off(),
             'z': lambda: main_menu()
         }.get(option, lambda: print ('\nrsp> Not a valid option.') )()
 
