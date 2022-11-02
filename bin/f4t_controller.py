@@ -43,8 +43,8 @@ def ip_addr():
     '''
     while True:
         try:
-            #ip_addr = input('Enter F4T IP address (e.g., 192.168.0.101): ')
-            ip_addr = '10.30.100.96'
+            ip_addr = input('Enter F4T IP address (e.g., 192.168.0.101): ')
+            #ip_addr = '10.30.100.96'
             chk_ip = re.match(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$", ip_addr)
             if chk_ip:
                 print ('\n')
