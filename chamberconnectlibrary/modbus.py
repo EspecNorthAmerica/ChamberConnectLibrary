@@ -3,14 +3,21 @@ Copyright (C) Espec North America, INC. - All Rights Reserved
 Written by Myles Metzler mmetzler@espec.com, Feb. 2016
 Partial modbus implimantation for communicating with watlow controllers (input/holding registers only)
 
-Updated:
-Modified by Paul Nong-Laolam  pnong-laolam@espec.com, Oct 2020
-The original source code written for Python 2.7.x by Myles Metzler has been modified 
-to support Python 3. Code has been completely tested on Python 3.6.8 and Python 3.7.3. 
+Updated: Oct 2020, 2022
+Modified and updated for Python 3.6+ by Paul Nong-Laolam  <pnong-laolam@espec.com>
+
+Note: The original source code written for Python 2.7.x by Myles Metzler 
+      To set this library available for Python 3, the entire set of source codes
+      have been updated to support Python 3. 
+
+      Some changes were made within the Python 3 itself and this code as updated 
+      to reflect those changes. 
+
+      Code has been completely tested on Python 3.6.8 and Python 3.7.3. 
 
 Updated: July 2022
-        -- more bugs found
-        -- fix bugs 
+        -- bug fixes and modifications to run on Python 3.6.8 and above 
+        -- completely tested on Python 3.9+ 
 '''
 #pylint: disable=W0703
 import socket
@@ -27,6 +34,7 @@ except AttributeError:
 class ModbusError(Exception):
     '''Generic Modbus exception.'''
     pass
+
 class Modbus(object):
     '''
     A subset of a modbus master library, only impliments modbus functions:
@@ -322,7 +330,7 @@ class Modbus(object):
                 itm['value'] = vals if len(vals) > 1 else vals[0]
 
         # return items to caller
-        print (f'\n428:Result summary: \n{items}\n\n')
+        #print (f'\n428:Result summary: \n{items}\n\n')
 
         return items
 
@@ -353,13 +361,13 @@ class Modbus(object):
             shex = ":".join("{:02x}".format(ord(c) for c in spacket))       # unmod, tested
             rhex = ":".join("{:02x}".format(ord(c) for c in packet))        # unmod, tested
 
-            raise ModbusError('Address error; Sent={}, Received={}'.format(shex, rhex))
+            raise ModbusError(f'Address error; Sent={shex}, Received={rhex}')
 
         if fcode > 127:
             ecode = struct.unpack(">B", bytes([packet[2]]))[0]
             ttp = (ecode, self.error_messages.get(ecode, 'Unknown error code'))
 
-            raise ModbusError('Modbus Error: Exception code = %d(%s)' % ttp)
+            raise ModbusError(f'Modbus Error: Exception code = {ttp}(%s)')
 
         if fcode in [3, 4]: #Read input/holding register(s)
             cnt = struct.unpack(">B", bytes([packet[2]]))[0]/2
@@ -413,28 +421,31 @@ class ModbusRTU(Modbus):
         '''
         crc = 0xFFFF
 
-        for k in data: print ('   byte = {}    value = {}'.format(bytes([k]), k))
+        # set to test in Python 3+ environment; remove for production 
+        #for k in data: print ('   byte = {}    value = {}'.format(bytes([k]), k))
 
         for i in data:
             crc ^= i     # NOTES: Python 3 stores CRC strings in bytes
 
-            #print (f'\n564: "crc ^= i" = {crc}')
+            #print (f'\n564: "crc ^= i" = {crc}')     # remove for production 
 
             for _ in range(8):
                 tmp = crc & 1
 
-                #print (f'\n570: crc & 1 = {tmp}')
+                #print (f'\n570: crc & 1 = {tmp}')    # remove for production
 
                 crc = crc >> 1
 
-                #print ('\n575: crc >> 1 = {crc}')
+                #print ('\n575: crc >> 1 = {crc}')    # remove for production 
 
                 if tmp:
                     crc ^= 0xA001    # crc = crc ^ 0xA001
 
+                # set for testing in Python 3+ environment; remove for production 
                 #print (f'\n534: Value of "crc ^= 0xA001" = {crc}')
 
         #print (f'\n584: (((crc % 256) << 8) + (crc >> 8)) = {(((crc % 256) << 8) + (crc >> 8))}')
+        # remove or comment out after testing.
 
         return ((crc % 256) << 8) + (crc >> 8) #swap byte order
 
@@ -472,13 +483,13 @@ class ModbusRTU(Modbus):
             shex = ":".join(["{:02x}".format(ord(c)) for c in packet+crc])
             rhex = ":".join(["{:02x}".format(ord(c)) for c in head+body+rcrc])
 
-            raise ModbusError('Address error; Sent={}, Recieved={}'.format(shex, rhex))
+            raise ModbusError(f'Address error; Sent={shex}, Recieved={rhex}')
 
         if rcrc != ccrc:
             shex = ":".join(["{:02x}".format(ord(c)) for c in packet+crc])
             rhex = ":".join(["{:02x}".format(ord(c)) for c in head+body+rcrc])
 
-            raise ModbusError("CRC error; Sent=%s, Recieved=%s" % (shex, rhex))
+            raise ModbusError(f'CRC error; Sent={shex}, Recieved={rhex}')
 
         return head + body
 
@@ -528,15 +539,23 @@ class ModbusTCP(Modbus):
 
         if len(mbap_raw) != 6:
             ttp = (len(mbap_raw), mbap_raw)
-            raise ModbusError("MBAP length error; expected:6, got:%s (%r)" % ttp)
+            raise ModbusError(f'MBAP length error; expected:6, got:{ttp} (%r)')
 
         mbap = struct.unpack('>3H', mbap_raw)
         body = self.socket.recv(mbap[2])
 
         if mbap[0] != self.packet_id:
             ttp = (self.packet_id, mbap[0], mbap_raw)
-            raise ModbusError("MBAP id error; expected:%r, got:%r (%r)" % ttp)
+            raise ModbusError(f'MBAP id error; expected:%r, got:{ttp} (%r)')
         #self.packet_id = self.packet_id + 1 if self.packet_id < 65535 else 0
         return body
 
+if __name__ == "__main__":
+    '''main program for texting local functions
+       no local functions needed for testing...
+    '''
+    # pass 
+    # no tests on local functions warranted
+    # refer to sample programs in build/scripts-3.7 folder
+    pass
 

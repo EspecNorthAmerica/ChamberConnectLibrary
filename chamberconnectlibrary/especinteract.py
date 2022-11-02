@@ -3,12 +3,28 @@ Handle the actual communication with Espec Corp. Controllers
 
 :copyright: (C) Espec North America, INC.
 :license: MIT, see LICENSE for more details.
+
+Updated: Oct 2020; 2022
+Modified and updated for Python 3.6+ by Paul Nong-Laolam  <pnong-laolam@espec.com>
+
+Note: The original source code written for Python 2.7.x by Myles Metzler 
+      To set this library available for Python 3, the entire set of source codes
+      have been updated to support Python 3. 
+
+      Some changes were made within the Python 3 itself and this code as updated 
+      to reflect those changes. 
+
+      Code has been completely tested on Python 3.6.8 and Python 3.7.3. 
+
+Updated: July 2022
+        -- bug fixes and modifications to run on Python 3.6.8 and above 
+        -- completely test on Python 3.9+ 
 '''
 #pylint: disable=W0703
 import socket
 import serial
 import time
-from controllerinterface import ControllerInterfaceError
+from chamberconnectlibrary.controllerinterface import ControllerInterfaceError
 
 ERROR_DESCIPTIONS = {
     'CMD ERR':'Unrocognized command',
@@ -90,8 +106,8 @@ class EspecSerial(object):
             message = [message]
         recvs = []
         for msg in message:
-            str_cmd1 = ('{},{}{}'.format(self.address, msg, self.delimiter))
-            str_cmd2 = ('{}{}'.format(msg, self.delimiter))
+            str_cmd1 = (f'{self.address},{msg}{self.delimiter}')
+            str_cmd2 = (f'{msg}{self.delimiter}')
             if self.address:
                 self.serial.write(str_cmd1.encode('ascii', 'ignore'))
             else:
@@ -104,9 +120,11 @@ class EspecSerial(object):
                 recv += rbuff
             if recv.startswith('NA:'):
                 errmsg = recv[3:0-len(self.delimiter)]
-                msg = 'EspecError: command:"{}" generated Error:"{}"({})'.format(
-                    message, errmsg, ERROR_DESCIPTIONS.get(errmsg, 'missing description')
-                )
+                descriptErr=ERROR_DESCIPTIONS.get(errmsg, 'missing description')
+                msg = f'EspecError: command:"{message}" generated Error:"{errmsg}"({descriptErr})'
+                #msg = 'EspecError: command:"{}" generated Error:"{}"({})'.format(
+                #    message, errmsg, ERROR_DESCIPTIONS.get(errmsg, 'missing description')
+                #)
                 raise EspecError(msg)
             recvs.append(recv[:-1*len(self.delimiter)])
         return recvs if len(recvs) > 1 else recvs[0]
@@ -146,15 +164,17 @@ class EspecTCP(object):
         raises:
             EspecError
         '''
-        str_cmd = ('{}{}'.format(message, self.delimiter))
+        str_cmd = (f'{message}{self.delimiter}')
         self.socket.send(str_cmd.encode('ascii', 'ignore'))
         recv = ''.encode('ascii', 'ignore') 
         while recv[0-len(self.delimiter):] != self.delimiter:
             recv += self.socket.recv(1)
         if recv.startswith('NA:'):
             errmsg = recv[3:0-len(self.delimiter)]
-            msg = 'EspecError: command:"{}" generated Error:"{}"({})'.format(
-                message, errmsg, ERROR_DESCIPTIONS.get(errmsg, 'missing description')
-            )
+            descriptErr=ERROR_DESCIPTIONS.get(errmsg, 'missing description')
+            msg = f'EspecError: command:"{message}" generated Error:"{errmsg}"({descriptErr})'
+            #msg = 'EspecError: command:"{}" generated Error:"{}"({})'.format(
+            #    message, errmsg, ERROR_DESCIPTIONS.get(errmsg, 'missing description')
+            #)
             raise EspecError(msg)
         return recv[:-2]

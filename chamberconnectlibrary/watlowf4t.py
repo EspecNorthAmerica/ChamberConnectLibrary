@@ -3,6 +3,10 @@ Upper level interface for the Watlow F4T controller
 
 :copyright: (C) Espec North America, INC.
 :license: MIT, see LICENSE for more details.
+:Updated: 2020, 2022 Paul Nong-Laolam <pnong-laolam@espec.com> 
+:Important Notes:
+     The following code has been updated and tested to run on 
+     Python 3.6.8 and above.  
 '''
 #pylint: disable=W0703
 import time
@@ -523,6 +527,24 @@ class WatlowF4T(ControllerInterface):
             self.client.write_holding(kpress, self.inv_watlow_val_dict('up'))
 
     @exclusive
+    def set_eventST(self, N, value):
+        '''the purpose of this method is to manually control event setting
+           operation: off 
+        '''
+        #62=0ff, 63=on
+        #      prof1  prof2  prof3  prof4  prof5  prof6  prof7  prof8  key1  key2  key3  key4
+        reg = [16594, 16596, 16598, 16600, 16822, 16824, 16826, 16828, 6844, 6864, 6884, 6904][N-1]
+        kpress = 6850 +(N-8-1)*20 #down=1457, #up = 1456
+        self.__range_check(N, 1, 12)
+        if N <= 8:
+            if value == 62:
+                self.client.write_holding(reg, self.inv_watlow_val_dict('off'))
+            else: 
+                print ('Unsupported feature.')
+        else:
+            print ('Unsupported feature.') 
+
+    @exclusive
     def get_status(self):
         prgmstate = self.client.read_holding(16568, 1)[0]
         if prgmstate == 149:
@@ -590,7 +612,7 @@ class WatlowF4T(ControllerInterface):
     def prgm_start(self, N, step):
         self.__range_check(N, 1, 40)
         if step > self.get_prgm_steps(N, exclusive=False):
-            raise ControllerInterfaceError("Program #%d does not have step #%d." % (N, step))
+            raise ControllerInterfaceError(f'Program #{N} does not have step #{step}')
         if self.get_status(exclusive=False).find("Program") >= 0:
             self.client.write_holding(16566, self.inv_watlow_val_dict('terminate'))
             time.sleep(2)
@@ -674,7 +696,7 @@ class WatlowF4T(ControllerInterface):
         self.client.write_holding(18888, N) #set active profile
         step_count = self.client.read_holding(18920, 1)[0] #get the number of steps in the profile
         if not step_count > 0:
-            raise ControllerInterfaceError("Profile %d does not exist." % N)
+            raise ControllerInterfaceError(f'Profile {N} does not exist.')
         prgm_dict = {'name':self.client.read_holding_string(18606, 20),
                      'log':self.client.read_holding(19038, 1)[0] == 106}
         #is wait a valid step type
@@ -851,7 +873,7 @@ class WatlowF4T(ControllerInterface):
             self.client.write_holding(18888, N) #set active profile
             self.client.write_holding(18890, self.inv_watlow_val_dict('delete')) #delete profile
         except ModbusError as exp:
-            exp.message = 'Cannot delete program. (original message: %s)' % exp.message
+            exp.message = f'Cannot delete program. (original message: {exp.message})'
             raise # something else went wrong pass the exception on up.
 
 

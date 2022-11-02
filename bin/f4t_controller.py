@@ -2,7 +2,7 @@
 '''
 :author: Paul Nong-Laolam <pnong-laolam@espec.com>
 :license: MIT, see LICENSE for more detail.
-:copyright: (c) 2022. ESPEC North America, INC.
+:copyright: (c) 2020, 2022. ESPEC North America, INC.
 :file: f4t_controller.py 
 
 Application interface for controlling Watlow F4T operations. 
@@ -14,9 +14,9 @@ from its class and method definitions.
 README:
 ======
 
-The following is a sample program call of the Library to control your F4T controller.
+The following is a sample program call to the Library to control the F4T controller.
 It is programmed to provide a menu to offer some of the operational features
-of the F4T selected from the ESPEC ChamberConenctLibrary.
+of the F4T selected from ESPEC ChamberConenctLibrary.
 
 This sample program applies TCP for communication. 
 
@@ -42,8 +42,7 @@ def ip_addr():
     while True:
         try:
             #ip_addr = input('Enter F4T IP address (e.g., 192.168.0.101): ')
-            ip_addr = '10.30.100.130'
-            #ip_addr = '192.168.0.233'
+            ip_addr = '10.30.100.96'
             chk_ip = re.match(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$", ip_addr)
             if chk_ip:
                 print ('\n')
@@ -81,7 +80,7 @@ def chkProg():
     '''
     str = CONTROLLER.get_status()
     time.sleep(0.5)
-    if re.search('Program Running', str) or re.search('Program Paused', str):
+    if 'Program Running' in str or 'Program Paused' in str:
         print ('\nrsp> Program execution in progress... must first terminate it.') 
     else:
         # execute new program 
@@ -102,7 +101,7 @@ def runProg():
                     CONTROLLER.prgm_start(pn,sn)
                     break
                 else:
-                    print (f'Invalid step number; available steps: 1 and {psteps}.')
+                    print (f'Invalid step number; available steps: 1 through {psteps}.')
                 break 
             else:
                 print ('Invalid Profile No. Must be between 1 and 40.')
@@ -126,7 +125,7 @@ def progMode(mode):
     }
     str = CONTROLLER.get_status()
     time.sleep(0.5)
-    if re.search('Program Running', str):
+    if "Program Running" in str:
         if mode == 'STOP':
             print (nlist["act"])
             CONTROLLER.stop()        
@@ -138,7 +137,7 @@ def progMode(mode):
             CONTROLLER.prgm_next_step()
         if mode == 'RESUME':
             print (nlist['run'])
-    elif re.search('Program Paused', str):
+    elif "Program Paused" in str: 
         if mode == 'RESUME':
             print (nlist["act"])
             CONTROLLER.prgm_resume()
@@ -151,18 +150,29 @@ def progMode(mode):
             print (nlist["pau"])
     else:
         print (nlist['nact']) 
-        pass
 
-def setTS():
+def setTS(value):
     '''Set TS value on the selected TS number
     '''
-    value = input('ENTER value= ')
     try:
         ts_num = int(input('Enter TS number: '))
-        if isinstance(ts_num, int):
-            #CONTROLLER.set_event(ts_num,'constant')
+        if isinstance(ts_num, int) and ts_num in range(1,9):
             CONTROLLER.set_event(ts_num,value)
             print ('\nrsp> DONE') 
+        else:
+            print ('\nrsp> Invalid TS number.')
+    except ValueError:
+        print ('Invalid TS number.')
+
+def setOff(value):
+    '''turn off time signal (Event#)'''
+    try:
+        ts_num = int(input('Enter TS number: '))
+        if isinstance(ts_num, int) and ts_num in range(1,9):
+            CONTROLLER.set_eventST(ts_num,value)
+            print ('\nrsp> DONE') 
+        else:
+            print ('\nrsp> Invalid TS number.')
     except ValueError:
         print ('Invalid TS number.')
 
@@ -174,19 +184,16 @@ def readTS():
         ts_list = CONTROLLER.get_event(i+1)
         tsout = 'ON' if ts_list['current'] == True else 'OFF'        
         print (f'    Time signal #{i+1} : {tsout}')
-    pass
 
 def constStart():
     '''Start Constant mode on chamber
     '''
     str = CONTROLLER.get_status()
     time.sleep(0.5)
-    if re.search('Program Running', str) or re.search('Program Paused', str):
+    if ('Program Running' in str) or ('Program Paused' in str):
         print (f'\nrsp> Chamber is running in {str} mode. Must stop it first.')
-        pass 
-    elif re.search('Constant', str):
+    elif 'Constant' in str:
         print (f'\nrsp> Chamber is already in {str} mode.')
-        pass 
     else:
         print (f'\nrsp> {CONTROLLER.const_start()}') 
 
@@ -243,7 +250,8 @@ def eventCtrl():
         '''
         return {
             'r': lambda: readTS(),
-            's': lambda: setTS(),
+            's': lambda: setTS(63),
+            'o': lambda: setOff(62),
             'z': lambda: main_menu()
         }.get(option, lambda: print ('\nrsp> Not a valid option.') )()
 
@@ -340,6 +348,7 @@ def menu(choice):
     ts_menu = {
         'r': 'Read event (TS) output        ',
         's': 'Set event (TS) output         ', 
+        'o': 'Turn off TS output            ',
         'z': 'Return to Main Menu           '
     }
 
@@ -365,7 +374,7 @@ if __name__ == "__main__":
     # clear terminal; consider MS Windows environment as well...
     os.system('clear||cls')
 
-    # connecto to watlow F4T via proper IP address using TCP/IP protocol
+    # connect to watlow F4T via proper IP address using TCP/IP protocol
     CONTROLLER = WatlowF4T(
         interface='TCP',
         host=ip_addr(),        # requires the correct IP address of F4T
@@ -376,5 +385,6 @@ if __name__ == "__main__":
     main_menu()
 
     # test section
+
 
 
