@@ -1,4 +1,4 @@
-﻿'''
+'''
 Upper level interface for the Watlow F4T controller
 
 :copyright: (C) Espec North America, INC.
@@ -47,6 +47,7 @@ class WatlowF4T(ControllerInterface):
     def __init__(self, **kwargs):
         self.iwatlow_val_dict, self.client, self.loops, self.cascades = None, None, None, None
         self.init_common(**kwargs)
+        self.port = kwargs.get('port', 502)
         self.cond_event = kwargs.get('cond_event', 9)
         self.cond_event_toggle = kwargs.get('cond_event_toggle', False)
 
@@ -172,10 +173,10 @@ class WatlowF4T(ControllerInterface):
         '''
         connect to the controller using the paramters provided on class initialization
         '''
-        if self.interface == "RTU":
+        if self.interface in ["RTU", "Serial"]:
             self.client = ModbusRTU(address=self.adr, port=self.serialport, baud=self.baudrate)
         else:
-            self.client = ModbusTCP(self.adr, self.host)
+            self.client = ModbusTCP(self.adr, self.host, self.port)
 
     def close(self):
         '''
@@ -523,7 +524,17 @@ class WatlowF4T(ControllerInterface):
         else:
             self.client.write_holding(kpress, self.inv_watlow_val_dict('up'))
 
+    @exclusive
+    def get_air_speed(self):
+        raise NotImplementedError
 
+    @exclusive
+    def get_air_speeds(self):
+        raise NotImplementedError
+
+    @exclusive
+    def set_air_speed(self, value): 
+        raise NotImplementedError
 
     @exclusive
     def get_status(self):
@@ -537,13 +548,12 @@ class WatlowF4T(ControllerInterface):
                 return "Constant (Program Calendar Start)"
             else:
                 return "Standby (Program Calendar Start)"
-        elif not self.get_alarm_status(exclusive=False)['active']:
-            if self.__read_io(self.run_module, self.run_io, exclusive=False):
-                return "Constant"
-            else:
-                return "Standby"
-        else:
+        elif self.__read_io(self.run_module, self.run_io, exclusive=False):
+            return "Constant"
+        elif self.get_alarm_status(exclusive=False)['active']:
             return "Alarm"
+        else:
+            return "Standby"
 
     @exclusive
     def get_alarm_status(self):
@@ -999,7 +1009,7 @@ class WatlowF4T(ControllerInterface):
         try:
             tlist = ['absoluteTemperature', 'relativeTemperature', 'notsourced']
             if self.watlow_val_dict[profpv] in tlist:
-                tval = self.client.read_holding(14080 if self.interface == "RTU" else 6730, 1)[0]
+                tval = self.client.read_holding(14080 if self.interface in ["RTU", "Serial"] else 6730, 1)[0]
                 return u'\xb0%s' % self.watlow_val_dict[tval]
             else:
                 return u'%s' % self.watlow_val_dict[profpv]
@@ -1013,7 +1023,7 @@ class WatlowF4T(ControllerInterface):
         haswaits = self.waits[0] != '' or self.waits[1] != ''
         haswaits = haswaits or self.waits[2] != '' or self.waits[3] != ''
         gsd, ldata, evd, wdata = [], [], [], []
-        for _ in range(self.loops):
+        for _ in range(self.loops + self.cascades):
             gsd.append({'value':3.0})
         for j in range(self.loops + self.cascades):
             lpdata = {'target':0, 'rate':0, 'mode':'', 'gsoak': False, 'cascade': False,
