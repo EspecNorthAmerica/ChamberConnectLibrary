@@ -58,7 +58,7 @@ print CONTROLLER.process_controller()
 #     print CONTROLLER.get_event(i+1)
 
 for _ in range(100):
-    print '\nsample'
+    print ('\nsample')
     stm = time.time()
     lookup = {'cascade':[], 'loop':[]}
     lookup['loop'].append({'name':'Temperature', 'id': 1, 'number': 1})
@@ -66,5 +66,5 @@ for _ in range(100):
     params = {'get_loops':True, 'get_status':True, 'get_alarms':True, 'get_program_status':True, 'get_program_list':True, 'get_refrig':True}
     params['get_events'] = [{'N':i+1, 'name':'TS#%d'%(i+1)} for i in range(8)]
     smpl = CONTROLLER.sample(lookup, **params)
-    print("--- %s seconds ---" % (time.time() - stm))
+    print(f'--- {(time.time() - stm)} seconds ---')
     print(smpl)
