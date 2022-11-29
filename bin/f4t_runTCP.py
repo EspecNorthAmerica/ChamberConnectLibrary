@@ -16,7 +16,7 @@ README:
 
 The following is a sample program call to the Library to control the F4T controller.
 It is programmed to provide a menu to offer some of the operational features
-of the F4T selected from ESPEC ChamberConenctLibrary.
+of the F4T selected from ESPEC ChamberConnectLibrary.
 
 This sample program applies TCP for communication. 
 
