@@ -3,6 +3,7 @@
 :author: Paul Nong-Laolam <pnong-laolam@espec.com>
 :license: MIT, see LICENSE for more detail.
 :copyright: (c) 2020, 2022. ESPEC North America, INC.
+:updated: 2023 Included sample call programs to provide ease of use.
 :file: f4t_runTCP.py 
 
 Application interface for controlling Watlow F4T operations. 
@@ -35,8 +36,6 @@ sys.path.insert(0,'../chamberconnectlibrary')
 
 from chamberconnectlibrary.watlowf4t import WatlowF4T
 from chamberconnectlibrary.controllerinterface import ControllerInterfaceError
-
-LOOP_NAMES = ['Temperature', 'Humidity']
 
 def ip_addr():
     '''select and check for proper IP address format
@@ -383,16 +382,108 @@ def menu(choice):
     }.get(choice, lambda: print('\nrsp> Not a valid option') )()
 
 if __name__ == "__main__":
+    '''
+    chamber/F4T call blocks for different types of ESPEC Chambers
+       Models: BTX-???, BTZ-???, BTU-???, etc
+       Types: Temp only, Temp/Humi, etc
+       Communciation: ModbusTCP; IP address is prompted for input. It can be assigned by 
+           modifying the interface_params with ip_addr() = x.x.x.x of your F4T. 
+    '''
 
     # clear terminal; consider MS Windows environment as well...
     os.system('clear||cls')
 
+    # the general setup for Watlow F4T, directly calling T or H loop
     # connect to watlow F4T via proper IP address using TCP/IP protocol
+    '''
+    LOOP_NAMES = ['Temperature', 'Humidity']
     CONTROLLER = WatlowF4T(
         interface='TCP',
         host=ip_addr(),        # requires the correct IP address of F4T
         loop_names=LOOP_NAMES  # set loop names for temp and humi 
     )
+    '''
+
+    # BEGIN 
+    ###############################################################################################
+    # BEGIN SELECTION OF THE SPECIFIC CHAMBER AND F4T 
+    #sepcifically for ESPEC Chambers and Types with Watlow F4T
+    ############################################################################################### 
+
+    #example interface_params for a TCP connection to 10.30.100.55
+    #interface_params = {'interface':'TCP', 'host':10.30.100.55}
+    
+    # to manually enter IP address of Watlow F4T 
+    interface_params = {'interface':'TCP', 'host':ip_addr()}
+
+
+    # Chamber models: BTU-??? or BTZ-??? with temp only 
+    # for these two types, uncomment the following block of lines 
+    CONTROLLER = WatlowF4T(
+        alarms=8, # the number of available alarms
+        profiles=True, # the controller has programming
+        loops=1, # the number of control loops (ie temperature)
+        cond_event=9, # the event that enables/disables conditioning
+        cond_event_toggle=False, # is the condition momentary(False), or maintained(True)
+        run_module=1, # The io module that has the chamber run output
+        run_io=1, # The run output on the mdoule that has the chamber run out put
+        limits=[5], # A list of modules that contain limit type cards.
+        **interface_params
+    )
+
+    '''
+    # Chamber models: BTL-??? or BTX-??? with temperature and humidity
+    # for thes two types, uncomment the following block of lines 
+    CONTROLLER = WatlowF4T(
+        alarms=8, # the number of available alarms
+        profiles=True, # the controller has programming
+        loops=2, # the number of control loops (ie temperature)
+        cond_event=9, # the event that enables/disables conditioning (9 is key 1)
+        cond_event_toggle=False, # is the condition momentary(False), or maintained(True)
+        run_module=1, # The io module that has the chamber run output
+        run_io=1, # The run output on the mdoule that has the chamber run out put
+        limits=[5], # A list of modules that contain limit type cards.
+        loop_event=[0,2,0,0], # A list of event #'s that enable/disable a control loop
+        **interface_params
+    )
+
+    # Chamber models: BTU-??? or BTZ-???
+    # with temp only w/ Product temperature control (aka "PTCON" or "cascade") 
+    # for these two types, uncomment the following block of lines 
+    CONTROLLER = WatlowF4T(
+        alarms=8, # the number of available alarms
+        profiles=True, # the controller has programming
+        loops=0, # the number of control loops (ie temperature)
+        cond_event=9, # the event that enables/disables conditioning
+        cond_event_toggle=False, # is the condition momentary(False), or maintained(True)
+        run_module=1, # The io module that has the chamber run output
+        run_io=1, # The run output on the mdoule that has the chamber run out put
+        limits=[5], # A list of modules that contain limit type cards.
+        cascades=1, # the number of cascade loops (ie temperature with PTCON)
+        cascade_ctl_event=[7,0,0,0] # the event that enables PTCON
+        **interface_params
+    )
+
+    # Chamber models: BTL-??? or BTX-???
+    # for temp/humidity w/ Product temperature control (aka "PTCON" or "cascade") 
+    # for thes two types, uncomment the following block of lines 
+    CONTROLLER = WatlowF4T(
+        alarms=8, # the number of available alarms
+        profiles=True, # the controller has programming
+        loops=1, # the number of control loops (ie temperature)
+        cond_event=9, # the event that enables/disables conditioning (9 is key 1)
+        cond_event_toggle=False, # is the condition momentary(False), or maintained(True)
+        run_module=1, # The io module that has the chamber run output
+        run_io=1, # The run output on the mdoule that has the chamber run out put
+        limits=[5], # A list of modules that contain limit type cards.
+        loop_event=[0,2,0,0], # A list of event #'s that enable/disable a control loop
+        cascades=1, # the number of cascade loops (ie temperature with PTCON)
+        cascade_ctl_event=[7,0,0,0] # the event that enables PTCON
+        **interface_params
+    )
+    # END OF Chamber model selection 
+    ###############################################################################################
+    '''
 
     # initiate menu
     main_menu()
