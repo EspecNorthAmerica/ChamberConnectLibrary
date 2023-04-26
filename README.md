@@ -93,6 +93,7 @@ P300: ```chamberconnectlibrary-test.py Espec Serial \\.\COM3 19200```
 SCP-220: ```chamberconnectlibrary-test.py EspecSCP220 Serial \\.\COM3 9600```
 
 Watlow F4T TCP: ```f4t_runTCP.py```
+
 Watlow F4T RTU: 
 
 ```f4t_runRTU.py``` use \\.\COM# 38400 with # the COM value assigned in MS Windows 
