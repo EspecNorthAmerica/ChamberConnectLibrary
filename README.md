@@ -92,7 +92,10 @@ P300: ```chamberconnectlibrary-test.py Espec Serial \\.\COM3 19200```
 
 SCP-220: ```chamberconnectlibrary-test.py EspecSCP220 Serial \\.\COM3 9600```
 
-Watlow F4T: ```f4t_controller.py  WatlowF4T RTU \\.\COM3 38400```
+Watlow F4T TCP: ```f4t_runTCP.py```
+Watlow F4T RTU: 
+```f4t_runRTU.py`` use \\.\COM# 38400 with # the COM value assigned in MS Windows 
+```f4t_runRTU.py`` use /dev/ttyUSB# 38400 with # the USB value assigned and listed in GNU/Linux with ``ls -l /dev/ttyUSB*```
 
 Watlow F4: ```chamberconnectlibrary-test.py WatlowF4 RTU \\.\COM3 19200```
 
