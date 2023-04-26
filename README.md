@@ -16,7 +16,7 @@ Such requirements were due to the use of new print function calls to shorten the
 
 ## Install
 
-IMPORTANT NOTE: The PyPI package has not yet been pulbished. 
+**IMPORTANT NOTE:** The PyPI package has not yet been pulbished. 
 In the mean time, if you would like to use this library, simply clone it and git checkout py3-chamberconnectlibrary, then select and execute bin/f4t_runTCP.py or bin/f4t_runRTU.py for your specific protocol. Both programs should work as intended. Any questions, contact Paul Nong-Laolam at ESPEC <pnong-laolam@espec.com> for assistance.  
 
 
