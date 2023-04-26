@@ -19,7 +19,7 @@ Such requirements were due to the use of new print function calls to shorten the
 **IMPORTANT NOTE:** The PyPI package has not yet been pulbished. 
 In the mean time, if you would like to use this library, simply clone it and git checkout py3-chamberconnectlibrary, then select and execute:
 
-```python3 bin/f4t_runTCP.py``
+```python3 bin/f4t_runTCP.py```
 
 or 
 
