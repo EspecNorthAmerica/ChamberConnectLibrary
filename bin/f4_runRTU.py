@@ -25,7 +25,8 @@ the exact feature(s) not implemented here to meet their requirement. Thus, the
 following program serves as a starting point on how to utilize our 
 ChamberConnectLibrary in the Python 3 environment. 
 
-Tested: Python 3.9.2
+Tested: Pyhton 3.9.4 on MS Windows 10; 
+        Python 3.7.3 on Debian 10 GNU/Linux; Python 3.8.10 on Ubuntu 20.04 LT   
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 '''
 import time,re
@@ -41,6 +42,7 @@ def ip_addr():
     '''
     while True:
         try:
+            # for use on F4T 
             ip_addr = input('Enter F4T IP address (e.g., 192.168.0.101): ')
             #ip_addr = '10.30.100.96'
             chk_ip = re.match(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$", ip_addr)

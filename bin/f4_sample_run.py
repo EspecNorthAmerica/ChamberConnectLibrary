@@ -3,14 +3,17 @@
 :author: Paul Nong-Laolam <pnong-laolam@espec.com>
 :license: MIT, see LICENSE for more detail.
 :copyright: (c) 2022. ESPEC North America, INC.
-:file: f4t_sample_run.py 
+:updated: 12/2023 for Watlow F4 (based on BTZ-133 chamber)
+:file: f4_sample_run.py 
 
-Application interface for controlling Watlow F4T operations. 
-This program may be and can be reimplemented with additional
-call methods to utilize the Watlow F4T control interface
-from its class and method definitions. 
+A simple test program to test RS232 communication with Watlow F4
+via its RS232 interface, with a straight-through cable.  
 
-TCP/IP protocol is applied. 
+baud rate: 19200
+address: 1 
+
+MS Windows: COM?   (? = number assigned by MS Windows OS)
+Linux: /dev/ttyUSB?  (? = number (0,1,2) assigned by Linux)
 '''
 import pprint
 import time
