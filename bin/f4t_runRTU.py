@@ -76,6 +76,15 @@ def setLoop(str, loop):
     currentPV = CONTROLLER.get_loop_pv(loop)
     print(f'\nrsp> {str} status:\n     PV: {currentPV}\n     SP: {currentSP}')
 
+def readTempVal(str,loop):
+    """
+    Read current values of Temp SP and PV
+    """
+    time.sleep(0.5)
+    currentSP = CONTROLLER.get_loop_sp(loop)
+    currentPV = CONTROLLER.get_loop_pv(loop)
+    print(f'\nrsp> {str} status:\n     PV: {currentPV}\n     SP: {currentSP}')
+
 def chkProg(): 
     '''Check current status of chamber before executing a new program
     '''
@@ -211,9 +220,14 @@ def thCtrl():
     '''
        set options for Temp and Humi controls
     '''
+def thCtrl():
+    '''
+       set options for Temp and Humi controls
+    '''
     def thMenu(choice):
         '''return T/H menu option'''
         return {
+            'r': lambda: readTempVal('Temp',1),
             't': lambda: setLoop('Temp',1),
             'h': lambda: print ('No yet implemented.'),
             'z': lambda: main_menu()
@@ -221,7 +235,7 @@ def thCtrl():
 
     while(True):
         print_menu('2','Temp/Humi')
-        option = input('Select option (t, h, z): ')
+        option = input('Select option (r,t, h, z): ')
         thMenu(option)
 
 def progMenu():  # test 
@@ -339,6 +353,7 @@ def menu(choice):
 
     # temp and humi ctrl menu
     th_menu = {
+        'r': 'Read Temeprature SP and PV    ',
         't': 'New Temperature Set Point     ',
         'h': 'New Humidity Set Point        ',
         'z': 'Return to Main Menu           '
