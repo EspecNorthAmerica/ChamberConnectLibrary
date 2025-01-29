@@ -27,8 +27,8 @@ setup(
         'bin/f4t_runTCP_TempHumi.py',
         'bin/f4t_runTCP_PTCON_cascade.py',
         'bin/p300_sample_run.py',
-        'bin/p300vib_sample_run.py'
-        'bin/sco220_sample_run.py'
+        'bin/p300vib_sample_run.py',
+        'bin/scp220_sample_run.py',
         ],
 
     classifiers=[
