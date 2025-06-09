@@ -3,20 +3,19 @@
 :author: Paul Nong-Laolam <pnong-laolam@espec.com>
 :license: MIT, see LICENSE for more detail.
 :copyright: (c) 2020, 2024. ESPEC North America, Inc. 
-:updated: May 2024; modified and expanded to support P300 Vib on Python 3.6+
-:file: p300-EQ_vib_sample_run.py 
+:updated: May 2024; modified and expanded to support P300 on Python 3.6+
+:file: p300-EGN_sample_run.py 
 
-Application interface for controlling ESPEC P300 with Vibration
-feature. This program may be reimplemented with additional
-call methods to utilize ESPEC P300 w/ Vibration
-from its class and method definitions.  
+Application interface for controlling ESPEC P300 with temperature
+and humidity feature. This program may be reimplemented with additional
+call methods to utilize ESPEC P300 from its class and method definitions.  
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 README:
 ======
 
 The following is a sample program call to the Library to control ESPEC P300
-controller with Vibration via the RS232 communication protocol. 
+controller via the communication protocol options for SERIAL or TCP. 
 
 It is programmed to provide a simple call function to our ESPEC 
 ChamberConnectLibrary to connect to "especinteract.py" program which in 
@@ -28,7 +27,7 @@ Note: "especinteract.py" supports both features of communication protocol:
     2. TCP/IP
 
 This sample program utilizes and explains the use of option 1 and option 2
-with correct setup for TCP/IP communication. 
+with correct setup for Serial or TCP/IP communication. 
 
 The programmer may add the additional methods or program sections to call 
 the library for the exact feature(s) not implemented here to meet their 
@@ -92,18 +91,19 @@ import logging
 import serial 
 sys.path.insert(0,'../chamberconnectlibrary')
 
-from chamberconnectlibrary.espec import EspecVib 
-from chamberconnectlibrary.p300vib import P300Vib
+from chamberconnectlibrary.espec import Espec 
+from chamberconnectlibrary.p300 import P300
+from chamberconnectlibrary.dictcode import dict_code
 from chamberconnectlibrary.especinteract import EspecSerial, EspecTCP 
 from chamberconnectlibrary.controllerinterface import ControllerInterfaceError
 
 def set_loop(str, loop):
     '''set new temp value
     '''
-    # recording temp range
+    # recording temp range 
     loop_num = [1,2] 
     val_range = CONTROLLER.get_loop_range(loop)
-    str1 = "Temperature Range" if loop == 1 else "Vibration Range"
+    str1 = "Temperature Range" if loop == 1 else "Humidity Range"
     print (f'\n{str1}:\nMAX: {val_range["max"]}\nMIN: {val_range["min"]}')
     print ('\n<Apply new Set Point>')
     try:
@@ -111,7 +111,7 @@ def set_loop(str, loop):
             try:
                 val = float(input('Enter new SP value (Ctrl-C to cancel): '))
                 if isinstance(val, int) or isinstance(val,float):
-                    if loop in loop_num:    #if loop == 1 or loop == 2:
+                    if loop in loop_num:   # if loop == 1 or loop == 2: 
                         if val_range["min"] <= val <= val_range["max"]:                            
                             CONTROLLER.set_loop_sp(loop,val)
                             break
@@ -132,7 +132,7 @@ def set_loop(str, loop):
 
 def read_val(str,loop):
     """
-    Read current values of Temp or Temp and Vib SP and PV
+    Read current values of Temp or Temp and Humi SP and PV
     """
     time.sleep(0.5)
     currentSP = CONTROLLER.get_loop_sp(loop)
@@ -153,9 +153,8 @@ def operation_status():
         elif str in ['Constant', 'CONSTANT', 'constant']:
             print ('\nrsp> Chamber in Constant mode; it must be stopped first.')            
         else:
-            #execute new program 
-            #set to: run_prog() 
-            run_prog()
+            # execute new program 
+            run_prog() 
 
 def run_prog(): 
     '''select and set profile for execution.
@@ -194,7 +193,7 @@ def prog_mode(mode):
         'pau' : f'\nrsp> Program is already in paused...request is ignored.',
         'run' : f'\nrsp> Program is already running...request is ignored.',
     }
-    str = CONTROLLER.get_mode() # set over get_mode() during program run  
+    str = CONTROLLER.get_mode()
     time.sleep(0.5)
     if "Program Running" in str:  
         if "STOP" in mode:
@@ -205,17 +204,20 @@ def prog_mode(mode):
             CONTROLLER.prgm_pause()
         if "SKIP" in mode:
             print ('\nrsp> Skip to next step in program...') 
-            CONTROLLER.prgm_next_step()   
+            CONTROLLER.prgm_next_step()
+        if "RESUME" in mode:
+            print (nlist['run'])
+            CONTROLLER.prgm_resume()     
     elif "Program Paused" in str: 
-        if 'RESUME' in mode:
+        if mode == 'RESUME':
             print (nlist["act"])
             CONTROLLER.prgm_resume()
-        if 'STOP' in mode:
+        if mode == 'STOP':
             print (nlist["act"])
             CONTROLLER.stop()
-        if 'SKIP' in mode:  
+        if mode == 'SKIP':  
             print (nlist["pau"])
-        if 'PAUSE' in mode:  
+        if mode == 'PAUSE':  
             print (nlist["pau"])
     else:
         print (nlist['nact']) 
@@ -226,9 +228,9 @@ def set_time_signal(state):
     try:
         ts_num = int(input('Enter TS number: '))
         if isinstance(ts_num, int) and ts_num in range(1,13):
-            print ('\nrsp> Requires implementation from programmer.')
-            # must know what number of relays are... 
-            #print ('\nrsp> DONE') #CONTROLLER.set_event(ts_num,state)
+            print ('\nrsp> To be implemented by programmer...')
+            #CONTROLLER.set_event(ts_num,state)
+            #print ('\nrsp> DONE') 
         else:
             print ('\nrsp> Invalid TS number.')
     except ValueError:
@@ -248,7 +250,7 @@ def const_start():
     '''
     str = CONTROLLER.get_mode()
     time.sleep(0.5)
-    if 'Program Running' in str or 'Program Paused' in str:        
+    if str in ['Program Running','Program Paused']: 
         print (f'\nrsp> Chamber is in {str} mode. Must stop it first.')
     elif str in ['constant', 'Constant', 'CONSTANT']:
         print (f'\nrsp> Chamber is already in {str} mode.')
@@ -265,28 +267,30 @@ def stop_const():
     if str in ['constant', 'Constant', 'CONSTANT']:
         CONTROLLER.stop()
         time.sleep(0.5) 
-        print ('\nrsp > Done ')
+        print ('\nrsp> Done ')
+    elif str in ['Program Running', 'Program Paused']:
+        print (f'\nrsp> Chamber is in {str} mode. Request ignored.')
     else:    
         print ("\nrsp> Chamber not in Constant mode. Nothing to do.")
 
-def temp_vib_controller():
+def temp_humi_controller():
     '''
-       set options for Temp and Vib controls
+       set options for Temp and Humi controls
     '''
-    def temp_vib_menu(choice):
+    def temp_humi_menu(choice):
         '''return T/H menu option'''
         return {
             'r': lambda: read_val('Temp',1),
             't': lambda: set_loop('Temp',1),
-            'v': lambda: read_val('Vib',2),
-            's': lambda: set_loop('Vib',2),
+            'h': lambda: read_val('Humi',2),
+            's': lambda: set_loop('Humi',2),
             'z': lambda: main_menu()
         }.get(choice, lambda: print ('\nrsp> Not a valid option.') )()  
 
     while(True):
-        print_menu('2','Temp/Vib')
-        option = input('Select option (r, t, v, s, z): ')
-        temp_vib_menu(option)
+        print_menu('2','Temp/Humi')
+        option = input('Select option (r, t, h, s, z): ')
+        temp_humi_menu(option)
 
 def prog_menu():  # tested 
     '''set up selection menu for operation
@@ -366,7 +370,7 @@ def main_menu():
     def main_option(choice):
         '''return main menu options'''
         return {
-            't': lambda: temp_vib_controller(),
+            't': lambda: temp_humi_controller(),
             'p': lambda: prog_menu(),
             'e': lambda: event_controller(),
             's': lambda: status_menu(),
@@ -381,7 +385,7 @@ def main_menu():
 def print_menu(choice, menu_name):
     '''set up selection menu
     '''
-    print (f'\nP300 w/ Vibration control options: {menu_name}'
+    print (f'\nP300 control options: {menu_name}'
             '\n--------------------------------') 
     for key in menu(choice).keys():
         print (f'  [{key}]:', menu(choice)[key] )
@@ -391,26 +395,26 @@ def menu(choice):
     '''menu list
     main menu option: 
        1: main menu
-       2: Temp/Vib menu
+       2: Temp/Humi menu
        3: Program menu
        4: Output (Time Signal) menu
        5: Chamber operating mode
     '''
     # main menu 
     main_menu = {
-        't': 'Temp/Vib SP control           ',
+        't': 'Temp/Humi SP control           ',
         'p': 'Program control               ',
         'e': 'Event control                 ',        
         's': 'Chamber operating mode        ',
         'z': 'Exit                          '
     }
 
-    # temp and Vib ctrl menu
-    tv_menu = {
+    # temp and humi ctrl menu
+    th_menu = {
         'r': 'Read Temperature SP and PV    ',
         't': 'New Temperature Set Point     ',
-        'v': 'Read Vibration SP and PV      ',
-        's': 'New Vibration Set Point       ',
+        'h': 'Read Humidity SP and PV      ',
+        's': 'New Humidity Set Point       ',
         'z': 'Return to Main Menu           '
     }
 
@@ -446,7 +450,7 @@ def menu(choice):
 
     return {
         '1': lambda: main_menu,
-        '2': lambda: tv_menu,
+        '2': lambda: th_menu,
         '3': lambda: prog_menu,
         '4': lambda: ts_menu,
         '5': lambda: status_menu,
@@ -455,7 +459,7 @@ def menu(choice):
 if __name__ == "__main__":
     '''main menu for the driver'''
 
-    #LOOP_NAMES = ['Temperature', 'Vibration']
+    #LOOP_NAMES = ['Temperature', 'Humidity']
     os.system('clear||cls') 
 
     #############
@@ -464,9 +468,9 @@ if __name__ == "__main__":
     # it to include the COM?, where ? is the number used by your OS;
     # read the "README" section at the top of this program.
     #
-    controller_type = "P300Vib"
-
-    # using serial connect 
+    controller_type = "P300"
+    # uncomment the following interface_params block to SERIAL CONNECT;
+    # comment out the next interface_params block for TCP  
     #interface_params = {
     #    'interface':'Serial',
     #    'baudrate':'19200',          # opt: 9600, 19200
@@ -474,15 +478,15 @@ if __name__ == "__main__":
     #    'serialport':'/dev/ttyUSB1', # GNU/Linux platform 
     #    'adr':1
     #}
-
-    # using TCP/IP for communication 
-    # TCP port preconfigured using 10001
+    #
+    # IP addr is required to use this interface. 
+    # be sure to comment out the preceding itnerface_params block to use this one 
     interface_params = {
-        'interface':'TCP',
-        'host':'10.30.100.115'  # use correct IP addr
-    }    
-    
-    CONTROLLER = EspecVib(
+            'interface':'TCP',
+            'host':'10.30.100.115'  # use correct IP addr
+    }
+
+    CONTROLLER = Espec(
         ctrl_type=controller_type,
         loops = 1,
         **interface_params #,

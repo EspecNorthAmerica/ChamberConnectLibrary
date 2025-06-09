@@ -465,8 +465,8 @@ if __name__ == "__main__":
     # read the "README" section at the top of this program.
     #
     controller_type = "P300Vib"
-
-    # using serial connect 
+    # uncomment the following interface_params block to SERIAL CONNECT;
+    # comment out the next interface_params block for TCP  
     #interface_params = {
     #    'interface':'Serial',
     #    'baudrate':'19200',          # opt: 9600, 19200
@@ -474,13 +474,13 @@ if __name__ == "__main__":
     #    'serialport':'/dev/ttyUSB1', # GNU/Linux platform 
     #    'adr':1
     #}
-
-    # using TCP/IP for communication 
-    # TCP port preconfigured using 10001
+    #
+    # IP addr is required to use this interface. 
+    # be sure to comment out the preceding itnerface_params block to use this one 
     interface_params = {
-        'interface':'TCP',
-        'host':'10.30.100.115'  # use correct IP addr
-    }    
+            'interface':'TCP',
+            'host':'10.30.100.115'  # use correct IP addr
+    }
     
     CONTROLLER = EspecVib(
         ctrl_type=controller_type,
