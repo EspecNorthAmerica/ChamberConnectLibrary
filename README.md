@@ -3,7 +3,17 @@
 ESPEC Chamber Connect Library for Python 3 is offered "as is" without 
 technical support, guaranttee or liability. However, the offered product here has been prepared and carefully tested by ESPEC software engineer to ensure its operability and compatibility. The library also comes with a long list various sample programs to help ESPEC customers or the public to get started with their project.
 
-This library for interfacing with ESPEC North America chambers supports the following controllers: ESPEC P300 and P300 w/ vibration, SCP-220, ES-102, Watlow F4T and Watlow F4S/D controllers. Interfacing can be configured to use Serial RS232C or TCP/IP. 
+This library for interfacing with ESPEC North America chambers supports the following controllers: 
+
+- ESPEC P300,
+- P300 w/ vibration, 
+- SCP-220, 
+- ES-102, 
+- Watlow F4T and Watlow F4S/D controllers
+
+Interfacing can be configured to use Serial RS232C or TCP/IP.
+
+**NOTE:** The library for the P-300 can be used for the GL controller (with some new functionality not yet available). The library for the GL controller is currently unavailable. 
 
 Please read the disclaimer on liability in the LICENSE document as well as in all sample programs and interfacing libraries. 
 
