@@ -12,6 +12,7 @@ import time
 from chamberconnectlibrary.controllerinterface import ControllerInterface, exclusive
 from chamberconnectlibrary.controllerinterface import ControllerInterfaceError
 from chamberconnectlibrary.p300 import P300
+from chamberconnectlibrary.glc import GLC
 from chamberconnectlibrary.p300vib import P300Vib
 from chamberconnectlibrary.p300extended import P300Extended 
 from chamberconnectlibrary.scp220 import SCP220

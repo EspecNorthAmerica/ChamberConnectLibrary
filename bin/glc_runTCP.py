@@ -1,28 +1,31 @@
 #!/bin/python3
 '''
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 :author: Paul Nong-Laolam <pnong-laolam@espec.com>
 :license: MIT, see LICENSE for more detail.
-:copyright: (c) 2020, 2024. ESPEC North America, Inc. 
-:updated: May 2024; modified and expanded to support P300 on Python 3.6+
-:file: p300_sample_run.py 
+:copyright: (c) 2025. ESPEC North America, Inc. 
+:updated: December 2025
+:file: gl_runTCP.py 
 
-Application interface for controlling ESPEC P300 with temperature
+Application interface for controlling ESPEC GL controller with temperature
 and humidity feature. This program may be reimplemented with additional
-call methods to utilize ESPEC P300 from its class and method definitions.  
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+call methods to utilize ESPEC GL controller from its class and method 
+definitions.  
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 README:
 ======
 
-The following is a sample program call to the Library to control ESPEC P300
-controller via the RS232 communication protocol. 
+The following is a sample program call to the Library to control ESPEC GL 
+controller via the TCP/IP or Serial RS-232 communication protocol. 
 
 It is programmed to provide a simple call function to our ESPEC 
 ChamberConnectLibrary to connect to "especinteract.py" program which in 
-turn communicates with the "p300.py" library offer and utilize the 
-operational features from "p300.py" in the chamberconenctlibrary directory. 
+turn communicates with the "glc.py" library offer and utilize the 
+operational features from "glc.py" in the chamberconenctlibrary directory. 
 
-Note: "especinteract.py" supports both features of communication protocol: 
+Note: 
+"especinteract.py" supports both features of communication protocol: 
     1. Serial RS-232/RS485
     2. TCP/IP
 
@@ -34,8 +37,9 @@ the library for the exact feature(s) not implemented here to meet their
 requirement. Thus, the following program serves as a starting point on how 
 to utilize our ChamberConnectLibrary in the Python 3 environment. 
 
+====================================
 How to Determine Communication Port: 
-===================================
+====================================
 
 MS Windows: COM? How to determine COM number assigned by MS Windows OS.
 DOS command to list COM ports: \> chgport
@@ -76,14 +80,15 @@ Tested:
 GNU/Linux platform: Python 3.8.x, 3.9.x, 3.10.x
 MS Windows platform: Python 3.9.x 
 
-DISCLAIMER: 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, 
-INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A 
-PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT 
-HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF 
-CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE 
-OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% DISCLAIMER: 
+% THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, 
+% INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A 
+% PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT 
+% HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF 
+% CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE 
+% OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 '''
 import time,re
 import os, sys
@@ -92,10 +97,25 @@ import serial
 sys.path.insert(0,'../chamberconnectlibrary')
 
 from chamberconnectlibrary.espec import Espec 
-from chamberconnectlibrary.p300 import P300
+from chamberconnectlibrary.glc import GLC
 from chamberconnectlibrary.dictcode import dict_code
 from chamberconnectlibrary.especinteract import EspecSerial, EspecTCP 
 from chamberconnectlibrary.controllerinterface import ControllerInterfaceError
+
+def ip_addr():
+    '''select and check for proper IP address format
+    '''
+    while True:
+        try:
+            ip_addr = input('Enter F4T IP address (e.g., 192.168.0.101): ')
+            #ip_addr = "10.30.100.165"
+            chk_ip = re.match(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$", ip_addr)
+            if chk_ip:
+                print ('\n')
+                break
+        except Exception:
+            print ('Invalid IP address.')
+    return ip_addr
 
 def set_loop(str, loop):
     '''set new temp value
@@ -385,7 +405,7 @@ def main_menu():
 def print_menu(choice, menu_name):
     '''set up selection menu
     '''
-    print (f'\nP300 control options: {menu_name}'
+    print (f'\nGL control options: {menu_name}'
             '\n--------------------------------') 
     for key in menu(choice).keys():
         print (f'  [{key}]:', menu(choice)[key] )
@@ -468,7 +488,11 @@ if __name__ == "__main__":
     # it to include the COM?, where ? is the number used by your OS;
     # read the "README" section at the top of this program.
     #
-    controller_type = "P300"
+
+    # set controller type
+    controller_type = "GLC"
+
+    # set GLC parameters and protocol 
     #interface_params = {
     #    'interface':'Serial',
     #    'baudrate':'19200',          # opt: 9600, 19200
@@ -476,12 +500,22 @@ if __name__ == "__main__":
     #    'serialport':'/dev/ttyUSB1', # GNU/Linux platform 
     #    'adr':1
     #}
-    # SELECT_OPT = 1 for P300 via TCP/IP
+    # SELECT_OPT = 1 for GLC via TCP/IP
     # IP addr is required to use this interface. 
-    interface_params = {
-            'interface':'TCP',
-            'host':'10.30.200.247'  # use correct IP addr
-    }
+    #interface_params = {
+    #        'interface':'TCP',
+    #        'host':'10.30.200.247'  # use correct IP addr
+    #}
+
+    # to manually enter IP address of GL controller system
+    interface_params = {'interface':'TCP', 'host':ip_addr()}
+
+    #interface_params = {
+    #    'interface':'Serial',
+    #    'baudrate':'19200',          # opt: 9600, 19200
+    #    #'serialport':'//./COM5',    # for MS Windows platform
+    #    'serialport':'/dev/ttyUSB1', # GNU/Linux platform 
+    #    'adr':1
 
     CONTROLLER = Espec(
         ctrl_type=controller_type,
