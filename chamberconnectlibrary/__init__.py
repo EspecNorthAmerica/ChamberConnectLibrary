@@ -11,6 +11,7 @@ Espec North America uses.
 from .espec import Espec
 from .espec import EspecVib 
 from .especp300 import EspecP300
+from .especglc import EspecGLC 
 from .especp300extended import EspecP300Extended
 from .especp300vib import EspecP300Vib
 from .especscp220 import EspecSCP220

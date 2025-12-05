@@ -751,8 +751,9 @@ class GLC(object):
             [int]
         '''
         rsp = ((self.ctlr.interact('PRGM USE?')).decode('utf-8', 'replace')).split(',')
-        prgm_list_size = len(rsp)
-        return rsp #, int(prgm_list_size)
+        max_num = len(rsp)
+        #return [str(i) in rsp[1:] for i in range(1, 41)], max_num
+        return rsp, int(max_num )
 
     def read_prgm_use_num(self, pgmnum):
         '''

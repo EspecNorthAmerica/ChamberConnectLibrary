@@ -5,7 +5,7 @@
 :license: MIT, see LICENSE for more detail.
 :copyright: (c) 2025. ESPEC North America, Inc. 
 :updated: December 2025
-:file: gl_runTCP.py 
+:file: glc_runTCP.py 
 
 Application interface for controlling ESPEC GL controller with temperature
 and humidity feature. This program may be reimplemented with additional
@@ -107,8 +107,8 @@ def ip_addr():
     '''
     while True:
         try:
-            ip_addr = input('Enter F4T IP address (e.g., 192.168.0.101): ')
-            #ip_addr = "10.30.100.165"
+            #ip_addr = input('Enter F4T IP address (e.g., 192.168.0.101): ')
+            ip_addr = "10.30.200.247"
             chk_ip = re.match(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$", ip_addr)
             if chk_ip:
                 print ('\n')
@@ -183,7 +183,7 @@ def run_prog():
     try: 
         while True:
             pn = int(input('Enter profile number (Ctrl-C to exit profile execution): '))
-            if isinstance(pn, int) and 1 <= pn <= 40:
+            if isinstance(pn, int) and 1 <= pn <= 1000:
                 psteps = CONTROLLER.get_prgm_steps(pn)
                 sn = int(input('Enter step number: '))
                 if isinstance(sn, int) and 1 <= sn <= psteps:
@@ -194,7 +194,7 @@ def run_prog():
                     print (f'Invalid step number; available steps: 1 through {psteps}.')
                 break 
             else:
-                print ('Invalid Profile No. Must be between 1 and 40.')
+                print ('Invalid Profile No. Program not found.')
     except KeyboardInterrupt:
             pass
 
@@ -523,4 +523,100 @@ if __name__ == "__main__":
         **interface_params #,
         #loop_names = LOOP_NAMES
     )
-    main_menu()
+    #main_menu()
+
+    ts_list = CONTROLLER.get_event(1)
+    print (f'ROM: {ts_list}')
+
+    str = CONTROLLER.get_mode()
+    print (f'Op Mode: {str}')
+
+    str = CONTROLLER.get_rom()
+    print (f'Op Mode: {str}')
+
+    str = CONTROLLER.get_date()
+    print (f'Op Mode: {str}')
+
+    str = CONTROLLER.get_date_time()
+    print (f'Op Mode: {str}') 
+
+    str = CONTROLLER.get_srq()
+    print (f'Op Mode: {str}') 
+
+    str = CONTROLLER.get_mask()
+    print (f'Op Mode: {str}') 
+
+    str = CONTROLLER.get_timer_on()
+    print (f'Op Mode: {str}')     
+
+    str = CONTROLLER.get_timer_use()
+    print (f'Op Mode: {str}')         
+
+    str = CONTROLLER.get_timer_list_quick()
+    print (f'Op Mode: {str}')  
+
+    str = CONTROLLER.get_timer_list_start()
+    print (f'Op Mode: {str}')      
+
+    str = CONTROLLER.get_timer_list_stop()
+    print (f'Op Mode: {str}')       
+
+    str = CONTROLLER.get_alarm()
+    print (f'Op Mode: {str}')       
+
+    str = CONTROLLER.get_keyprotect()
+    print (f'Op Mode: {str}')       
+
+    str = CONTROLLER.get_type()
+    print (f'Op Mode: {str}')  
+
+    str = CONTROLLER.get_mode()
+    print (f'Op Mode: {str}')          
+
+    str = CONTROLLER.get_mon()
+    print (f'Op Mode: {str}')      
+
+    str = CONTROLLER.get_temp()
+    print (f'Op Mode: {str}')       
+
+    str = CONTROLLER.get_humi()
+    print (f'Op Mode: {str}')         
+
+    str = CONTROLLER.get_set()
+    print (f'Op Mode: {str}')           
+
+    str = CONTROLLER.get_ref()
+    print (f'Op Mode: {str}')     
+
+    str = CONTROLLER.get_relay()
+    print (f'Op Mode: {str}')       
+
+    str = CONTROLLER.get_htr()
+    print (f'Op Mode: {str}') 
+
+    str = CONTROLLER.get_constant_temp()
+    print (f'Op Mode: {str}')     
+
+    str = CONTROLLER.get_constant_humi()
+    print (f'Op Mode: {str}')                    
+
+    str = CONTROLLER.get_constant_ref()
+    print (f'Op Mode: {str}')         
+
+    str = CONTROLLER.get_constant_relay()
+    print (f'Op Mode: {str}')         
+
+    #str = CONTROLLER.get_constant_ptc()
+    #print (f'Op Mode: {str}')       
+
+    str = CONTROLLER.get_system_set()
+    print (f'Op Mode: {str}')     
+
+    #str = CONTROLLER.get_mon_ptc()
+    #print (f'Op Mode: {str}')      
+
+    #str = CONTROLLER.get_prgm_mon()
+    #print (f'Op Mode: {str}')     
+
+    str = CONTROLLER.get_prgm_use()
+    print (f'Op Mode: {str}')       

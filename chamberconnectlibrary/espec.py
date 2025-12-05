@@ -1,11 +1,34 @@
 '''
-Upper level interface for Espec Corp. Controllers, for:
-ESPEC P300 (T/H) and P300 w/ Vibration 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+:author: Paul Nong-Laolam <pnong-laolam@espec.com>
+:        ESPEC North America, Inc. 
+:        4141 Central Park Way
+:        Hudsonville, MI 49426 
+:license: MIT, see LICENSE for more detail.
+:copyright: (c) 2025. ESPEC North America, Inc. 
+:updated: December 2025
+:file: espec.py 
 
-:author: Paul Nong-Laolam <pnong-laolam@espec.com> 
-:copyright: (C) 2020, 2024 Espec North America, Inc.
-:license: MIT, see LICENSE for more details. 
+This is Upper-Level Interface for ESPEC CORP. controllers: 
+
+GLC
+P300
+SCP220
+ES102
+
+This file has been rewritten and modified for the GL controller which was
+originally implemented for P300 as the superset of commands amongst ESPEC
+CORP. controllers.
+
+Original implementation date: 2020, 2024 (c) Paul Nong-Laolam 
+
+Application interface for controlling ESPEC GL controller with temperature
+and humidity feature. This program may be reimplemented with additional
+call methods to utilize ESPEC GL controller from its class and method 
+definitions.  
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 '''
+
 #pylint: disable=R0902,R0904
 import datetime
 import time
@@ -56,7 +79,8 @@ class Espec(ControllerInterface):
             self.temp:self.temp,
             self.humi:self.humi,
         }
-        self.ctlr_type = kwargs.get('ctlr_type', 'P300') # try this on P300; change to ES102 or SCP220
+        self.ctlr_type = kwargs.get('ctlr_type', 'GLC') # set ctrl type for 1st one first
+        #self.ctlr_type = kwargs.get('ctlr_type', 'P300') # try this on P300; change to ES102 or SCP220
         ttp = (self.ctlr_type, self.temp, self.humi)
         self.lp_exmsg = 'The %s controller only supports 2 loops (%d:temperature,%d:humidity)'%ttp
         ttp = (self.ctlr_type, self.temp)
@@ -65,7 +89,8 @@ class Espec(ControllerInterface):
         self.profiles = True
         self.events = 12
         #self.total_programs = 40 if self.ctlr_type == 'P300' else 30
-        self.total_programs = 40 if self.ctlr_type == 'P300' else 30 if self.ctlr_type == 'SCP220' else 1
+        #self.total_programs = 40 if self.ctlr_type == 'P300' else 30 if self.ctlr_type == 'SCP220' else 1
+        self.total_programs = 1000 if self.ctlr_type == 'GLC' else 40 if self.ctrl_type == 'P300' else 30 if self.ctlr_type == 'SCP220' else 1
         self.__update_loop_map()
 
     def __update_loop_map(self):
@@ -88,8 +113,10 @@ class Espec(ControllerInterface):
         '''
         args = {'serialport':self.serialport, 'baudrate':self.baudrate, 'host':self.host,
                 'address':self.adr}
-        if self.ctlr_type == 'P300':
-            self.client = P300(self.interface, **args)
+        if self.ctlr_type == 'GLC':
+            self.client = GLC(self.interface, **args)
+        elif self.ctlr_type == 'P300':
+            self.client = P300(self.interface, **args)            
         elif self.ctlr_type == 'SCP220':
             self.client = SCP220(self.interface, **args)
         elif self.ctlr_type == 'ES102':
@@ -132,19 +159,158 @@ class Espec(ControllerInterface):
             qps = [i for i, c in enumerate(emsg) if c == '"']
             return 'NA:' + emsg[qps[len(qps)-2]+1:qps[len(qps)-1]]
 
-    @exclusive
-    def get_refrig(self):
-        return self.client.read_constant_ref()
+    ##################################################################################
+    # Decorators for GLC (P300, SCP220 and ES102) by calling each read command
+    # from their methods.
+    ###
 
     # added to allow reading of ROM info 
     @exclusive
     def get_rom(self):
         return self.client.read_rom()
 
-    # added to allow reading of operating mode 
+    @exclusive
+    def get_date(self):
+        return self.client.read_date()
+
+    @exclusive
+    def get_date_time(self):
+        return self.client.read_date_time()
+
+    @exclusive
+    def get_srq(self):
+        return self.client.read_srq()
+
+    @exclusive
+    def get_mask(self):
+        return self.client.read_mask()
+
+    @exclusive
+    def get_timer_on(self):
+        return self.client.read_timer_on()
+
+    @exclusive
+    def get_timer_use(self):
+        return self.client.read_timer_use()
+
+    @exclusive
+    def get_timer_list_quick(self):
+        return self.client.read_timer_list_quick()
+
+    @exclusive
+    def get_timer_list_start(self):
+        return self.client.read_timer_list_start()
+
+    @exclusive
+    def get_timer_list_stop(self):
+        return self.client.read_timer_list_stop()
+
+    @exclusive
+    def get_alarm(self):
+        return self.client.read_alarm()
+
+    @exclusive
+    def get_keyprotect(self):
+        return self.client.read_keyprotect()
+    
+    @exclusive
+    def get_type(self):
+        return self.client.read_type()
+
     @exclusive
     def get_mode(self):
         return self.client.read_mode()
+
+    @exclusive
+    def get_mon(self):
+        return self.client.read_mon()
+
+    @exclusive
+    def get_temp(self):
+        return self.client.read_temp()
+
+    @exclusive
+    def get_humi(self):
+        return self.client.read_humi()
+
+    @exclusive
+    def get_set(self):
+        return self.client.read_set()
+
+    @exclusive
+    def get_ref(self):
+        return self.client.read_ref()
+
+    @exclusive
+    def get_relay(self):
+        return self.client.read_relay()
+
+    @exclusive
+    def get_htr(self):
+        return self.client.read_htr()
+
+    #################################################################
+    # NOTE: 
+    # Both constant set? on GLC is extensive, which includes Const No. 
+    # Example: CONSTANT SET?, 1, TEMP
+    # 
+    # Will come back to this...
+    @exclusive
+    def get_constant_temp(self):
+        return self.client.read_constant_temp()
+
+    @exclusive
+    def get_constant_humi(self):
+        return self.client.read_constant_humi()
+
+    @exclusive
+    def get_constant_ref(self):
+        return self.client.read_constant_ref()
+
+    @exclusive
+    def get_constant_relay(self):
+        return self.client.read_constant_relay()        
+
+    # Unsupported or not working? 
+    @exclusive
+    def get_constant_ptc(self):
+        return self.client.read_constant_ptc()           
+    
+    #
+    #################################################################
+
+    @exclusive
+    def get_system_set(self):
+        return self.client.read_system_set()
+
+    # Unsupported or not working? 
+    @exclusive
+    def get_mon_ptc(self):
+        return self.client.read_mon_ptc()
+
+    # Unsupported or not working? 
+    @exclusive
+    def get_temp_ptc(self):
+        return self.client.read_temp_ptc()
+
+    # Unsupported or not working? 
+    @exclusive
+    def get_set_ptc(self):
+        return self.client.read_set_ptc()
+
+    @exclusive
+    def get_prgm_mon(self):
+        return self.client.read_prgm_mon()
+
+    # GLC method of reading is different from P300
+    # used P300 method but modified
+    @exclusive
+    def get_prgm_use(self):
+        return self.client.read_prgm_use()
+
+    @exclusive
+    def get_refrig(self):
+        return self.client.read_constant_ref()
 
     @exclusive
     def set_refrig(self, value):
