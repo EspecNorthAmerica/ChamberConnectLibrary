@@ -97,6 +97,21 @@ from chamberconnectlibrary.dictcode import dict_code
 from chamberconnectlibrary.especinteract import EspecSerial, EspecTCP 
 from chamberconnectlibrary.controllerinterface import ControllerInterfaceError
 
+def ip_addr():
+    '''select and check for proper IP address format
+    '''
+    while True:
+        try:
+            #ip_addr = input('Enter F4T IP address (e.g., 192.168.0.101): ')
+            ip_addr = "10.30.100.175"
+            chk_ip = re.match(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$", ip_addr)
+            if chk_ip:
+                print ('\n')
+                break
+        except Exception:
+            print ('Invalid IP address.')
+    return ip_addr
+
 def set_loop(str, loop):
     '''set new temp value
     '''
@@ -469,19 +484,21 @@ if __name__ == "__main__":
     # read the "README" section at the top of this program.
     #
     controller_type = "P300"
+
+    #interface_params = {
+    #        'interface':'TCP',
+    #        'host':'10.30.100.175'  # use correct IP addr
+    #}
+
+    # to manually enter IP address of GL controller system
+    interface_params = {'interface':'TCP', 'host':ip_addr()}
+
     #interface_params = {
     #    'interface':'Serial',
     #    'baudrate':'19200',          # opt: 9600, 19200
     #    #'serialport':'//./COM5',    # for MS Windows platform
     #    'serialport':'/dev/ttyUSB1', # GNU/Linux platform 
     #    'adr':1
-    #}
-    # SELECT_OPT = 1 for P300 via TCP/IP
-    # IP addr is required to use this interface. 
-    interface_params = {
-            'interface':'TCP',
-            'host':'10.30.200.247'  # use correct IP addr
-    }
 
     CONTROLLER = Espec(
         ctrl_type=controller_type,
