@@ -345,7 +345,7 @@ class GLC(object):
                 "OFF""STANDBY" or "CONSTANT" or "RUN" or "RUN PAUSE" or "RUN END HOLD" or
                 "RMT RUN" or "RMT RUN PAUSE" or "RMT RUN END HOLD"
         '''
-        return (self.ctlr.interact('MODE?{}'.format(',DETAIL' if detail else ''))).decode('utf-8', 'replace')
+        return (self.ctlr.interact(f'MODE?{",DETAIL" if detail else ""}')).decode('utf-8', 'replace')
 
     def read_mon(self, detail=False):
         '''
@@ -358,7 +358,7 @@ class GLC(object):
             "humidity": only present if chamber has humidity
             "mode": see read_mode for valid parameters (with and without detail flag).
         '''
-        rsp = ((self.ctlr.interact('MON?{}'.format(',DETAIL' if detail else ''))).decode('utf-8', 'replace')).split(',')
+        rsp = ((self.ctlr.interact(f'MON?{",DETAIL" if detail else ""}')).decode('utf-8', 'replace')).split(',')        
         data = {'temperature':float(rsp[0]), 'mode':rsp[2], 'alarms':int(rsp[3])}
         if rsp[1]:
             data['humidity'] = float(rsp[1])
@@ -458,11 +458,11 @@ class GLC(object):
         else:
             return {'dry':float(rsp[1])}
 
-    ###################################
+    ######################################################################
     # NOTE: 
     # Requires rewriting, reimplementation to include CONSTANT #1, 2, 3
-
-    def read_constant_temp(self):
+    # 
+    def read_constant_temp(self): # GL legacy command to CONSTANT 1 values 
         '''
         Get the constant settings for the temperature loop
 
@@ -472,7 +472,7 @@ class GLC(object):
         rsp = ((self.ctlr.interact('CONSTANT SET?,TEMP')).decode('utf-8', 'replace')).split(',')
         return {'setpoint':float(rsp[0]), 'enable':rsp[1] == 'ON'}
 
-    def read_constant_humi(self):
+    def read_constant_humi(self): # GL legacy command to CONSTANT 1 values 
         '''
         Get the constant settings for the humidity loop
 
@@ -482,7 +482,7 @@ class GLC(object):
         rsp = ((self.ctlr.interact('CONSTANT SET?,HUMI')).decode('utf-8', 'replace')).split(',')
         return {'setpoint':float(rsp[0]), 'enable':rsp[1] == 'ON'}
 
-    def read_constant_ref(self):
+    def read_constant_ref(self): # GL legacy command to CONSTANT 1 values 
         '''
         Get the constant settings for the refigeration system
 
@@ -495,7 +495,7 @@ class GLC(object):
         except Exception:
             return {'mode':rsp.lower(), 'setpoint':0}
 
-    def read_constant_relay(self):
+    def read_constant_relay(self): # GL legacy command to CONSTANT 1 values 
         '''
         Get the constant settings for the relays(time signals)
 
@@ -505,8 +505,7 @@ class GLC(object):
         rsp = ((self.ctlr.interact('CONSTANT SET?,RELAY')).decode('utf-8', 'replace')).split(',')
         return [str(i) in rsp[1:] for i in range(1, 13)]
 
-    # Unsupported or not working on GL controller? 
-    def read_constant_ptc(self):
+    def read_constant_ptc(self): # GL legacy command to CONSTANT 1 values 
         '''
         Get the constant settings for product temperature control
 
@@ -520,9 +519,62 @@ class GLC(object):
         }
 
     #
-    ###################################
+    #######################################################################################
 
-    def read_system_set(self, arg='PTCOPT'):
+    #######################################################################################
+    # Only for GL controller system 
+    def read_constant_set(self, cnum, arg='TEMP'):
+        '''
+        Get the constant settings for all system parameters: 
+            TEMP, HUMI, REF, RELAY, PTC
+
+        returns:
+            [int] and [string]
+        '''
+        if arg in ['TEMP', 'HUMI', 'REF', 'RELAY', 'PTC'] and cnum in [1,2,3]:
+            return (self.ctlr.interact(f'CONSTANT SET?,{cnum},{arg}')).decode('utf-8', 'replace').split(',')
+        else:
+            raise ValueError('arg must be one of the following: "TEMP", "HUMI", "REF", "RELAY", "PTC" and cnum must be between 1 and 3')
+
+    def read_ais(self, num, arg='TEMP'):
+        '''
+        Read and report the refrigeration installation information.
+
+        Args:
+            arg: what to read options are: 'TEMP', 'ELV', 'FREQ', 'REF', 'PRESS'
+        returns:
+            [string] in list 
+        '''
+        if arg in ['TEMP', 'ELV', 'FREQ', 'REF', 'PRESS'] and num in [1,2,3,4]:
+            return (self.ctlr.interact(f'AIS?,{num},{arg}')).decode('utf-8', 'replace').split(',')
+        else:
+            raise ValueError('arg must be one of the following: "TEMP", "HUMI", "REF", "RELAY", "PTC" and num must be between 1 and 4')
+
+    def read_ais_unit(self, arg='UNIT'):
+        '''
+        Read and report the refrigeration installation information.
+        
+        required arguments: UNIT, VER 
+        returns:
+            [string] and list
+        '''
+        if arg in ['UNIT', 'VER']:
+            rsp=(self.ctlr.interact(f'AIS?,{arg}')).decode('utf-8', 'replace').split(',')
+            return rsp # return as list of strings 
+        else:
+            raise ValueError('arg must be one of the following: "UNIT" or "VER"')
+
+    def read_ais_all_temp(self):
+        '''
+        Read and report all the refrigeration installation information.
+        
+        returns:
+            [string] and list
+        '''
+        rsp=(self.ctlr.interact(f'AIS?,ALL,TEMP')).decode('utf-8', 'replace').split(',')
+        return rsp # return as list of strings 
+
+    def read_system_set(self, arg='PTS'):
         '''
         return controller product monitor and or control configuration
 
@@ -531,12 +583,27 @@ class GLC(object):
         returns:
             string
         '''
-        if arg in ['PTCOPT', 'PTC', 'PTC']:
-            return (self.ctlr.interact('SYSTEM SET?,{}'.format(arg))).decode('utf-8', 'replace')
+        if arg in ['PTS', 'PTC', 'PTCOPT']:            
+            return (self.ctlr.interact(f'SYSTEM SET?,{arg}')).decode('utf-8', 'replace')
         else:
             raise ValueError('arg must be one of the following: "PTCOPT","PTC","PTS"')
+ 
+    def read_equimon(self, arg='REF'):
+        '''
+        Read and report...
 
-    # GLC is unsupported? 
+        Args:
+            arg: what to read options are: "REF", "FAN", "AUXHUMI"
+        returns:
+            [string] list 
+
+        '''
+        if arg in ['REF', 'FAN', 'AUXHUMI']:
+            rsp = (self.ctlr.interact(f'EQUIMON?,{arg}')).decode('utf-8', 'repalce') 
+            return rsp 
+        else:
+            raise ValueError('arg must be one of the following: "REF"", "FAN", "AUXHUMI"')
+
     def read_mon_ptc(self):
         '''
         Returns the conditions inside the chamber, including PTCON
@@ -643,7 +710,7 @@ class GLC(object):
             }
             "END"="OFF" or "CONSTANT" or "STANDBY" or "RUN"
         '''
-        pdata = (self.ctlr.interact('PRGM DATA PTC?,{}:{}'.format(self.rom_pgm(pgmnum), pgmnum))).decode('utf-8', 'replace')
+        pdata = (self.ctlr.interact(f'PRGM DATA PTC?,{self.rom_pgm(pgmnum)}:{pgmnum}')).decode('utf-8', 'replace')
         return self.parse_prgm_data(pdata)
 
     def read_prgm_data_ptc_detail(self, pgmnum):
@@ -658,7 +725,7 @@ class GLC(object):
                 "humidity":{"range":{"max":float, "min":float}, "mode":string, "setpoint":float}
             }
         '''
-        tmp = (self.ctlr.interact('PRGM DATA PTC?,{}:{},DETAIL'.format(self.rom_pgm(pgmnum), pgmnum))).decode('utf-8', 'replace')
+        tmp = (self.ctlr.interact(f'PRGM DATA PTC?,{self.rom_pgm(pgmnum)}:{pgmnum},DETAIL')).decode('utf-8', 'replace')
         return self.parse_prgm_data_detail(tmp)
 
     def read_prgm_data_ptc_step(self, pgmnum, pgmstep):
@@ -689,7 +756,7 @@ class GLC(object):
                 "relay":[int]
             }
         '''
-        tmp = (self.ctlr.interact('PRGM DATA PTC?,{}:{},STEP{}'.format(self.rom_pgm(pgmnum),pgmnum, pgmstep))).decode('utf-8', 'replace')
+        tmp = (self.ctlr.interact(f'PRGM DATA PTC?,{self.rom_pgm(pgmnum)}:{pgmnum},STEP{pgmstep}')).decode('utf-8', 'replace')
         return self.parse_prgm_data_step(tmp)
                                                                                #
     ############################################################################
@@ -765,7 +832,7 @@ class GLC(object):
         '''
         rsp = re.search(
             r'(.+)?,(\d+).(\d+)\/(\d+)',
-            (self.ctlr.interact('PRGM USE?,{}:{}'.format(self.rom_pgm(pgmnum), pgmnum))).decode('utf-8', 'replace')
+            (self.ctlr.interact(f'PRGM USE?,{self.rom_pgm(pgmnum)}:{pgmnum}')).decode('utf-8', 'replace')
         )
         return {
             'name':rsp.group(1) if rsp.group(1) else '',
@@ -792,7 +859,7 @@ class GLC(object):
             }
             "END"="OFF" or "CONSTANT" or "STANDBY" or "RUN"
         '''
-        pdata = (self.ctlr.interact('PRGM DATA?,{}:{}'.format(self.rom_pgm(pgmnum), pgmnum))).decode('utf-8', 'replace')
+        pdata = (self.ctlr.interact(f'PRGM DATA?,{self.rom_pgm(pgmnum)}:{pgmnum}')).decode('utf-8', 'repalce')        
         return self.parse_prgm_data(pdata)
 
     def read_prgm_data_detail(self, pgmnum):
@@ -807,7 +874,7 @@ class GLC(object):
                 "humidity":{"range":{"max":float,"min":float},"mode":string,"setpoint":float}
             }
         '''
-        pdata = (self.ctlr.interact('PRGM DATA?,{}:{},DETAIL'.format(self.rom_pgm(pgmnum), pgmnum))).decode('utf-8', 'replace')
+        pdata = (self.ctlr.interact(f'PRGM DATA?,{self.rom_pgm(pgmnum)}:{pgmnum},DETAIL')).decode('utf-8', 'repalce')
         return self.parse_prgm_data_detail(pdata)
 
     def read_prgm_data_step(self, pgmnum, pgmstep):
@@ -829,7 +896,7 @@ class GLC(object):
                 "relay":[int]
             }
         '''
-        tmp = (self.ctlr.interact('PRGM DATA?,{}:{},STEP{}'.format(self.rom_pgm(pgmnum), pgmnum, pgmstep))).decode('utf-8', 'replace')
+        tmp = (self.ctlr.interact(f'PRGM DATA?,{self.rom_pgm(pgmnum)}:{pgmnum},STEP{pgmstep}'))#.decode('utf-8', 'replace')
         return self.parse_prgm_data_step(tmp)
 
     def read_run_prgm_mon(self):
@@ -893,15 +960,18 @@ class GLC(object):
             ret['relay'] = [str(i) in relays for i in range(1, 13)]
         else:
             ret['relay'] = [False for i in range(1, 13)]
+        return rsp # return rsp from GL controller
 
-    def read_ip_set(self):
+
+
+    def read_ip_set(self): # Dose note seem to work on GL controller.
         '''
         Read the configured IP address of the controller
         '''
         return dict(list(zip(['address', 'mask', 'gateway'], ((self.ctlr.interact('IPSET?')).decode('utf-8', 'replace')).split(','))))
 
     #--- write methods --- write methods --- write methods --- write methods --- write methods ---
-    def write_date(self, year, month, day, dow):
+    def write_date(self, year, month, day, dow): # Do not attempt to write date/time to mess up the system config
         '''
         write a new date to the controller
 
@@ -913,7 +983,7 @@ class GLC(object):
         cyear = (year - 2000) if year > 2000 else year
         (self.ctlr.interact('DATE,{}.{}/{}. {}'.format(cyear, month, day, dow))).decode('utf-8', 'replace')
 
-    def write_time(self, hour, minute, second):
+    def write_time(self, hour, minute, second): # Do not attempt to write date/time to mess up the system config
         '''
         write a new time to the controller
 

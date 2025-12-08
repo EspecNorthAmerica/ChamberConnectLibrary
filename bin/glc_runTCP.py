@@ -17,7 +17,12 @@ README:
 ======
 
 The following is a sample program call to the Library to control ESPEC GL 
-controller via the TCP/IP or Serial RS-232 communication protocol. 
+controller via the TCP/IP or Serial RS-232 communication protocol to
+monitor and control the GL chamber. 
+
+It is a "canned program" with selected options. You may use this program
+to get started by exploring what it does. You can then modify it to
+include specific function calls to accommplish your needs. 
 
 It is programmed to provide a simple call function to our ESPEC 
 ChamberConnectLibrary to connect to "especinteract.py" program which in 
@@ -77,7 +82,7 @@ should be listed, such as (for example):
    port = '/dev/ttyUSB0' 
 
 Tested: 
-GNU/Linux platform: Python 3.8.x, 3.9.x, 3.10.x
+GNU/Linux platform: Python 3.8.x, 3.9.x, 3.10.x,3.13.x
 MS Windows platform: Python 3.9.x 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -571,10 +576,10 @@ if __name__ == "__main__":
     print (f'Op Mode: {str}')  
 
     str = CONTROLLER.get_mode()
-    print (f'Op Mode: {str}')          
+    print (f'MODE: {str}')          
 
     str = CONTROLLER.get_mon()
-    print (f'Op Mode: {str}')      
+    print (f'MONITOR: {str}')      
 
     str = CONTROLLER.get_temp()
     print (f'Op Mode: {str}')       
@@ -606,17 +611,95 @@ if __name__ == "__main__":
     str = CONTROLLER.get_constant_relay()
     print (f'Op Mode: {str}')         
 
+    # err: NA: INVALID REQ 
     #str = CONTROLLER.get_constant_ptc()
     #print (f'Op Mode: {str}')       
 
-    str = CONTROLLER.get_system_set()
-    print (f'Op Mode: {str}')     
+    str = CONTROLLER.get_system_set('PTS')
+    print (f'SYSTEM SET: {str}')     
 
+    # err: NA: INVALID REQ 
     #str = CONTROLLER.get_mon_ptc()
     #print (f'Op Mode: {str}')      
 
+    # err: NA: INVALID REQ 
     #str = CONTROLLER.get_prgm_mon()
     #print (f'Op Mode: {str}')     
 
     str = CONTROLLER.get_prgm_use()
-    print (f'Op Mode: {str}')       
+    print (f'PRGM USE: {str}')       
+
+    # err: CHB NOT READY 
+    #str = CONTROLLER.get_prgm_set()   # err: chamber not ready 
+    #print (f'Op Mode: {str}')       
+
+    str = CONTROLLER.get_prgm_use()
+    prm_num = len(str) 
+    print (f'Select PRGM NUM BETWEEN 1 and {prm_num-1}:')
+    num = int(input("PRGM NUM:"))
+    str = CONTROLLER.get_prgm_use_num(num)
+    print (f'PRGM USE NUM: {str}')    
+
+    #str = CONTROLLER.get_prgm_use()
+    #prm_num = len(str) 
+    #print (f'Select PRGM NUM BETWEEN 1 and {prm_num-1}:')
+    num = int(input("PRGM NUM:"))
+    str = CONTROLLER.get_prgm_data(num)
+    print (f'PRGM DATA: {str}')      
+
+    num = int(input("PRGM NUM:"))
+    str = CONTROLLER.get_prgm_data_detail(num)
+    print (f'PRGM DATA DETAIL: {str}')        
+
+    prgmnum = int(input("PRGM NUM:"))
+    stepnum = int(input('STEP NUM:'))
+    str = CONTROLLER.get_prgm_data_step(prgmnum,stepnum)
+    print (f'PRGM DATA DETAIL STEP: {str}')       
+
+    # err: NA: CHMB NOT READY 
+    #str = CONTROLLER.get_prgm_mon()
+    #print (f'PRGM DATA: {str}')  
+
+    str = CONTROLLER.get_run_prgm()
+    print (f'PRGM STATUS: {str}')  
+
+    # err: NA: CHMB NOT READY 
+    #str = CONTROLLER.get_run_prgm()
+    #print (f'PRGM STATUS: {str}')  
+
+    str = CONTROLLER.get_system_set('PTS')
+    print (f'SYSTEM SET (PTS): {str}')          
+
+    str = CONTROLLER.get_system_set('PTC')
+    print (f'SYSTEM SET (PTC): {str}')      
+
+    str = CONTROLLER.get_system_set('PTCOPT')
+    print (f'SYSTEM SET (PTCOPT): {str}')      
+
+    str = CONTROLLER.get_constant_set(1,'TEMP')
+    print (f'CONSTANT SET (TEMP): {str}')    
+
+    str = CONTROLLER.get_constant_set(1,'HUMI')
+    print (f'CONSTANT SET (HUMI): {str}')   
+
+    str = CONTROLLER.get_constant_set(1,'REF')
+    print (f'CONSTANT SET (REF): {str}')   
+
+    str = CONTROLLER.get_constant_set(1,'RELAY')
+    print (f'CONSTANT SET (RELAY): {str}')
+
+    # err: INVALID REQ, missing description?
+    #str = CONTROLLER.get_constant_set(1,'PTC')
+    #print (f'CONSTANT SET (PTC): {str}')     
+
+    str = CONTROLLER.get_ais_unit('UNIT') # option: UNIT, VER 
+    print (f'AIS UNIT: {str}')  
+
+    str = CONTROLLER.get_ais_all_temp() # standard 
+    print (f'AIS ALL TEMP: {str}') 
+
+    str = CONTROLLER.get_ais(1,'FREQ') # num = 1-4, arg=TEMP, ELV, FREQ, REF, PRESS 
+    print (f'AIS NUM and ARG: {str}')                   
+
+    str = CONTROLLER.get_equimon('REF') # Ref opt worked... 
+    print (f'READ EQUIMON: {str}')       

@@ -1,34 +1,29 @@
 '''
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-:author: Paul Nong-Laolam <pnong-laolam@espec.com>
-:        ESPEC North America, Inc. 
-:        4141 Central Park Way
-:        Hudsonville, MI 49426 
-:license: MIT, see LICENSE for more detail.
-:copyright: (c) 2025. ESPEC North America, Inc. 
-:updated: December 2025
-:file: espec.py 
-
-This is Upper-Level Interface for ESPEC CORP. controllers: 
-
-GLC
-P300
-SCP220
-ES102
-
-This file has been rewritten and modified for the GL controller which was
-originally implemented for P300 as the superset of commands amongst ESPEC
-CORP. controllers.
-
-Original implementation date: 2020, 2024 (c) Paul Nong-Laolam 
-
-Application interface for controlling ESPEC GL controller with temperature
-and humidity feature. This program may be reimplemented with additional
-call methods to utilize ESPEC GL controller from its class and method 
-definitions.  
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+:author: Paul Nong-Laolam <pnong-laolam@espec.com>                          %
+:        ESPEC North America, Inc.                                          %
+:        4141 Central Park Way                                              %
+:        Hudsonville, MI 49426                                              %
+:license: MIT, see LICENSE for more detail.                                 %
+:copyright: (c) 2025. ESPEC North America, Inc.                             %
+:updated: December 2025                                                     %
+:file: espec.py                                                             %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+:                                                                           %           
+This is the Upper-Level Interface Library for ESPEC CORP. controllers:      %
+                                                                            %
+GLC                                                                         %
+P300                                                                        %
+SCP220                                                                      %
+ES102                                                                       %
+                                                                            %
+It has been completely rewritten and modified for the GL controller call    %
+functions/methods which are now the superset of ESPEC CORP. controllers     %
+P300, SCP220 and ES102.                                                     %
+                                                                            %
+Original implementation date: 2020, 2024 (c) Paul Nong-Laolam               %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 '''
-
 #pylint: disable=R0902,R0904
 import datetime
 import time
@@ -47,23 +42,35 @@ class Espec(ControllerInterface):
     A class for interfacing with Espec controllers (P300, SCP220, ES102)
 
     Kwargs:
-        interface (str): The connection method::
-            "TCP" -- Use a Ethernet to serial adapter with raw TCP
-            "Serial" -- Use a hardware serial port
-        adr (int): The address of the controller (default=1)
-        host (str): The hostname (IP address) of the controller when interface="TCP"
-        serialport (str): The serial port to use when interface="Serial" (default=3(COM4))
-        baudrate (int): The serial port's baud rate to use when interface="Serial" (default=9600)
-        loops (int): The number of control loops the controller has (default=1, max=2)
-        cascades (int): The number of cascade control loops the controller has (default=0, max=1)
-        lock (RLock): The locking method to use when accessing the controller (default=RLock())
-        freshness (int): The length of time (in seconds) a command is cached (default = 0)
-        ctlr_type (str): "SCP220" or "P300" (default = "P300")
+        interface (str): The connection method:
+            "TCP": Use an Ethernet to serial adapter with raw TCP
+            "Serial": Use a hardware serial port
+        
+        GL controller uses direct Ethernet connection, port reservation: 10001
+
+        adr (int): 
+            The address of the controller (default=1)
+        host (str): 
+            The hostname (IP address) of the controller when interface="TCP"
+        serialport (str): 
+            The serial port to use when interface="Serial" (default=3(COM4))
+        baudrate (int): 
+            The serial port's baud rate to use when interface="Serial" (default=9600)
+        loops (int): 
+            The number of control loops the controller has (default=1, max=2)
+        cascades (int): 
+            The number of cascade control loops the controller has (default=0, max=1)
+        lock (RLock): 
+            The locking method to use when accessing the controller (default=RLock())
+        freshness (int): 
+            The length of time (in seconds) a command is cached (default = 0)
+        ctlr_type (str): "ES102", "SCP220", "P300" (default = "GLC")
     '''
 
     def __init__(self, **kwargs):
-        '''Warning: Espec Class is no longer being maintained as of version 2.3.0; use EspecP300 or EspecSCP220 classes instead.'''
-        #print ('Warning: Espec Class is no longer being maintained as of version 2.3.0; use EspecP300 or EspecSCP220 classes instead.')
+        '''
+        Warning: Espec Class is no longer being maintained as of version 2.3.0; use EspecP300 or EspecSCP220 classes instead.
+        '''
         self.client, self.loops, self.cascades = None, None, None
         self.init_common(**kwargs)
         self.freshness = kwargs.get('freshness', 0)
@@ -136,8 +143,9 @@ class Espec(ControllerInterface):
 
     def cached(self, func, *args, **kwargs):
         '''
-        The P300 returns multiple parameters with each command. The commands responses will be
-        cached and cached responses returned if they are fresh enough (settable property)
+        The GLC returns multiple parameters with each command (and similarly for P300). 
+        The commands responses will be cached and cached responses returned if they are fresh 
+        enough (settable property)
         '''
         now = time.time()
         incache = func.__name__ not in self.cache
@@ -160,9 +168,10 @@ class Espec(ControllerInterface):
             return 'NA:' + emsg[qps[len(qps)-2]+1:qps[len(qps)-1]]
 
     ##################################################################################
+    # MONITOR/READ COMMANDS:
     # Decorators for GLC (P300, SCP220 and ES102) by calling each read command
     # from their methods.
-    ###
+    ##################################################################################
 
     # added to allow reading of ROM info 
     @exclusive
@@ -249,35 +258,31 @@ class Espec(ControllerInterface):
     def get_htr(self):
         return self.client.read_htr()
 
-    #################################################################
     # NOTE: 
     # Both constant set? on GLC is extensive, which includes Const No. 
-    # Example: CONSTANT SET?, 1, TEMP
+    # Example: CONSTANT SET?, 1, TEMP; CONSTANT SET?,2,TEMP, etc. 
     # 
-    # Will come back to this...
     @exclusive
-    def get_constant_temp(self):
+    def get_constant_temp(self): # GL legacy command to CONSTANT 1 values 
         return self.client.read_constant_temp()
 
     @exclusive
-    def get_constant_humi(self):
+    def get_constant_humi(self): # GL legacy command to CONSTANT 1 values 
         return self.client.read_constant_humi()
 
     @exclusive
-    def get_constant_ref(self):
+    def get_constant_ref(self): # GL legacy command to CONSTANT 1 values 
         return self.client.read_constant_ref()
 
     @exclusive
-    def get_constant_relay(self):
+    def get_constant_relay(self): # GL legacy command to CONSTANT 1 values 
         return self.client.read_constant_relay()        
 
-    # Unsupported or not working? 
     @exclusive
-    def get_constant_ptc(self):
+    def get_constant_ptc(self): # GL legacy command to CONSTANT 1 values 
         return self.client.read_constant_ptc()           
-    
-    #
-    #################################################################
+        
+    ####END LEGACY CONSTANT SET? COMMANDS
 
     @exclusive
     def get_system_set(self):
@@ -309,8 +314,71 @@ class Espec(ControllerInterface):
         return self.client.read_prgm_use()
 
     @exclusive
-    def get_refrig(self):
+    def get_prgm_set(self):
+        return self.client.read_prgm_set()
+
+    @exclusive
+    def get_prgm_use_num(self, pgmnum):
+        return self.client.read_prgm_use_num(pgmnum)
+
+    @exclusive
+    def get_prgm_data(self, pgmnum):
+        return self.client.read_prgm_data(pgmnum)
+
+    @exclusive
+    def get_prgm_data_detail(self, pgmnum):
+        return self.client.read_prgm_data(pgmnum)
+
+    @exclusive
+    def get_prgm_data_step(self, pgmnum, stepnum):
+        return self.client.read_prgm_data_step(pgmnum,stepnum)
+
+    @exclusive
+    def get_prgm_mon(self): # err: NA: CHB NOT READY 
+        return self.client.read_prgm_mon()
+    
+    @exclusive
+    def get_run_prgm_mon(self): # err: NA: CMD_ERR
+        return self.client.read_run_prgm_mon()
+
+    @exclusive
+    def get_run_prgm(self): # worked 
+        return self.client.read_run_prgm()
+
+    @exclusive
+    def get_system_set(self, arg): # worked 
+        return self.client.read_system_set(arg)
+
+    @exclusive
+    def get_constant_set(self, cnum, arg): # worked 
+        return self.client.read_constant_set(cnum, arg)
+
+    @exclusive
+    def get_ais_unit(self, arg): # worked 
+        return self.client.read_ais_unit(arg)
+
+    @exclusive
+    def get_ais_all_temp(self): # worked 
+        return self.client.read_ais_all_temp()
+
+    @exclusive
+    def get_ais(self, num, arg): # worked 
+        return self.client.read_ais(num, arg)        
+
+    @exclusive
+    def get_equimon(self, arg): # worked 
+        return self.client.read_equimon(arg)  
+
+    @exclusive
+    def get_refrig(self): # GL legacy command to CONSTANT 1 values 
         return self.client.read_constant_ref()
+
+
+    ##################################################################################
+    # CONTROL/SET COMMANDS:
+    # Decorators for GLC (P300, SCP220 and ES102) by calling each set command
+    # to set or control the chamber 
+    ##################################################################################
 
     @exclusive
     def set_refrig(self, value):
