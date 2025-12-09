@@ -90,7 +90,12 @@ class GLC(object):
         '''
         return (self.ctlr.interact(message)).decode('utf-8', 'replace')
 
-    # starting of GL controller class methods here...
+    ##################################################################################
+    # MONITOR/READ COMMANDS: READ METHODS
+    # Decorators for GLC (P300, SCP220 and ES102) by calling each read command
+    # from their methods.
+    ##################################################################################
+
     def read_rom(self, display=False):
         '''
         Get the rom version of the controller
@@ -517,7 +522,6 @@ class GLC(object):
             'enable': rsp[0] == 'ON',
             'deviation': {'positive':float(rsp[1]), 'negative':float(rsp[2])}
         }
-
     #
     #######################################################################################
 
@@ -964,14 +968,23 @@ class GLC(object):
 
 
 
-    def read_ip_set(self): # Dose note seem to work on GL controller.
+    def read_ip_set(self): # Unsupport on GL controller.
         '''
         Read the configured IP address of the controller
         '''
         return dict(list(zip(['address', 'mask', 'gateway'], ((self.ctlr.interact('IPSET?')).decode('utf-8', 'replace')).split(','))))
 
+    ##################################################################################
+    # CONTROL/SET COMMANDS: WRITE METHODS 
+    # Decorators for GLC by calling each set command
+    # to set or control the chamber 
+    ##################################################################################
+    #
     #--- write methods --- write methods --- write methods --- write methods --- write methods ---
-    def write_date(self, year, month, day, dow): # Do not attempt to write date/time to mess up the system config
+    #
+
+    # Do not attempt to write date/time to mess up the system config
+    def write_date(self, year, month, day, dow):
         '''
         write a new date to the controller
 
@@ -981,9 +994,11 @@ class GLC(object):
             day: int,1-31
         '''
         cyear = (year - 2000) if year > 2000 else year
-        (self.ctlr.interact('DATE,{}.{}/{}. {}'.format(cyear, month, day, dow))).decode('utf-8', 'replace')
+        (self.ctlr.interact(f'DATE,{cyear}.{month}/{day}.{dow}')).decode('utf-8', 'replace')
+        #(self.ctlr.interact('DATE,{}.{}/{}. {}'.format(cyear, month, day, dow))).decode('utf-8', 'replace')
 
-    def write_time(self, hour, minute, second): # Do not attempt to write date/time to mess up the system config
+    # Do not attempt to write date/time to mess up the system config
+    def write_time(self, hour, minute, second):
         '''
         write a new time to the controller
 
@@ -992,7 +1007,7 @@ class GLC(object):
             minute: int,0-59
             second: int,0-59
         '''
-        (self.ctlr.interact('TIME,{}:{}:{}'.format(hour, minute, second))).decode('utf-8', 'replace') 
+        (self.ctlr.interact(f'TIME,{hour}:{minute}:{second}')).decode('utf-8', 'replace') 
 
     def write_mask(self, alarm=False, single_step_done=False, state_change=False, gpib=False):
         '''
@@ -1006,7 +1021,7 @@ class GLC(object):
         #    int(single_step_done),
         #    int(state_change),
         #    int(gpib)))
-        (self.ctlr.interact('MASK,0{}{}{}00{}0'.format(int(alarm),int(single_step_done),int(state_change),int(gpib)))).decode('utf-8', 'replace') 
+        (self.ctlr.interact(f'MASK,0{int(alarm)}{int(single_step_done)}{int(state_change)}00{int(gpib)}0')).decode('utf-8', 'replace') 
 
     def write_srq(self):
         '''
@@ -1024,9 +1039,9 @@ class GLC(object):
             pgmnum: int, program to run if mode=="RUN"
             pgmstep: int, program step to run if mode=="RUN"
         '''
-        cmd = 'TIMER WRITE,NO0,{}:{},{}'.format(time['hour'], time['minute'], mode)
+        cmd = f"TIMER WRITE,NO0,{time['hour']}:{time['minute']},{mode}"
         if mode == 'RUN':
-            cmd = '{},{}:{},STEP{d}'.format(cmd, self.rom_pgm(pgmnum), pgmnum, pgmstep)
+            cmd = f'{cmd},{self.rom_pgm(pgmnum)}:{pgmnum},STEP{pgmstep:d}'
         (self.ctlr.interact(cmd)).decode('utf-8', 'replace') 
 
     def write_timer_start(self, repeat, time, mode, **kwargs):
