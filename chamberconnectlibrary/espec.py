@@ -471,7 +471,7 @@ class Espec(ControllerInterface):
         return datetime.datetime(**self.client.read_date_time())
 
     @exclusive
-    def set_datetime(self, value):
+    def set_datetime(self, value): # Do not use this on GL 
         weekday = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'][value.weekday()]
         self.client.write_time(value.hour, value.minute, value.second)
         self.client.write_date(value.year, value.month, value.day, weekday)

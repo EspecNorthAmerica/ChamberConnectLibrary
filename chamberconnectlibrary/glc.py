@@ -1117,14 +1117,14 @@ class GLC(object):
         '''
         (self.ctlr.interact('KEYPROTECT,{}'.format('ON' if enable else 'off'))).decode('utf-8', 'replace')
 
-    def write_power(self, start):
+    def write_power(self, start): # No quite usable on GL controller to power oof/on.
         '''
         turn on the chamber power
 
         Args:
             start: boolean True=start constant1, False=Turn contoller off)
         '''
-        (self.ctlr.interact('POWER,{}'.format('ON' if start else 'off'))).decode('utf-8', 'replace')
+        (self.ctlr.interact(f"POWER,{'ON' if start else 'off'}")).decode('utf-8', 'replace')
 
     def write_temp(self, **kwargs):
         '''
@@ -1139,14 +1139,14 @@ class GLC(object):
         setpoint, maximum, minimum = 24,30,10
         setpoint, maximum, minimum = kwargs.get('setpoint'), kwargs.get('max'), kwargs.get('min')
         if setpoint is not None and minimum is not None and maximum is not None:
-            (self.ctlr.interact('TEMP, S{0:.1f} H{0:.1f} L{0:.1f}'.format(setpoint, maximum, minimum))).decode('utf-8', 'replace')
+            (self.ctlr.interact(f'TEMP, S{setpoint:.1f} H{maximum:.1f} L{minimum:.1f}')).decode('utf-8', 'replace')
         else:
             if setpoint is not None:
-                (self.ctlr.interact('TEMP, S{0:.1f}'.format(setpoint))).decode('utf-8', 'replace')
+                (self.ctlr.interact(f'TEMP, S{setpoint:.1f}')).decode('utf-8', 'replace')
             if minimum is not None:
-                (self.ctlr.interact('TEMP, L{0:.1f}'.format(minimum))).decode('utf-8', 'replace')
+                (self.ctlr.interact(f'TEMP, L{minimum:.1f}')).decode('utf-8', 'replace')
             if maximum is not None:
-                (self.ctlr.interact('TEMP, H{0:.1f}'.format(maximum))).decode('utf-8', 'replace')
+                (self.ctlr.interact(f'TEMP, H{maximum:.1f}')).decode('utf-8', 'replace')
 
     def write_humi(self, **kwargs):
         '''
@@ -1162,20 +1162,20 @@ class GLC(object):
         setpoint, maximum, minimum = kwargs.get('setpoint'), kwargs.get('max'), kwargs.get('min')
         enable = kwargs.get('enable')
         if enable is False:
-            spstr = 'SOFF'
+            spstr = f'SOFF'
         elif setpoint is not None:
-            spstr = ' S{0:.1f}'.format(setpoint)
+            spstr = f' S{setpoint:.1f}'
         else:
             spstr = None
         if spstr is not None and minimum is not None and maximum is not None:
-            (self.ctlr.interact('HUMI,{} H{0:.1f} {0:.1f}'.format(spstr, maximum, minimum))).decode('utf-8', 'replace')
+            (self.ctlr.interact(f'HUMI,{spstr} H{maximum:.1f} {minimum:.1f}')).decode('utf-8', 'replace')
         else:
             if spstr is not None:
-                (self.ctlr.interact('HUMI,' + spstr)).decode('utf-8', 'replace')
+                (self.ctlr.interact(f'HUMI,{spstr}')).decode('utf-8', 'replace')
             if minimum is not None:
-                (self.ctlr.interact('HUMI, L%0.1f' % minimum)).decode('utf-8', 'replace')
+                (self.ctrl.interact(f'HUMI, L{minimum:0.1f}')).decode('utf-8', 'replace')
             if maximum is not None:
-                (self.ctlr.interact('HUMI, H%0.1f' % maximum)).decode('utf-8', 'replace')
+                (self.ctlr.interact(f'HUMI, H{maximum:0.1f}')).decode('utf-8', 'replace')
 
     def write_set(self, mode, setpoint=0):
         '''
@@ -1185,7 +1185,7 @@ class GLC(object):
             mode: string,"off" or "manual" or "auto"
             setpoint: int,20 or 50 or 100
         '''
-        (self.ctlr.interact('SET,{}'.format(self.encode_refrig(mode, setpoint)))).decode('utf-8', 'replace')
+        (self.ctlr.interact(f'SET,{self.encode_refrig(mode, setpoint)}')).decode('utf-8', 'replace')
 
     def write_relay(self, relays):
         '''
@@ -1196,9 +1196,9 @@ class GLC(object):
         '''
         vals = (self.parse_relays(relays))     
         if len(vals['on']) > 0:
-            (self.ctlr.interact('RELAY,ON,{}'.format(','.join(str(v) for v in vals['on'])))).decode('utf-8', 'replace')
+            (self.ctlr.interact(f"RELAY,ON,{','.join(str(v) for v in vals['on'])}")).decode('utf-8', 'replace')
         if len(vals['off']) > 0:
-            (self.ctlr.interact('RELAY,OFF,{}'.format(','.join(str(v) for v in vals['off'])))).decode('utf-8', 'replace') 
+            (self.ctlr.interact(f"RELAY,OFF,{','.join(str(v) for v in vals['off'])}")).decode('utf-8', 'replace') 
 
     def write_prgm_run(self, pgmnum, pgmstep):
         '''
@@ -1208,7 +1208,7 @@ class GLC(object):
             pgmnum: int, program to run
             prgmstep: int, step to run
         '''
-        (self.ctlr.interact('PRGM,RUN,{}:{},STEP{}'.format(self.rom_pgm(pgmnum), pgmnum, pgmstep))).decode('utf-8', 'replace')
+        (self.ctlr.interact(f'PRGM,RUN,{self.rom_pgm(pgmnum)}:{pgmnum},STEP{pgmstep}')).decode('utf-8', 'replace')
 
     def write_prgm_pause(self):
         '''
@@ -1236,7 +1236,7 @@ class GLC(object):
             mode: string, vaid options: "HOLD"/"CONST"/"OFF"/"STANDBY"(default)
         '''
         if mode in ["HOLD", "CONST", "OFF", "STANDBY"]:
-            (self.ctlr.interact('PRGM,END,{}'.format(mode))).decode('utf-8', 'replace') 
+            (self.ctlr.interact(f'PRGM,END,{mode}')).decode('utf-8', 'replace') 
         else:
             raise ValueError('"mode" must be "HOLD"/"CONST"/"OFF"/"STANDBY"')
 
@@ -1265,7 +1265,7 @@ class GLC(object):
         Args:
             pgmnum: int, the program to run
         '''
-        (self.ctlr.interact('MODE,RUN{}'.format(pgmnum))).decode('utf-8', 'replace')
+        (self.ctlr.interact(f'MODE,RUN{pgmnum}')).decode('utf-8', 'replace')
 
     def write_prgm_data_edit(self, pgmnum, mode, overwrite=False):
         '''
@@ -1276,7 +1276,7 @@ class GLC(object):
             mode: string, "START" or "END" or "CANCEL"
             overwrite: boolean, when true programs/steps may be overwritten
         '''
-        tmp = 'PRGM DATA WRITE,PGM{},{} {}'.format(pgmnum, 'OVER WRITE' if overwrite else 'EDIT', mode)
+        tmp = f"PRGM DATA WRITE,PGM{pgmnum},{'OVER WRITE' if overwrite else 'EDIT'} {mode}"
         (self.ctlr.interact(tmp)).decode('utf-8', 'replace')
 
     def write_prgm_data_details(self, pgmnum, **pgmdetail):

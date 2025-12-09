@@ -108,7 +108,8 @@ from chamberconnectlibrary.especinteract import EspecSerial, EspecTCP
 from chamberconnectlibrary.controllerinterface import ControllerInterfaceError
 
 def ip_addr():
-    '''select and check for proper IP address format
+    '''
+    select and check for proper IP address format
     '''
     while True:
         try:
@@ -123,7 +124,8 @@ def ip_addr():
     return ip_addr
 
 def set_loop(str, loop):
-    '''set new temp value
+    '''
+    set new temp value
     '''
     # recording temp range 
     loop_num = [1,2] 
@@ -156,16 +158,17 @@ def set_loop(str, loop):
     print(f'\nrsp> {str} status:\n     PV: {currentPV}\n     SP: {currentSP}')
 
 def read_val(str,loop):
-    """
+    '''
     Read current values of Temp or Temp and Humi SP and PV
-    """
+    '''
     time.sleep(0.5)
     currentSP = CONTROLLER.get_loop_sp(loop)
     currentPV = CONTROLLER.get_loop_pv(loop)
     print(f'\nrsp> {str} status:\n     PV: {currentPV}\n     SP: {currentSP}')
 
 def operation_status(): 
-    '''Check current status of chamber before executing a new program
+    '''
+    Check current status of chamber before executing a new program
     '''
     chk_alarm = CONTROLLER.get_alarm_status() 
     if chk_alarm["active"] == 'active': 
@@ -182,13 +185,18 @@ def operation_status():
             run_prog() 
 
 def run_prog(): 
-    '''select and set profile for execution.
     '''
+    select and set profile for execution.
+    '''
+    # checking existing programs, program numbers
+    str = CONTROLLER.get_prgm_use()
+    print(f'Available program number(s): {str}')
+    prm_num = int(len(str)) - 1
     print ('\n<Select a profile to execute>')
     try: 
         while True:
-            pn = int(input('Enter profile number (Ctrl-C to exit profile execution): '))
-            if isinstance(pn, int) and 1 <= pn <= 1000:
+            pn = int(input(f'Enter profile number between 1 and {prm_num} (Ctrl-C to exit profile execution): '))
+            if isinstance(pn, int) and 1 <= pn <= prm_num:
                 psteps = CONTROLLER.get_prgm_steps(pn)
                 sn = int(input('Enter step number: '))
                 if isinstance(sn, int) and 1 <= sn <= psteps:
@@ -204,7 +212,8 @@ def run_prog():
             pass
 
 def prog_mode(mode):
-    '''set program mode of currently running profile
+    '''
+    set program mode of currently running profile
 
        available modes: 
           stop: terminate program
@@ -248,7 +257,8 @@ def prog_mode(mode):
         print (nlist['nact']) 
 
 def set_time_signal(state):
-    '''Set TS value on the selected TS number
+    '''
+    Set TS value on the selected TS number
     '''
     try:
         ts_num = int(input('Enter TS number: '))
@@ -262,7 +272,8 @@ def set_time_signal(state):
         print ('Invalid TS number.')
 
 def read_time_signal():
-    '''Read TS value on the select TS number
+    '''
+    Read TS value on the select TS number
     '''
     print ('\nrsp> ')
     for i in range(12):
@@ -271,7 +282,8 @@ def read_time_signal():
         print (f'    Time signal #{i+1} : {tsout}')
 
 def const_start():
-    '''Start Constant mode on chamber
+    '''
+    Start Constant mode on chamber
     '''
     str = CONTROLLER.get_mode()
     time.sleep(0.5)
@@ -285,7 +297,8 @@ def const_start():
         print (f'\nrsp> CONSTANT mode started.') 
 
 def stop_const():
-    '''Stop constant mode on chamber
+    '''
+    Stop constant mode on chamber
     '''
     str = CONTROLLER.get_mode()
     time.sleep(0.5)
@@ -318,7 +331,8 @@ def temp_humi_controller():
         temp_humi_menu(option)
 
 def prog_menu():  # tested 
-    '''set up selection menu for operation
+    '''
+    set up selection menu for operation
        main menu 
        m: Program status
        e: execute program
@@ -346,10 +360,12 @@ def prog_menu():  # tested
         prog_operation(option)
 
 def event_controller():
-    '''Test TS events
+    '''
+    Test TS events
     '''
     def event_option(option) :
-        '''get event seelction menu
+        '''
+        get event seelction menu
         '''
         return {
             'r': lambda: read_time_signal(),
@@ -365,10 +381,13 @@ def event_controller():
         event_option(option) 
 
 def status_menu():
-    '''read chamber mode
+    '''
+    read chamber mode
     '''
     def status_option(choice):
-        '''return status options'''
+        '''
+        return status options
+        '''
         return {
             'r': lambda: print (f'\nrsp> {CONTROLLER.get_mode()}'),
             's': lambda: const_start(), 
@@ -393,7 +412,9 @@ def main_menu():
        Set options for program control
     '''
     def main_option(choice):
-        '''return main menu options'''
+        '''
+        return main menu options
+        '''
         return {
             't': lambda: temp_humi_controller(),
             'p': lambda: prog_menu(),
@@ -408,7 +429,8 @@ def main_menu():
         main_option(option)
 
 def print_menu(choice, menu_name):
-    '''set up selection menu
+    '''
+    set up selection menu
     '''
     print (f'\nGL control options: {menu_name}'
             '\n--------------------------------') 
@@ -417,7 +439,8 @@ def print_menu(choice, menu_name):
     print ('--------------------------------') 
 
 def menu(choice):
-    '''menu list
+    '''
+    menu list
     main menu option: 
        1: main menu
        2: Temp/Humi menu
@@ -528,8 +551,9 @@ if __name__ == "__main__":
         **interface_params #,
         #loop_names = LOOP_NAMES
     )
-    #main_menu()
+    main_menu()
 
+    '''
     ts_list = CONTROLLER.get_event(1)
     print (f'ROM: {ts_list}')
 
@@ -703,3 +727,6 @@ if __name__ == "__main__":
 
     str = CONTROLLER.get_equimon('REF') # Ref opt worked... 
     print (f'READ EQUIMON: {str}')       
+
+
+    '''
