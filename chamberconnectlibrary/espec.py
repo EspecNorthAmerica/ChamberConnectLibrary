@@ -470,8 +470,10 @@ class Espec(ControllerInterface):
     def get_datetime(self):
         return datetime.datetime(**self.client.read_date_time())
 
+    # Do not apply set datetime on GL controller; 
+    # it has been disabled for a special reason.
     @exclusive
-    def set_datetime(self, value): # Do not use this on GL 
+    def set_datetime(self, value):  
         weekday = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'][value.weekday()]
         self.client.write_time(value.hour, value.minute, value.second)
         self.client.write_date(value.year, value.month, value.day, weekday)
@@ -790,6 +792,10 @@ class Espec(ControllerInterface):
     @exclusive
     def const_start(self):
         self.client.write_mode_constant()
+
+    @exclusive
+    def const_start_gl(self, cstnum):
+        self.client.write_mode_constant(cstnum)
 
     @exclusive
     def stop(self):

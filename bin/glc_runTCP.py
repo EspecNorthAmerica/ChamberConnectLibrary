@@ -16,44 +16,34 @@ definitions.
 README:
 ======
 
-The following is a sample program call to the Library to control ESPEC GL 
-controller via the TCP/IP or Serial RS-232 communication protocol to
-monitor and control the GL chamber. 
+The following is a sample program that calls to the GL Library to control 
+the GL chamber via TCP/IP or Serial RS-232 communication protocol.
 
 It is a "canned program" with selected options. You may use this program
-to get started by exploring what it does. You can then modify it to
-include specific function calls to accommplish your needs. 
+to get started by exploring what it does, how the methods in the library
+are called. You can then modify it to include specific function calls 
+to accommplish your needs. 
 
-It is programmed to provide a simple call function to our ESPEC 
-ChamberConnectLibrary to connect to "especinteract.py" program which in 
-turn communicates with the "glc.py" library offer and utilize the 
-operational features from "glc.py" in the chamberconenctlibrary directory. 
+===================================================
+How to Determine Communication Port for Serial COMM: 
+===================================================
 
-Note: 
-"especinteract.py" supports both features of communication protocol: 
-    1. Serial RS-232/RS485
-    2. TCP/IP
-
-This sample program utilizes and explains the use of option 1 and option 2
-with correct setup for TCP/IP communication. 
-
-The programmer may add the additional methods or program sections to call 
-the library for the exact feature(s) not implemented here to meet their 
-requirement. Thus, the following program serves as a starting point on how 
-to utilize our ChamberConnectLibrary in the Python 3 environment. 
-
-====================================
-How to Determine Communication Port: 
-====================================
-
-MS Windows: COM? How to determine COM number assigned by MS Windows OS.
+MS Windows: 
+===========
+COM? How to determine COM number assigned by MS Windows OS.
 DOS command to list COM ports: \> chgport
 
-GNU/Linux: /dev/ttyUSB? How to determine USB number assigned by Linux. 
+GNU/Linux: 
+==========
+/dev/ttyUSB? How to determine USB number assigned by Linux. 
 Linux command to list /dev/ttyUSB: $ ls -l /dev/ttyUSB* 
 
+==============================
 How to find COM or USB number: 
+==============================
+
 MS Windows:
+===========
 1. At the CMD prompt, issue:
    chgport
 2. Study the list of COM numbers in output.
@@ -67,7 +57,8 @@ should be listed, such as (for example):
 5. Use this COM number in the program. Example: 
    port = '//./COM5' 
 
-GNU/Linux 
+GNU/Linux:
+========== 
 1. At the shell terminal, issue:
    ls -l /dev/ttyUSB* 
 2. Study the list of USB numbers in output.
@@ -155,7 +146,7 @@ def set_loop(str, loop):
     time.sleep(0.5)
     currentSP = CONTROLLER.get_loop_sp(loop)
     currentPV = CONTROLLER.get_loop_pv(loop)
-    print(f'\nrsp> {str} status:\n     PV: {currentPV}\n     SP: {currentSP}')
+    print(f'\nrsp> {str} status:\n\tPV: {currentPV}\n\tSP: {currentSP}')
 
 def read_val(str,loop):
     '''
@@ -164,7 +155,7 @@ def read_val(str,loop):
     time.sleep(0.5)
     currentSP = CONTROLLER.get_loop_sp(loop)
     currentPV = CONTROLLER.get_loop_pv(loop)
-    print(f'\nrsp> {str} status:\n     PV: {currentPV}\n     SP: {currentSP}')
+    print(f'\nrsp> {str} status:\n\tPV: {currentPV}\n\tSP: {currentSP}')
 
 def operation_status(): 
     '''
@@ -224,24 +215,93 @@ def prog_mode(mode):
     nlist = { 
         'nact': f'\nrsp> No program running. Nothing to do.',
         'act' : f'\nrsp> {mode} current program.',
-        'pau' : f'\nrsp> Program is already in paused...request is ignored.',
-        'run' : f'\nrsp> Program is already running...request is ignored.',
+        'pau' : f'\nrsp> Program is already in paused; request is ignored.',
+        'run' : f'\nrsp> Program is already running; request is ignored.',
     }
     str = CONTROLLER.get_mode()
     time.sleep(0.5)
     if "Program Running" in str:  
         if "STOP" in mode:
             print (nlist["act"])
-            CONTROLLER.stop()        
+            try: 
+                CONTROLLER.stop()
+                print ('\nrsp> DONE') 
+            except Exception as e:          
+                print(f'\nAttempt failed; reason:\n {e}')             
         if "PAUSE" in mode:
             print (nlist["act"])
-            CONTROLLER.prgm_pause()
+            try: 
+                CONTROLLER.prgm_pause()
+                print ('\nrsp> DONE') 
+            except Exception as e:          
+                print(f'\nAttempt failed; reason:\n {e}')  
         if "SKIP" in mode:
             print ('\nrsp> Skip to next step in program...') 
-            CONTROLLER.prgm_next_step()
+            try:
+                CONTROLLER.prgm_next_step()
+            except Exception as e:          
+                print(f'\nAttempt failed; reason:\n {e}')              
         if "RESUME" in mode:
             print (nlist['run'])
-            CONTROLLER.prgm_resume()     
+            try:
+                CONTROLLER.prgm_resume()    
+            except Exception as e:          
+                print(f'\nAttempt failed; reason:\n {e}')               
+    elif "Program Paused" in str: 
+        if mode == 'RESUME':
+            print (nlist["act"])
+            try:
+                CONTROLLER.prgm_resume()
+            except Exception as e:          
+                print(f'\nAttempt failed; reason:\n {e}')              
+        if mode == 'STOP':
+            print (nlist["act"])
+            try:
+                CONTROLLER.stop()
+            except Exception as e:          
+                print(f'\nAttempt failed; reason:\n {e}')              
+        if mode == 'SKIP' or mode == 'PAUSE':  
+            print (nlist["pau"])
+        #if mode == 'PAUSE':  
+        #    print (nlist["pau"])
+    else:
+        print (nlist['nact']) 
+    '''
+    if "Program Running" in str:
+        def process_command(mode): # Only works on Python 3.10 and above 
+            match mode:
+                case "STOP":
+                    print (nlist["act"])
+                    try: 
+                        CONTROLLER.stop()
+                        print ('\nrsp> DONE') 
+                    except Exception as e:          
+                        print(f'\nAttempt failed; reason:\n {e}')             
+                case "PAUSE":
+                    print (nlist["act"])
+                    try: 
+                        CONTROLLER.prgm_pause()
+                        print ('\nrsp> DONE') 
+                    except Exception as e:          
+                        print(f'\nAttempt failed; reason:\n {e}')  
+                case "SKIP":
+                    print ('\nrsp> Skip to next step in program...') 
+                    try:
+                        CONTROLLER.prgm_next_step()
+                        print ('\nrsp> DONE')
+                    except Exception as e:          
+                        print(f'\nAttempt failed; reason:\n {e}') 
+                case "RESUME":
+                    print (nlist['run'])
+                    try:
+                        CONTROLLER.prgm_resume()
+                        print ('\nrsp> DONE')
+                    except Exception as e:          
+                        print(f'\nAttempt failed; reason:\n {e}')
+                case _:
+                    print(f'Unknown string type.')
+        process_command(mode)                          
+    
     elif "Program Paused" in str: 
         if mode == 'RESUME':
             print (nlist["act"])
@@ -255,7 +315,7 @@ def prog_mode(mode):
             print (nlist["pau"])
     else:
         print (nlist['nact']) 
-
+    '''
 def set_time_signal(state):
     '''
     Set TS value on the selected TS number
@@ -263,9 +323,11 @@ def set_time_signal(state):
     try:
         ts_num = int(input('Enter TS number: '))
         if isinstance(ts_num, int) and ts_num in range(1,13):
-            print ('\nrsp> To be implemented by programmer...')
-            #CONTROLLER.set_event(ts_num,state)
-            #print ('\nrsp> DONE') 
+            try: 
+                CONTROLLER.set_event(ts_num,state)
+                print ('\nrsp> DONE') 
+            except Exception as e:          
+                print(f'\nStart attempt failed; reason:\n {e}')         
         else:
             print ('\nrsp> Invalid TS number.')
     except ValueError:
@@ -279,8 +341,8 @@ def read_time_signal():
     for i in range(12):
         ts_list = CONTROLLER.get_event(i+1)
         tsout = 'ON' if ts_list['current'] == True else 'OFF'
-        print (f'    Time signal #{i+1} : {tsout}')
-
+        print (f'\tTime signal #{i+1} : {tsout}')        
+"""
 def const_start():
     '''
     Start Constant mode on chamber
@@ -292,9 +354,29 @@ def const_start():
     elif str in ['constant', 'Constant', 'CONSTANT']:
         print (f'\nrsp> Chamber is already in {str} mode.')
     else:
-        CONTROLLER.const_start()
-        time.sleep(0.5)
-        print (f'\nrsp> CONSTANT mode started.') 
+        try: 
+            CONTROLLER.const_start()
+            print (f'\nrsp> CONSTANT mode started.')
+        except Exception as e:           
+            print(f'\nAttempt failed; reason:\n {e}') 
+"""
+def const_start():
+    '''
+    Start Constant mode on chamber
+    '''
+    str = CONTROLLER.get_mode()
+    time.sleep(0.5)
+    if str in ['Program Running','Program Paused']: 
+        print (f'\nrsp> Chamber is in {str} mode. Must stop it first.')
+    elif str in ['constant', 'Constant', 'CONSTANT']:
+        print (f'\nrsp> Chamber is already in {str} mode.')
+    else:
+        cstnum = int(input(f"Enter Constant No. (option: 1, 2, or 3): "))
+        try: 
+            CONTROLLER.const_start_gl(cstnum)
+            print (f'\nrsp> CONSTANT #{cstnum} mode started.')
+        except Exception as e:           
+            print(f'\nAttempt failed; reason:\n {e}') 
 
 def stop_const():
     '''
@@ -390,7 +472,7 @@ def status_menu():
         '''
         return {
             'r': lambda: print (f'\nrsp> {CONTROLLER.get_mode()}'),
-            's': lambda: const_start(), 
+            's': lambda: const_start(),             
             'o': lambda: stop_const(),
             'a': lambda: print (f'\nrsp> {CONTROLLER.get_alarm_status()}'),
             'd': lambda: print (f'\nrsp> {CONTROLLER.get_datetime()}'),
@@ -551,6 +633,7 @@ if __name__ == "__main__":
         **interface_params #,
         #loop_names = LOOP_NAMES
     )
+    
     main_menu()
 
     '''
@@ -728,5 +811,25 @@ if __name__ == "__main__":
     str = CONTROLLER.get_equimon('REF') # Ref opt worked... 
     print (f'READ EQUIMON: {str}')       
 
+
+   
+    str = CONTROLLER.get_constant_set(1,'TEMP')
+    print (f'CONSTANT SET (TEMP): {str}')    
+
+    str = CONTROLLER.get_constant_set(2,'HUMI')
+    print (f'CONSTANT SET (HUMI): {str}')   
+
+    str = CONTROLLER.get_constant_set(3,'REF')
+    print (f'CONSTANT SET (REF): {str}')   
+
+    str = CONTROLLER.get_constant_set(1,'RELAY')
+    print (f'CONSTANT SET (RELAY): {str}')
+
+    str = CONTROLLER.get_constant_set(2,'HUMI')
+    print (f'CONSTANT SET (HUMI): {str}')  
+
+    # err: INVALID REQ, missing description?
+    #str = CONTROLLER.get_constant_set(1,'PTC')
+    #print (f'CONSTANT SET (PTC): {str}')  
 
     '''

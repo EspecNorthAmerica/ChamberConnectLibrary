@@ -1252,11 +1252,13 @@ class GLC(object):
         '''
         (self.ctlr.interact('MODE,STANDBY')).decode('utf-8', 'replace')
 
-    def write_mode_constant(self):
+    def write_mode_constant(self, cstnum):
         '''
         run constant setpoint 1
         '''
-        (self.ctlr.interact('MODE,CONSTANT')).decode('utf-8', 'replace')
+        #(self.ctlr.interact('MODE,CONSTANT')).decode('utf-8', 'replace')
+        # modified for all three Constant modes 
+        (self.ctlr.interact(f'MODE,CONSTANT,{cstnum}')).decode('utf-8', 'replace')
 
     def write_mode_run(self, pgmnum):
         '''
