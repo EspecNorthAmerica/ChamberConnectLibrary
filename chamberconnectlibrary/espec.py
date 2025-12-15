@@ -261,7 +261,7 @@ class Espec(ControllerInterface):
     # NOTE: 
     # Both constant set? on GLC is extensive, which includes Const No. 
     # Example: CONSTANT SET?, 1, TEMP; CONSTANT SET?,2,TEMP, etc. 
-    # 
+    # These are legacy set commands for P300, SCP220 and ES102
     @exclusive
     def get_constant_temp(self): # GL legacy command to CONSTANT 1 values 
         return self.client.read_constant_temp()
@@ -334,39 +334,39 @@ class Espec(ControllerInterface):
         return self.client.read_prgm_data_step(pgmnum,stepnum)
 
     @exclusive
-    def get_prgm_mon(self): # err: NA: CHB NOT READY 
+    def get_prgm_mon(self):
         return self.client.read_prgm_mon()
     
     @exclusive
-    def get_run_prgm_mon(self): # err: NA: CMD_ERR
+    def get_run_prgm_mon(self):
         return self.client.read_run_prgm_mon()
 
     @exclusive
-    def get_run_prgm(self): # worked 
+    def get_run_prgm(self): 
         return self.client.read_run_prgm()
 
     @exclusive
-    def get_system_set(self, arg): # worked 
+    def get_system_set(self, arg): 
         return self.client.read_system_set(arg)
 
     @exclusive
-    def get_constant_set(self, cnum, arg): # worked 
+    def get_constant_set(self, cnum, arg):
         return self.client.read_constant_set(cnum, arg)
 
     @exclusive
-    def get_ais_unit(self, arg): # worked 
+    def get_ais_unit(self, arg): 
         return self.client.read_ais_unit(arg)
 
     @exclusive
-    def get_ais_all_temp(self): # worked 
+    def get_ais_all_temp(self): 
         return self.client.read_ais_all_temp()
 
     @exclusive
-    def get_ais(self, num, arg): # worked 
+    def get_ais(self, num, arg): 
         return self.client.read_ais(num, arg)        
 
     @exclusive
-    def get_equimon(self, arg): # worked 
+    def get_equimon(self, arg): 
         return self.client.read_equimon(arg)  
 
     @exclusive
@@ -738,6 +738,14 @@ class Espec(ControllerInterface):
             raise ValueError('There are only 12 events')
         self.client.write_relay([value if i == N else None for i in range(1, 13)])
 
+    # Exclusively GL controller
+    @exclusive
+    def set_event_cst(self, cstnum, N, value):
+        value = value['constant'] if isinstance(value, dict) else value
+        if N >= 13:
+            raise ValueError('There are only 12 events')
+        self.client.write_constant_set_relay([value if i == N else None for i in range(1, 13)])
+
     @exclusive
     def get_air_speed(self):
         raise NotImplementedError
@@ -793,9 +801,15 @@ class Espec(ControllerInterface):
     def const_start(self):
         self.client.write_mode_constant()
 
+    # NEW GL 
     @exclusive
     def const_start_gl(self, cstnum):
         self.client.write_mode_constant(cstnum)
+
+    # NEW GL 
+    @exclusive
+    def set_const_mode_gl(self, cstnum, param, value):
+        self.client.write_constant_set_mode(cstnum, param, value)
 
     @exclusive
     def stop(self):

@@ -966,8 +966,6 @@ class GLC(object):
             ret['relay'] = [False for i in range(1, 13)]
         return rsp # return rsp from GL controller
 
-
-
     def read_ip_set(self): # Unsupport on GL controller.
         '''
         Read the configured IP address of the controller
@@ -1677,5 +1675,46 @@ class GLC(object):
 
 # GL features: superset commands for GL on P300 library 
 
+    def write_constant_set_mode(self, cnum, arg, value):
+        '''
+        Get the constant settings for all system parameters: 
+            TEMP, HUMI, REF, RELAY, PTC
 
+        returns:
+            [int] and [string]
+        '''
+        if arg in ['TEMP', 'HUMI'] and cnum in [1,2,3]:
+        #if arg in ['TEMP', 'HTEMP', 'LTEMP', 'HUMI', 'HHUMI', 'LHUMI', 'REF', 'REFSET', 'FAN', 'DEHUMI', 'AUXHUMI'] and cnum in [1,2,3]:            
+            #return (self.ctlr.interact(f'CONSTANT SET,{cnum},{arg},{value}')).decode('utf-8', 'replace').split(',')
+        #ss = f'CONSTANT SET,{cnum},{arg},{value}'
+            self.ctlr.interact(f'CONSTANT SET,{cnum},{arg},{value}').decode('utf-8', 'replace').split(',')
+        #return ss 
+        else:
+            raise ValueError('Invalid parameter values and cnum must be between 1 and 3')
+
+
+    def write_constant_set_relay(self, cstnum, relays):
+        '''
+        run constant setpoint 1
+        '''
+        vals = (self.parse_relays(relays))     
+        if len(vals['on']) > 0:
+            (self.ctlr.interact(f"CONSTANT SET,{cstnum},RELAY,ON,{','.join(str(v) for v in vals['on'])}")).decode('utf-8', 'replace')
+        if len(vals['off']) > 0:
+            (self.ctlr.interact(f"CONSTATN SET,{cstnum},RELAY,OFF,{','.join(str(v) for v in vals['off'])}")).decode('utf-8', 'replace') 
+
+    """
+    def write_relay(self, relays):
+        '''
+        set each relay(time signal)
+
+        Args:
+            relays: [boolean] True=turn relay on, False=turn relay off, None=do nothing
+        '''
+        vals = (self.parse_relays(relays))     
+        if len(vals['on']) > 0:
+            (self.ctlr.interact(f"RELAY,ON,{','.join(str(v) for v in vals['on'])}")).decode('utf-8', 'replace')
+        if len(vals['off']) > 0:
+            (self.ctlr.interact(f"RELAY,OFF,{','.join(str(v) for v in vals['off'])}")).decode('utf-8', 'replace') 
+    """
 

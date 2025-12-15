@@ -148,6 +148,45 @@ def set_loop(str, loop):
     currentPV = CONTROLLER.get_loop_pv(loop)
     print(f'\nrsp> {str} status:\n\tPV: {currentPV}\n\tSP: {currentSP}')
 
+def const_ssetup(param):
+    '''
+    Read Constant [1,2,3] RELAY setting value
+    
+    Return:
+        value,[str] 
+    '''
+    cstnum = int(input(f'Enter Constant # '))
+    current = CONTROLLER.get_constant_set(cstnum,param)
+    print(f'\nrsp> Current Setting: {current}')
+    val = float(input(f'Enter new Set Point: '))
+    CONTROLLER.set_const_mode_gl(cstnum,param,val) 
+    current = CONTROLLER.get_constant_set(cstnum,param)
+    print(f'\nrsp> Current Setting: {current}')
+
+def const_thsetup(param):
+    '''
+    Read Constant [1,2,3] TEMP, HUMI, REF value
+    Set Constant [1,2,3] TEMP, HUMI, REF value 
+    
+    Return:
+        value,[str] 
+    '''
+    cstnum = int(input(f'Enter Constant # '))
+    current = CONTROLLER.get_constant_set(cstnum,param)
+    print(f'\nrsp> Current Setting: {current}')
+    if param in ['TEMP'] and cstnum in [1,2,3]:
+        val = float(input(f'Enter new Set Point: '))
+        CONTROLLER.set_const_mode_gl(cstnum,param,val) 
+    if param in ['HUMI'] and cstnum in [1,2,3]:
+        val = int(input(f'Enter new Set Point: '))
+        CONTROLLER.set_const_mode_gl(cstnum,param,val) 
+    if param in ['REF'] and cstnum in [1,2,3]:
+        #val = int(input(f'Enter new Set Point: '))
+        #CONTROLLER.set_const_mode_gl(cstnum,param,val)
+        print(f'Done')
+    current = CONTROLLER.get_constant_set(cstnum,param)
+    print(f'\nrsp> Current Setting: {current}')
+
 def read_val(str,loop):
     '''
     Read current values of Temp or Temp and Humi SP and PV
@@ -267,6 +306,7 @@ def prog_mode(mode):
     else:
         print (nlist['nact']) 
     '''
+    NOTE: Case usage is implemented in Python 3.10+ 
     if "Program Running" in str:
         def process_command(mode): # Only works on Python 3.10 and above 
             match mode:
@@ -316,6 +356,21 @@ def prog_mode(mode):
     else:
         print (nlist['nact']) 
     '''
+
+def prog_mon():
+    '''
+    check run program status
+    '''
+    str = CONTROLLER.get_mode()
+    if str in ['Program Running']:
+        rsp1 = CONTROLLER.get_prgm_mon()        
+        rsp2 = CONTROLLER.get_run_prgm()  
+        print(f'\nrsp>\n\t{rsp2}\n\t{rsp1}')        
+    elif str in ['Constant', 'CONSTANT', 'constant']:
+        print ('\nrsp> Chamber in Constant mode; nothing to do.')            
+    else:
+        print(f'\nrsp> Program not running...nothing to do.')
+
 def set_time_signal(state):
     '''
     Set TS value on the selected TS number
@@ -342,24 +397,7 @@ def read_time_signal():
         ts_list = CONTROLLER.get_event(i+1)
         tsout = 'ON' if ts_list['current'] == True else 'OFF'
         print (f'\tTime signal #{i+1} : {tsout}')        
-"""
-def const_start():
-    '''
-    Start Constant mode on chamber
-    '''
-    str = CONTROLLER.get_mode()
-    time.sleep(0.5)
-    if str in ['Program Running','Program Paused']: 
-        print (f'\nrsp> Chamber is in {str} mode. Must stop it first.')
-    elif str in ['constant', 'Constant', 'CONSTANT']:
-        print (f'\nrsp> Chamber is already in {str} mode.')
-    else:
-        try: 
-            CONTROLLER.const_start()
-            print (f'\nrsp> CONSTANT mode started.')
-        except Exception as e:           
-            print(f'\nAttempt failed; reason:\n {e}') 
-"""
+
 def const_start():
     '''
     Start Constant mode on chamber
@@ -405,7 +443,7 @@ def temp_humi_controller():
             'h': lambda: read_val('Humi',2),
             's': lambda: set_loop('Humi',2),
             'z': lambda: main_menu()
-        }.get(choice, lambda: print ('\nrsp> Not a valid option.') )()  
+        }.get(choice, lambda: print ('\nrsp> Not a valid option.') )()
 
     while(True):
         print_menu('2','Temp/Humi')
@@ -422,6 +460,7 @@ def prog_menu():  # tested
        p: pause program
        r: resume program
        s: stop program
+       c: check program status
        z: return to Main Menu 
     '''
     def prog_operation(choice):
@@ -433,12 +472,13 @@ def prog_menu():  # tested
             'p': lambda: prog_mode('PAUSE'),
             'r': lambda: prog_mode('RESUME'),
             's': lambda: prog_mode('STOP'),
-            'z': lambda: main_menu(),
+            'c': lambda: prog_mon(),
+            'z': lambda: main_menu()
         }.get(choice, lambda: print ('\nrsp> Not a valid option') )()
 
     while(True):
         print_menu('3','Program')
-        option = input('Select option (m, e, n, p, r, s, z): ')
+        option = input('Select option (m, e, n, p, r, s, c, z): ')
         prog_operation(option)
 
 def event_controller():
@@ -489,6 +529,26 @@ def end_program():
     print ("Program terminated.\n")
     exit() 
 
+def const_setup():
+    '''
+    Set control options  
+    '''
+    def const_opt(option):
+        '''
+        Select const setup option
+        '''
+        return {
+            't': lambda: const_thsetup('TEMP'),
+            'h': lambda: const_thsetup('HUMI'),
+            'r': lambda: const_thsetup('REF'),            
+            's': lambda: const_rsetup('RELAY'),
+            'z': lambda: main_menu()
+        }.get(option, lambda: print (f'\nrsp> Not a valid option.')) () 
+    while(True):
+        print_menu('6','constant setup')
+        option = input('Select option (t, h, r, s, z): ')
+        const_opt(option)
+         
 def main_menu(): 
     '''
        Set options for program control
@@ -500,6 +560,7 @@ def main_menu():
         return {
             't': lambda: temp_humi_controller(),
             'p': lambda: prog_menu(),
+            'c': lambda: const_setup(),            
             'e': lambda: event_controller(),
             's': lambda: status_menu(),
             'z': lambda: end_program(),
@@ -507,7 +568,7 @@ def main_menu():
 
     while(True):
         print_menu('1','Main Menu')
-        option = input('Select option (t, p, e, s, z): ')
+        option = input('Select option (t, p, c, e, s, z): ')
         main_option(option)
 
 def print_menu(choice, menu_name):
@@ -529,14 +590,16 @@ def menu(choice):
        3: Program menu
        4: Output (Time Signal) menu
        5: Chamber operating mode
+       6: Constant setup
     '''
     # main menu 
     main_menu = {
-        't': 'Temp/Humi SP control           ',
+        't': 'Temp/Humi SP control          ',
         'p': 'Program control               ',
+        'c': 'Constant Mode control         ',
         'e': 'Event control                 ',        
         's': 'Chamber operating mode        ',
-        'z': 'Exit                          '
+        'z': 'Exit program                  '
     }
 
     # temp and humi ctrl menu
@@ -556,6 +619,7 @@ def menu(choice):
         'p': 'Pause program                 ',
         'r': 'Resume program                ',
         's': 'Stop program                  ',
+        'c': 'Check program status          ',
         'z': 'Return to Main Menu           '
     }
 
@@ -578,12 +642,22 @@ def menu(choice):
         'z': 'Return to Main Menu           '
     }
 
+    # event ctrl menu 
+    setup_menu = {
+        't': 'Set Const [1, 2, 3] Temp      ',
+        'h': 'Set Const [1, 2, 3] Humi      ', 
+        'r': 'Set Const [1, 2, 3] REF       ',
+        's': 'Set Const [1, 2, 3] RELAYS    ',        
+        'z': 'Return to Main Menu           '
+    }
+
     return {
         '1': lambda: main_menu,
         '2': lambda: th_menu,
         '3': lambda: prog_menu,
         '4': lambda: ts_menu,
         '5': lambda: status_menu,
+        '6': lambda: setup_menu,
     }.get(choice, lambda: print('\nrsp> Not a valid option') )()
 
 if __name__ == "__main__":
@@ -637,6 +711,7 @@ if __name__ == "__main__":
     main_menu()
 
     '''
+    #GL test commands: 
     ts_list = CONTROLLER.get_event(1)
     print (f'ROM: {ts_list}')
 
