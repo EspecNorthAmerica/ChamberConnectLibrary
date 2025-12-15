@@ -1341,14 +1341,14 @@ class GLC(object):
             pgmnum: int, the program being written/edited
             pgmstep: the program parameters, see read_prgm_data_step for parameters
         '''
-        cmd = 'PRGM DATA WRITE,PGM{},STEP{}'.format(pgmnum, pgmstep['number'])
+        cmd = f"PRGM DATA WRITE,PGM{pgmnum},STEP{pgmstep['number']}"
         if 'temperature' in pgmstep:
             if 'setpoint' in pgmstep['temperature']:
-                cmd = '{},TEMP{:.1f}'.format(cmd, pgmstep['temperature']['setpoint'])
+                cmd = f"{cmd},TEMP{pgmstep['temperature']['setpoint']:.1f}"
             if 'ramp' in pgmstep['temperature']:
-                cmd = '{},TRAMP{}'.format(cmd, 'ON' if pgmstep['temperature']['ramp'] else 'OFF')
+                cmd = f"{cmd},TRAMP{'ON' if pgmstep['temperature']['ramp'] else 'OFF'}"                
             if 'enable_cascade' in pgmstep['temperature']:
-                cmd = '{},PTC{}'.format(cmd, 'ON' if pgmstep['temperature']['enable_cascade'] else 'OFF')
+                cmd = f"{cmd},PTC{'ON' if pgmstep['temperature']['enable_cascade'] else 'OFF'}"
             if 'deviation' in pgmstep['temperature']:
                 ttp = (cmd, pgmstep['temperature']['deviation']['positive'],
                        pgmstep['temperature']['deviation']['negative'])
@@ -1400,18 +1400,18 @@ class GLC(object):
             gohumi: float, the humidity to end the steap at (optional for ramping)
             relays: [boolean], True= turn relay on, False=turn relay off, None=Do nothing
         '''
-        cmd = 'RUN PRGM, TEMP{0:.1f} TIME{}:{}'.format(temp, hour, minute)
+        cmd = f'RUN PRGM, TEMP{temp:.1f} TIME{hour}:{minute}'
         if gotemp is not None:
-            cmd = '{} GOTEMP{0:.1f}'.format(cmd, gotemp)
+            cmd = f'{cmd} GOTEMP{gotemp:.1f}'
         if humi is not None:
-            cmd = '{} HUMI{0:.0f}'.format(cmd, humi)
+            cmd = f'{cmd} HUMI{humi:.0f}'
         if gohumi is not None:
-            cmd = '{} GOHUMI{0:.0f}'.format(cmd, gohumi)
+            cmd = f'{cmd} GOHUMI{gohumi:.0f}'
         rlys = self.parse_relays(relays) if relays is not None else {'on':None, 'off':None}
         if rlys['on']:
-            cmd = '{} RELAYON,{}'.format(cmd, ','.join(str(v) for v in rlys['on']))
+            cmd = f"{cmd} RELAYON,{','.join(str(v) for v in rlys['on'])}"
         if rlys['off']:
-            cmd = '{} RELAYOFF,{}'.format(cmd, ','.join(str(v) for v in rlys['off']))
+            cmd = f"{cmd} RELAYOFF,{','.join(str(v) for v in rlys['off'])}"
         (self.ctlr.interact(cmd)).decode('utf-8', 'replace') 
 
     def write_temp_ptc(self, enable, positive, negative):
@@ -1684,11 +1684,7 @@ class GLC(object):
             [int] and [string]
         '''
         if arg in ['TEMP', 'HUMI'] and cnum in [1,2,3]:
-        #if arg in ['TEMP', 'HTEMP', 'LTEMP', 'HUMI', 'HHUMI', 'LHUMI', 'REF', 'REFSET', 'FAN', 'DEHUMI', 'AUXHUMI'] and cnum in [1,2,3]:            
-            #return (self.ctlr.interact(f'CONSTANT SET,{cnum},{arg},{value}')).decode('utf-8', 'replace').split(',')
-        #ss = f'CONSTANT SET,{cnum},{arg},{value}'
             self.ctlr.interact(f'CONSTANT SET,{cnum},{arg},{value}').decode('utf-8', 'replace').split(',')
-        #return ss 
         else:
             raise ValueError('Invalid parameter values and cnum must be between 1 and 3')
 

@@ -156,10 +156,9 @@ def const_ssetup(param):
         value,[str] 
     '''
     cstnum = int(input(f'Enter Constant # '))
-    current = CONTROLLER.get_constant_set(cstnum,param)
-    print(f'\nrsp> Current Setting: {current}')
-    val = float(input(f'Enter new Set Point: '))
-    CONTROLLER.set_const_mode_gl(cstnum,param,val) 
+    if cstnum in [1,2,3]:
+        val = int(input(f'Enter relay number: '))
+        CONTROLLER.set_const_relay_gl(cstnum, val)
     current = CONTROLLER.get_constant_set(cstnum,param)
     print(f'\nrsp> Current Setting: {current}')
 
@@ -184,6 +183,11 @@ def const_thsetup(param):
         #val = int(input(f'Enter new Set Point: '))
         #CONTROLLER.set_const_mode_gl(cstnum,param,val)
         print(f'Done')
+    if param in ['RELAY'] and cstnum in [1,2,3]:
+        val = int(input(f'Enter relay number: '))
+        #CONTROLLER.set_const_mode_gl(cstnum,param,val)
+        CONTROLLER.set_const_relay_gl(cstnum, param, value)
+        print(f'Done')        
     current = CONTROLLER.get_constant_set(cstnum,param)
     print(f'\nrsp> Current Setting: {current}')
 
@@ -541,7 +545,7 @@ def const_setup():
             't': lambda: const_thsetup('TEMP'),
             'h': lambda: const_thsetup('HUMI'),
             'r': lambda: const_thsetup('REF'),            
-            's': lambda: const_rsetup('RELAY'),
+            's': lambda: const_ssetup('RELAY'),
             'z': lambda: main_menu()
         }.get(option, lambda: print (f'\nrsp> Not a valid option.')) () 
     while(True):

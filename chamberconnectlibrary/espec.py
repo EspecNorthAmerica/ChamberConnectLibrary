@@ -797,6 +797,8 @@ class Espec(ControllerInterface):
         inactive = [x for x in alarmlist if x not in active]
         return {'active':active, 'inactive':inactive}
 
+
+
     @exclusive
     def const_start(self):
         self.client.write_mode_constant()
@@ -810,6 +812,11 @@ class Espec(ControllerInterface):
     @exclusive
     def set_const_mode_gl(self, cstnum, param, value):
         self.client.write_constant_set_mode(cstnum, param, value)
+
+    # NEW GL 
+    @exclusive
+    def set_const_relay_gl(self, cstnum, value):
+        self.client.write_constant_set_relay(cstnum, value)
 
     @exclusive
     def stop(self):
