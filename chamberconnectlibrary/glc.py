@@ -535,10 +535,10 @@ class GLC(object):
         returns:
             [int] and [string]
         '''
-        if arg in ['TEMP', 'HUMI', 'REF', 'RELAY', 'PTC'] and cnum in [1,2,3]:
+        if arg in ['TEMP', 'HTEMP', 'LTEMP', 'HUMI', 'HHUMI', 'LHUMI', 'REF', 'RELAY', 'PTC'] and cnum in [1,2,3]:
             return (self.ctlr.interact(f'CONSTANT SET?,{cnum},{arg}')).decode('utf-8', 'replace').split(',')
         else:
-            raise ValueError('arg must be one of the following: "TEMP", "HUMI", "REF", "RELAY", "PTC" and cnum must be between 1 and 3')
+            raise ValueError('arg must be one of the following: "TEMP", "HTEMP", "LTEMP", "HUMI", "HHUMI", "LHUMI", "REF", "RELAY", "PTC" and cnum must be between 1 and 3')
 
     def read_ais(self, num, arg='TEMP'):
         '''
@@ -1683,7 +1683,7 @@ class GLC(object):
         returns:
             [int] and [string]
         '''
-        if arg in ['TEMP', 'HUMI'] and cnum in [1,2,3]:
+        if arg in ['TEMP', 'HTEMP', 'LTEMP', 'HUMI', 'HHUMI', 'LHUMI', ] and cnum in [1,2,3]:            
             self.ctlr.interact(f'CONSTANT SET,{cnum},{arg},{value}').decode('utf-8', 'replace').split(',')
         else:
             raise ValueError('Invalid parameter values and cnum must be between 1 and 3')
@@ -1696,9 +1696,14 @@ class GLC(object):
         vals = (self.parse_relays(relays))     
         if len(vals['on']) > 0:
             (self.ctlr.interact(f"CONSTANT SET,{cstnum},RELAY,ON,{','.join(str(v) for v in vals['on'])}")).decode('utf-8', 'replace')
+        else:
+            raise ValueError('Invalid parameter.')
+
         if len(vals['off']) > 0:
             (self.ctlr.interact(f"CONSTATN SET,{cstnum},RELAY,OFF,{','.join(str(v) for v in vals['off'])}")).decode('utf-8', 'replace') 
-
+        else:
+            raise ValueError('Invladi parameter')          
+            
     """
     def write_relay(self, relays):
         '''

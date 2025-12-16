@@ -148,6 +148,64 @@ def set_loop(str, loop):
     currentPV = CONTROLLER.get_loop_pv(loop)
     print(f'\nrsp> {str} status:\n\tPV: {currentPV}\n\tSP: {currentSP}')
 
+def const_tsetup():
+    '''
+    Read Constant [1,2,3] TEMP, HTEMP, LTEMP value
+    Set Constant [1,2,3] TEMP, HTEMP, LTEMP value
+    
+    Return:
+        value,[str] 
+    '''
+    loop = 1  # temp loop
+    val_range = CONTROLLER.get_loop_range(loop)
+    str1 = "Temperature Range" if loop == 1 else "Humidity Range"
+    print (f'\n{str1}:\nMAX: {val_range["max"]}\nMIN: {val_range["min"]}')
+    cstnum = int(input(f'Enter Constant # '))
+    param = input(f'Enter parameter (e.g., TEMP, HTEMP, LTEMP): ')
+    current = CONTROLLER.get_constant_set(cstnum,param)
+    print(f'\nrsp> Current Setting: {current}')
+    if param in ['TEMP', 'HTEMP', 'LTEMP'] and cstnum in [1,2,3]:
+        val = float(input(f'Enter new Set Point: '))
+        try: 
+            CONTROLLER.set_const_mode_gl(cstnum,param,val) 
+            print ('\nrsp> DONE') 
+        except Exception as e:          
+            print(f'\nAttempt failed; reason:\n {e}')          
+    else: 
+        print(f'\nAttempt failed; try again.')
+        const_setup() 
+        
+    current = CONTROLLER.get_constant_set(cstnum,param)
+    print(f'\nrsp> Current Setting: {current}')
+
+def const_hsetup():
+    '''
+    Read Constant [1,2,3] TEMP, HUMI, REF value
+    Set Constant [1,2,3] TEMP, HUMI, REF value 
+    
+    Return:
+        value,[str] 
+    '''
+    loop = 2  # humi loop 
+    val_range = CONTROLLER.get_loop_range(loop)
+    str1 = "Temperature Range" if loop == 1 else "Humidity Range"
+    print (f'\n{str1}:\nMAX: {val_range["max"]}\nMIN: {val_range["min"]}')
+    cstnum = int(input(f'Enter Constant # '))
+    param = input(f'Enter parameter (e.g., HUMI, HHUMI, LHUMI): ')
+    current = CONTROLLER.get_constant_set(cstnum,param)
+    print(f'\nrsp> Current Setting: {current}')      
+        
+    if param in ['HUMI', 'HHUMI', 'LHUMI'] and cstnum in [1,2,3]:
+        val = int(input(f'Enter new Set Point: '))
+        try:
+            CONTROLLER.set_const_mode_gl(cstnum,param,val) 
+            print ('\nrsp> DONE') 
+        except Exception as e:          
+            print(f'\nAttempt failed; reason:\n {e}')   
+
+    current = CONTROLLER.get_constant_set(cstnum,param)
+    print(f'\nrsp> Current Setting: {current}')
+
 def const_ssetup(param):
     '''
     Read Constant [1,2,3] RELAY setting value
@@ -159,35 +217,6 @@ def const_ssetup(param):
     if cstnum in [1,2,3]:
         val = int(input(f'Enter relay number: '))
         CONTROLLER.set_const_relay_gl(cstnum, val)
-    current = CONTROLLER.get_constant_set(cstnum,param)
-    print(f'\nrsp> Current Setting: {current}')
-
-def const_thsetup(param):
-    '''
-    Read Constant [1,2,3] TEMP, HUMI, REF value
-    Set Constant [1,2,3] TEMP, HUMI, REF value 
-    
-    Return:
-        value,[str] 
-    '''
-    cstnum = int(input(f'Enter Constant # '))
-    current = CONTROLLER.get_constant_set(cstnum,param)
-    print(f'\nrsp> Current Setting: {current}')
-    if param in ['TEMP'] and cstnum in [1,2,3]:
-        val = float(input(f'Enter new Set Point: '))
-        CONTROLLER.set_const_mode_gl(cstnum,param,val) 
-    if param in ['HUMI'] and cstnum in [1,2,3]:
-        val = int(input(f'Enter new Set Point: '))
-        CONTROLLER.set_const_mode_gl(cstnum,param,val) 
-    if param in ['REF'] and cstnum in [1,2,3]:
-        #val = int(input(f'Enter new Set Point: '))
-        #CONTROLLER.set_const_mode_gl(cstnum,param,val)
-        print(f'Done')
-    if param in ['RELAY'] and cstnum in [1,2,3]:
-        val = int(input(f'Enter relay number: '))
-        #CONTROLLER.set_const_mode_gl(cstnum,param,val)
-        CONTROLLER.set_const_relay_gl(cstnum, param, value)
-        print(f'Done')        
     current = CONTROLLER.get_constant_set(cstnum,param)
     print(f'\nrsp> Current Setting: {current}')
 
@@ -542,10 +571,10 @@ def const_setup():
         Select const setup option
         '''
         return {
-            't': lambda: const_thsetup('TEMP'),
-            'h': lambda: const_thsetup('HUMI'),
-            'r': lambda: const_thsetup('REF'),            
-            's': lambda: const_ssetup('RELAY'),
+            't': lambda: const_tsetup(),
+            'h': lambda: const_hsetup(),
+            'r': lambda: const_rsetup(),            
+            's': lambda: const_ssetup(),
             'z': lambda: main_menu()
         }.get(option, lambda: print (f'\nrsp> Not a valid option.')) () 
     while(True):
