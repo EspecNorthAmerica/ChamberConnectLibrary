@@ -466,7 +466,7 @@ class GLC(object):
     ######################################################################
     # NOTE: 
     # Requires rewriting, reimplementation to include CONSTANT #1, 2, 3
-    # 
+    ###################################################################### 
     def read_constant_temp(self): # GL legacy command to CONSTANT 1 values 
         '''
         Get the constant settings for the temperature loop
@@ -1718,4 +1718,5 @@ class GLC(object):
         if len(vals['off']) > 0:
             (self.ctlr.interact(f"RELAY,OFF,{','.join(str(v) for v in vals['off'])}")).decode('utf-8', 'replace') 
     """
+
 

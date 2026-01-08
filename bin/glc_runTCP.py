@@ -106,6 +106,7 @@ def ip_addr():
         try:
             #ip_addr = input('Enter F4T IP address (e.g., 192.168.0.101): ')
             ip_addr = "10.30.200.247"
+            #ip_addr = "10.30.200.243"            
             chk_ip = re.match(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$", ip_addr)
             if chk_ip:
                 print ('\n')
@@ -159,29 +160,50 @@ def const_tsetup():
     loop = 1  # temp loop
     val_range = CONTROLLER.get_loop_range(loop)
     str1 = "Temperature Range" if loop == 1 else "Humidity Range"
-    print (f'\n{str1}:\nMAX: {val_range["max"]}\nMIN: {val_range["min"]}')
-    cstnum = int(input(f'Enter Constant # '))
-    param = input(f'Enter parameter (e.g., TEMP, HTEMP, LTEMP): ')
-    current = CONTROLLER.get_constant_set(cstnum,param)
-    print(f'\nrsp> Current Setting: {current}')
-    if param in ['TEMP', 'HTEMP', 'LTEMP'] and cstnum in [1,2,3]:
-        val = float(input(f'Enter new Set Point: '))
-        try: 
-            CONTROLLER.set_const_mode_gl(cstnum,param,val) 
-            print ('\nrsp> DONE') 
-        except Exception as e:          
-            print(f'\nAttempt failed; reason:\n {e}')          
-    else: 
-        print(f'\nAttempt failed; try again.')
-        const_setup() 
+    print (f'\n{str1}:\n\tMAX: {val_range["max"]}\n\tMIN: {val_range["min"]}')
+    try:
+        while True:
+            try:
+                cstnum = int(input(f'\nEnter Constant # '))
+                if isinstance(cstnum, int) and cstnum in [1,2,3]:
+                    param = input(f'Enter parameter (e.g., TEMP, HTEMP, LTEMP): ').upper()
+
+                    # reading current setting/values
+                    if param.upper() in ['TEMP', 'HTEMP', 'LTEMP']:
+                        current = CONTROLLER.get_constant_set(cstnum,param)
+                        print(f'\nrsp> Current Setting: {current}')
+                    else:
+                        print(f'ERR: Invalid input; exiting setup.')
+                        const_setup()         
+
+                    if param in ['TEMP', 'HTEMP', 'LTEMP'] and cstnum in [1,2,3]:
+                        val = float(input(f'Enter new Set Point: '))
+                        if val_range["min"] <= val <= val_range["max"]:                            
+                            CONTROLLER.set_const_mode_gl(cstnum,param,val) 
+                            print ('\nrsp> DONE') 
+                            break
+                        else:
+                            print(f'ERR: Invalid input; try again.')
+                            const_setup()  
+                    else: 
+                        print(f'\nAttempt failed; try again.')
+                        const_setup() 
+                else:
+                    print ('ERROR! Constant number out of range. Try again. \n')
+            except ValueError:
+                print ('Invalid value.\n')
+            except KeyboardInterrupt:
+                pass 
+    except KeyboardInterrupt:
+        pass        
         
     current = CONTROLLER.get_constant_set(cstnum,param)
-    print(f'\nrsp> Current Setting: {current}')
+    print(f'\nrsp> New reading: {current}\n\n')
 
 def const_hsetup():
     '''
-    Read Constant [1,2,3] TEMP, HUMI, REF value
-    Set Constant [1,2,3] TEMP, HUMI, REF value 
+    Read Constant [1,2,3] HUMI, HHUMI, LHUMI value
+    Set Constant [1,2,3] HUMI, HHUMI, LHUMI value
     
     Return:
         value,[str] 
@@ -189,36 +211,87 @@ def const_hsetup():
     loop = 2  # humi loop 
     val_range = CONTROLLER.get_loop_range(loop)
     str1 = "Temperature Range" if loop == 1 else "Humidity Range"
-    print (f'\n{str1}:\nMAX: {val_range["max"]}\nMIN: {val_range["min"]}')
-    cstnum = int(input(f'Enter Constant # '))
-    param = input(f'Enter parameter (e.g., HUMI, HHUMI, LHUMI): ')
-    current = CONTROLLER.get_constant_set(cstnum,param)
-    print(f'\nrsp> Current Setting: {current}')      
-        
-    if param in ['HUMI', 'HHUMI', 'LHUMI'] and cstnum in [1,2,3]:
-        val = int(input(f'Enter new Set Point: '))
-        try:
-            CONTROLLER.set_const_mode_gl(cstnum,param,val) 
-            print ('\nrsp> DONE') 
-        except Exception as e:          
-            print(f'\nAttempt failed; reason:\n {e}')   
+    print (f'\n{str1}:\n\tMAX: {val_range["max"]}\n\tMIN: {val_range["min"]}')
+    try: 
+        while True:
+            try:
+                cstnum = int(input(f'\nEnter Constant # '))
+                if isinstance(cstnum,int) and cstnum in [1,2,3]:
+                    param = input(f'Enter parameter (e.g., HUMI, HHUMI, LHUMI): ').upper()
+    
+                    # reading current humi setting/values
+                    if param.upper() in ['HUMI', 'HHUMI', 'LHUMI']:
+                        current = CONTROLLER.get_constant_set(cstnum,param)
+                        print(f'\nrsp> Current Setting: {current}') 
+                    else:
+                        print(f'ERR: Invalid input; exiting setup.')
+                        const_setup()      
+
+                    if param in ['HUMI', 'HHUMI', 'LHUMI'] and cstnum in [1,2,3]:
+                        val = int(input(f'Enter new Set Point: '))
+                        if val_range["min"] <= val <= val_range["max"]: 
+                            CONTROLLER.set_const_mode_gl(cstnum,param,val) 
+                            print ('\nrsp> DONE') 
+                            break
+                        else:
+                            print(f'ERR: Invalid input; try again.')
+                            const_setup()  
+                    else: 
+                        print(f'\nAttempt failed; try again.')
+                        const_setup() 
+                else:
+                    print ('ERROR! Constant number out of range. Try again. \n')
+            except ValueError:
+                print ('Invalid value.\n')
+            except KeyboardInterrupt:
+                pass 
+    except KeyboardInterrupt:
+        pass  
 
     current = CONTROLLER.get_constant_set(cstnum,param)
-    print(f'\nrsp> Current Setting: {current}')
+    print(f'\nrsp> New reading: {current}\n\n')
 
-def const_ssetup(param):
+def const_ssetup():
     '''
-    Read Constant [1,2,3] RELAY setting value
+    Read Constant [1,2,3] HUMI, HHUMI, LHUMI value
+    Set Constant [1,2,3] HUMI, HHUMI, LHUMI value
     
     Return:
         value,[str] 
     '''
-    cstnum = int(input(f'Enter Constant # '))
-    if cstnum in [1,2,3]:
-        val = int(input(f'Enter relay number: '))
-        CONTROLLER.set_const_relay_gl(cstnum, val)
+    try: 
+        while True:
+            try:
+                cstnum = int(input(f'\nEnter Constant # '))
+                if isinstance(cstnum,int) and cstnum in [1,2,3]:
+                    current = CONTROLLER.get_constant_set(cstnum,'REF')
+                    print(f'\nrsp> Current Setting: {current}') 
+                else:
+                    print(f'ERR: Invalid input; exiting setup.')
+                    const_setup()  
+
+                val = input(f'Enter new refrig set point (e.g.: Off,25,50,100,Auto): ')
+
+                if isinstance(val,int) and val in [25,50,100]:
+                    print('Number PASSED!')
+                    cstnum = int(input(f'\nPAUSED: '))
+                    const_setup()
+                elif isinstance(val,str) and val.upper() in ['OFF', 'AUTO']:
+                    print('STR PASSED!')
+                    cstnum = int(input(f'\nPAUSED: '))
+                    const_setup()
+                else:
+                    print ('ERROR! Refrig value out of range. \n')
+
+            except ValueError:
+                print ('Invalid value.\n')
+            except KeyboardInterrupt:
+                pass 
+    except KeyboardInterrupt:
+        pass  
+
     current = CONTROLLER.get_constant_set(cstnum,param)
-    print(f'\nrsp> Current Setting: {current}')
+    print(f'\nrsp> New reading: {current}\n\n')
 
 def read_val(str,loop):
     '''
@@ -573,12 +646,12 @@ def const_setup():
         return {
             't': lambda: const_tsetup(),
             'h': lambda: const_hsetup(),
-            'r': lambda: const_rsetup(),            
+            'r': lambda: const_ssetup(),            
             's': lambda: const_ssetup(),
             'z': lambda: main_menu()
         }.get(option, lambda: print (f'\nrsp> Not a valid option.')) () 
     while(True):
-        print_menu('6','constant setup')
+        print_menu('6','Constant Setup')
         option = input('Select option (t, h, r, s, z): ')
         const_opt(option)
          
@@ -609,10 +682,10 @@ def print_menu(choice, menu_name):
     set up selection menu
     '''
     print (f'\nGL control options: {menu_name}'
-            '\n--------------------------------') 
+            '\n----------------------------------') 
     for key in menu(choice).keys():
         print (f'  [{key}]:', menu(choice)[key] )
-    print ('--------------------------------') 
+    print ('----------------------------------') 
 
 def menu(choice):
     '''
@@ -637,10 +710,10 @@ def menu(choice):
 
     # temp and humi ctrl menu
     th_menu = {
-        'r': 'Read Temperature SP and PV    ',
-        't': 'New Temperature Set Point     ',
-        'h': 'Read Humidity SP and PV      ',
-        's': 'New Humidity Set Point       ',
+        'r': 'Read Const [1] Temp SP and PV    ',
+        't': 'Set Const [1] Temp Set Point     ',
+        'h': 'Read Const [1] Humi SP and PV    ',
+        's': 'Set Const [1] Humi Set Point     ',
         'z': 'Return to Main Menu           '
     }
 
@@ -742,202 +815,3 @@ if __name__ == "__main__":
     )
     
     main_menu()
-
-    '''
-    #GL test commands: 
-    ts_list = CONTROLLER.get_event(1)
-    print (f'ROM: {ts_list}')
-
-    str = CONTROLLER.get_mode()
-    print (f'Op Mode: {str}')
-
-    str = CONTROLLER.get_rom()
-    print (f'Op Mode: {str}')
-
-    str = CONTROLLER.get_date()
-    print (f'Op Mode: {str}')
-
-    str = CONTROLLER.get_date_time()
-    print (f'Op Mode: {str}') 
-
-    str = CONTROLLER.get_srq()
-    print (f'Op Mode: {str}') 
-
-    str = CONTROLLER.get_mask()
-    print (f'Op Mode: {str}') 
-
-    str = CONTROLLER.get_timer_on()
-    print (f'Op Mode: {str}')     
-
-    str = CONTROLLER.get_timer_use()
-    print (f'Op Mode: {str}')         
-
-    str = CONTROLLER.get_timer_list_quick()
-    print (f'Op Mode: {str}')  
-
-    str = CONTROLLER.get_timer_list_start()
-    print (f'Op Mode: {str}')      
-
-    str = CONTROLLER.get_timer_list_stop()
-    print (f'Op Mode: {str}')       
-
-    str = CONTROLLER.get_alarm()
-    print (f'Op Mode: {str}')       
-
-    str = CONTROLLER.get_keyprotect()
-    print (f'Op Mode: {str}')       
-
-    str = CONTROLLER.get_type()
-    print (f'Op Mode: {str}')  
-
-    str = CONTROLLER.get_mode()
-    print (f'MODE: {str}')          
-
-    str = CONTROLLER.get_mon()
-    print (f'MONITOR: {str}')      
-
-    str = CONTROLLER.get_temp()
-    print (f'Op Mode: {str}')       
-
-    str = CONTROLLER.get_humi()
-    print (f'Op Mode: {str}')         
-
-    str = CONTROLLER.get_set()
-    print (f'Op Mode: {str}')           
-
-    str = CONTROLLER.get_ref()
-    print (f'Op Mode: {str}')     
-
-    str = CONTROLLER.get_relay()
-    print (f'Op Mode: {str}')       
-
-    str = CONTROLLER.get_htr()
-    print (f'Op Mode: {str}') 
-
-    str = CONTROLLER.get_constant_temp()
-    print (f'Op Mode: {str}')     
-
-    str = CONTROLLER.get_constant_humi()
-    print (f'Op Mode: {str}')                    
-
-    str = CONTROLLER.get_constant_ref()
-    print (f'Op Mode: {str}')         
-
-    str = CONTROLLER.get_constant_relay()
-    print (f'Op Mode: {str}')         
-
-    # err: NA: INVALID REQ 
-    #str = CONTROLLER.get_constant_ptc()
-    #print (f'Op Mode: {str}')       
-
-    str = CONTROLLER.get_system_set('PTS')
-    print (f'SYSTEM SET: {str}')     
-
-    # err: NA: INVALID REQ 
-    #str = CONTROLLER.get_mon_ptc()
-    #print (f'Op Mode: {str}')      
-
-    # err: NA: INVALID REQ 
-    #str = CONTROLLER.get_prgm_mon()
-    #print (f'Op Mode: {str}')     
-
-    str = CONTROLLER.get_prgm_use()
-    print (f'PRGM USE: {str}')       
-
-    # err: CHB NOT READY 
-    #str = CONTROLLER.get_prgm_set()   # err: chamber not ready 
-    #print (f'Op Mode: {str}')       
-
-    str = CONTROLLER.get_prgm_use()
-    prm_num = len(str) 
-    print (f'Select PRGM NUM BETWEEN 1 and {prm_num-1}:')
-    num = int(input("PRGM NUM:"))
-    str = CONTROLLER.get_prgm_use_num(num)
-    print (f'PRGM USE NUM: {str}')    
-
-    #str = CONTROLLER.get_prgm_use()
-    #prm_num = len(str) 
-    #print (f'Select PRGM NUM BETWEEN 1 and {prm_num-1}:')
-    num = int(input("PRGM NUM:"))
-    str = CONTROLLER.get_prgm_data(num)
-    print (f'PRGM DATA: {str}')      
-
-    num = int(input("PRGM NUM:"))
-    str = CONTROLLER.get_prgm_data_detail(num)
-    print (f'PRGM DATA DETAIL: {str}')        
-
-    prgmnum = int(input("PRGM NUM:"))
-    stepnum = int(input('STEP NUM:'))
-    str = CONTROLLER.get_prgm_data_step(prgmnum,stepnum)
-    print (f'PRGM DATA DETAIL STEP: {str}')       
-
-    # err: NA: CHMB NOT READY 
-    #str = CONTROLLER.get_prgm_mon()
-    #print (f'PRGM DATA: {str}')  
-
-    str = CONTROLLER.get_run_prgm()
-    print (f'PRGM STATUS: {str}')  
-
-    # err: NA: CHMB NOT READY 
-    #str = CONTROLLER.get_run_prgm()
-    #print (f'PRGM STATUS: {str}')  
-
-    str = CONTROLLER.get_system_set('PTS')
-    print (f'SYSTEM SET (PTS): {str}')          
-
-    str = CONTROLLER.get_system_set('PTC')
-    print (f'SYSTEM SET (PTC): {str}')      
-
-    str = CONTROLLER.get_system_set('PTCOPT')
-    print (f'SYSTEM SET (PTCOPT): {str}')      
-
-    str = CONTROLLER.get_constant_set(1,'TEMP')
-    print (f'CONSTANT SET (TEMP): {str}')    
-
-    str = CONTROLLER.get_constant_set(1,'HUMI')
-    print (f'CONSTANT SET (HUMI): {str}')   
-
-    str = CONTROLLER.get_constant_set(1,'REF')
-    print (f'CONSTANT SET (REF): {str}')   
-
-    str = CONTROLLER.get_constant_set(1,'RELAY')
-    print (f'CONSTANT SET (RELAY): {str}')
-
-    # err: INVALID REQ, missing description?
-    #str = CONTROLLER.get_constant_set(1,'PTC')
-    #print (f'CONSTANT SET (PTC): {str}')     
-
-    str = CONTROLLER.get_ais_unit('UNIT') # option: UNIT, VER 
-    print (f'AIS UNIT: {str}')  
-
-    str = CONTROLLER.get_ais_all_temp() # standard 
-    print (f'AIS ALL TEMP: {str}') 
-
-    str = CONTROLLER.get_ais(1,'FREQ') # num = 1-4, arg=TEMP, ELV, FREQ, REF, PRESS 
-    print (f'AIS NUM and ARG: {str}')                   
-
-    str = CONTROLLER.get_equimon('REF') # Ref opt worked... 
-    print (f'READ EQUIMON: {str}')       
-
-
-   
-    str = CONTROLLER.get_constant_set(1,'TEMP')
-    print (f'CONSTANT SET (TEMP): {str}')    
-
-    str = CONTROLLER.get_constant_set(2,'HUMI')
-    print (f'CONSTANT SET (HUMI): {str}')   
-
-    str = CONTROLLER.get_constant_set(3,'REF')
-    print (f'CONSTANT SET (REF): {str}')   
-
-    str = CONTROLLER.get_constant_set(1,'RELAY')
-    print (f'CONSTANT SET (RELAY): {str}')
-
-    str = CONTROLLER.get_constant_set(2,'HUMI')
-    print (f'CONSTANT SET (HUMI): {str}')  
-
-    # err: INVALID REQ, missing description?
-    #str = CONTROLLER.get_constant_set(1,'PTC')
-    #print (f'CONSTANT SET (PTC): {str}')  
-
-    '''

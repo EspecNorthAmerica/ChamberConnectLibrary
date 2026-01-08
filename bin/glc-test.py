@@ -104,8 +104,9 @@ def ip_addr():
     '''
     while True:
         try:
-            #ip_addr = input('Enter IP address of GL system (e.g., 192.168.0.101): ')
+            #ip_addr = input('Enter F4T IP address (e.g., 192.168.0.101): ')
             ip_addr = "10.30.200.247"
+            #ip_addr = "10.30.200.243"            
             chk_ip = re.match(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$", ip_addr)
             if chk_ip:
                 print ('\n')
@@ -118,6 +119,7 @@ def set_loop(str, loop):
     '''
     set new temp value
     '''
+    # recording temp range 
     loop_num = [1,2] 
     val_range = CONTROLLER.get_loop_range(loop)
     str1 = "Temperature Range" if loop == 1 else "Humidity Range"
@@ -158,29 +160,51 @@ def const_tsetup():
     loop = 1  # temp loop
     val_range = CONTROLLER.get_loop_range(loop)
     str1 = "Temperature Range" if loop == 1 else "Humidity Range"
-    print (f'\n{str1}:\nMAX: {val_range["max"]}\nMIN: {val_range["min"]}')
-    cstnum = int(input(f'Enter Constant # '))
-    param = input(f'Enter parameter (e.g., TEMP, HTEMP, LTEMP): ')
-    current = CONTROLLER.get_constant_set(cstnum,param)
-    print(f'\nrsp> Current Setting: {current}')
-    if param in ['TEMP', 'HTEMP', 'LTEMP'] and cstnum in [1,2,3]:
-        val = float(input(f'Enter new Set Point: '))
-        try: 
-            CONTROLLER.set_const_mode_gl(cstnum,param,val) 
-            print ('\nrsp> DONE') 
-        except Exception as e:          
-            print(f'\nAttempt failed; reason:\n {e}')          
-    else: 
-        print(f'\nAttempt failed; try again.')
-        const_setup() 
+    print (f'\n{str1}:\n\tMAX: {val_range["max"]}\n\tMIN: {val_range["min"]}')
+    try:
+        while True:
+            try:
+                cstnum = int(input(f'\nEnter Constant # '))
+                if isinstance(cstnum, int) and cstnum in [1,2,3]:
+                    param = input(f'Enter parameter (e.g., TEMP, HTEMP, LTEMP): ').upper()
+
+                    # reading current setting/values
+                    if param.upper() in ['TEMP', 'HTEMP', 'LTEMP']:
+                        current = CONTROLLER.get_constant_set(cstnum,param)
+                        print(f'\nrsp> Current Setting: {current}')
+                    else:
+                        print(f'ERR: Invalid input; try again.')
+                        const_setup()         
+
+                    if param in ['TEMP', 'HTEMP', 'LTEMP'] and cstnum in [1,2,3]:
+                        val = float(input(f'Enter new Set Point: '))
+                        if val_range["min"] <= val <= val_range["max"]:                            
+                            CONTROLLER.set_const_mode_gl(cstnum,param,val) 
+                            print ('\nrsp> DONE') 
+                            break
+                            pass 
+                        else:
+                            print(f'ERR: Invalid input; try again.')
+                            const_setup()  
+                    else: 
+                        print(f'\nAttempt failed; try again.')
+                        const_setup() 
+                else:
+                    print ('ERROR! Constant number out of range. Try again. \n')
+            except ValueError:
+                print ('Invalid value.\n')
+            except KeyboardInterrupt:
+                pass 
+    except KeyboardInterrupt:
+        pass        
         
     current = CONTROLLER.get_constant_set(cstnum,param)
-    print(f'\nrsp> Current Setting: {current}')
+    print(f'\nrsp> New reading: {current}\n\n')
 
 def const_hsetup():
     '''
-    Read Constant [1,2,3] TEMP, HUMI, REF value
-    Set Constant [1,2,3] TEMP, HUMI, REF value 
+    Read Constant [1,2,3] HUMI, HHUMI, LHUMI value
+    Set Constant [1,2,3] HUMI, HHUMI, LHUMI value
     
     Return:
         value,[str] 
@@ -188,36 +212,57 @@ def const_hsetup():
     loop = 2  # humi loop 
     val_range = CONTROLLER.get_loop_range(loop)
     str1 = "Temperature Range" if loop == 1 else "Humidity Range"
-    print (f'\n{str1}:\nMAX: {val_range["max"]}\nMIN: {val_range["min"]}')
-    cstnum = int(input(f'Enter Constant # '))
-    param = input(f'Enter parameter (e.g., HUMI, HHUMI, LHUMI): ')
-    current = CONTROLLER.get_constant_set(cstnum,param)
-    print(f'\nrsp> Current Setting: {current}')      
-        
-    if param in ['HUMI', 'HHUMI', 'LHUMI'] and cstnum in [1,2,3]:
-        val = int(input(f'Enter new Set Point: '))
-        try:
-            CONTROLLER.set_const_mode_gl(cstnum,param,val) 
-            print ('\nrsp> DONE') 
-        except Exception as e:          
-            print(f'\nAttempt failed; reason:\n {e}')   
+    print (f'\n{str1}:\n\tMAX: {val_range["max"]}\n\tMIN: {val_range["min"]}')
+    try: 
+        while True:
+            try:
+                cstnum = int(input(f'\nEnter Constant # '))
+                if isinstance(cstnum,int) and cstnum in [1,2,3]:
+                    param = input(f'Enter parameter (e.g., HUMI, HHUMI, LHUMI): ').upper()
+    
+                    # reading current humi setting/values
+                    if param.upper() in ['HUMI', 'HHUMI', 'LHUMI']:
+                        current = CONTROLLER.get_constant_set(cstnum,param)
+                        print(f'\nrsp> Current Setting: {current}') 
+                    else:
+                        print(f'ERR: Invalid input; try again.')
+                        const_setup()      
+
+                    if param in ['HUMI', 'HHUMI', 'LHUMI'] and cstnum in [1,2,3]:
+                        val = int(input(f'Enter new Set Point: '))
+                        if val_range["min"] <= val <= val_range["max"]: 
+                            CONTROLLER.set_const_mode_gl(cstnum,param,val) 
+                            print ('\nrsp> DONE') 
+                            break 
+                            pass 
+                        else:
+                            print(f'ERR: Invalid input; try again.')
+                            const_setup()  
+                    else: 
+                        print(f'\nAttempt failed; try again.')
+                        const_setup() 
+                else:
+                    print ('ERROR! Constant number out of range. Try again. \n')
+            except ValueError:
+                print ('Invalid value.\n')
+            except KeyboardInterrupt:
+                pass 
+    except KeyboardInterrupt:
+        pass  
 
     current = CONTROLLER.get_constant_set(cstnum,param)
-    print(f'\nrsp> Current Setting: {current}')
+    print(f'\nrsp> New reading: {current}\n\n')
 
-def const_ssetup(param):
+def const_ssetup():
     '''
     Read Constant [1,2,3] RELAY setting value
     
     Return:
         value,[str] 
     '''
-    cstnum = int(input(f'Enter Constant # '))
-    if cstnum in [1,2,3]:
-        val = int(input(f'Enter relay number: '))
-        CONTROLLER.set_const_relay_gl(cstnum, val)
-    current = CONTROLLER.get_constant_set(cstnum,param)
-    print(f'\nrsp> Current Setting: {current}')
+    a=CONTROLLER.get_ref()
+    b=CONTROLLER.get_relay()
+    print(f'\n\tREF:{a}\n\t RELAY: {b}') 
 
 def read_val(str,loop):
     '''
@@ -463,25 +508,24 @@ def stop_const():
     else:    
         print ("\nrsp> Chamber not in Constant mode. Nothing to do.")
 
-def const_setup():
+def temp_humi_controller():
     '''
-    Set control options  
+       set options for Temp and Humi controls
     '''
-    def const_opt(option):
-        '''
-        Select const setup option
-        '''
+    def temp_humi_menu(choice):
+        '''return T/H menu option'''
         return {
-            't': lambda: const_tsetup(),
-            'h': lambda: const_hsetup(),
-            'r': lambda: const_thsetup('REF'),            
-            's': lambda: const_ssetup('RELAY'),
+            'r': lambda: read_val('Temp',1),
+            't': lambda: set_loop('Temp',1),
+            'h': lambda: read_val('Humi',2),
+            's': lambda: set_loop('Humi',2),
             'z': lambda: main_menu()
-        }.get(option, lambda: print (f'\nrsp> Not a valid option.')) () 
+        }.get(choice, lambda: print ('\nrsp> Not a valid option.') )()
+
     while(True):
-        print_menu('3','Constant setup')
-        option = input('Select option (t, h, r, s, z): ')
-        const_opt(option)
+        print_menu('2','Temp/Humi')
+        option = input('Select option (r, t, h, s, z): ')
+        temp_humi_menu(option)
 
 def prog_menu():  # tested 
     '''
@@ -510,28 +554,9 @@ def prog_menu():  # tested
         }.get(choice, lambda: print ('\nrsp> Not a valid option') )()
 
     while(True):
-        print_menu('2','Program')
+        print_menu('3','Program')
         option = input('Select option (m, e, n, p, r, s, c, z): ')
         prog_operation(option)
-
-def temp_humi_controller():
-    '''
-       set options for Constant Temp and Humi controls
-    '''
-    def temp_humi_menu(choice):
-        '''return T/H menu option'''
-        return {
-            'r': lambda: read_val('Temp',1),
-            't': lambda: set_loop('Temp',1),
-            'h': lambda: read_val('Humi',2),
-            's': lambda: set_loop('Humi',2),
-            'z': lambda: main_menu()
-        }.get(choice, lambda: print ('\nrsp> Not a valid option.') )()
-
-    while(True):
-        print_menu('2','Temp/Humi')
-        option = input('Select option (r, t, h, s, z): ')
-        temp_humi_menu(option)
 
 def event_controller():
     '''
@@ -581,6 +606,26 @@ def end_program():
     print ("Program terminated.\n")
     exit() 
 
+def const_setup():
+    '''
+    Set control options  
+    '''
+    def const_opt(option):
+        '''
+        Select const setup option
+        '''
+        return {
+            't': lambda: const_tsetup(),
+            'h': lambda: const_hsetup(),
+            'r': lambda: const_ssetup(),            
+            's': lambda: const_ssetup(),
+            'z': lambda: main_menu()
+        }.get(option, lambda: print (f'\nrsp> Not a valid option.')) () 
+    while(True):
+        print_menu('6','constant setup')
+        option = input('Select option (t, h, r, s, z): ')
+        const_opt(option)
+         
 def main_menu(): 
     '''
        Set options for program control
@@ -590,6 +635,7 @@ def main_menu():
         return main menu options
         '''
         return {
+            't': lambda: temp_humi_controller(),
             'p': lambda: prog_menu(),
             'c': lambda: const_setup(),            
             'e': lambda: event_controller(),
@@ -599,7 +645,7 @@ def main_menu():
 
     while(True):
         print_menu('1','Main Menu')
-        option = input('Select option (p, c, e, s, z): ')
+        option = input('Select option (t, p, c, e, s, z): ')
         main_option(option)
 
 def print_menu(choice, menu_name):
@@ -607,30 +653,41 @@ def print_menu(choice, menu_name):
     set up selection menu
     '''
     print (f'\nGL control options: {menu_name}'
-            '\n--------------------------------') 
+            '\n----------------------------------') 
     for key in menu(choice).keys():
         print (f'  [{key}]:', menu(choice)[key] )
-    print ('--------------------------------') 
+    print ('----------------------------------') 
 
 def menu(choice):
     '''
     menu list
     main menu option: 
        1: main menu
-       2: Program menu
-       3: Constant setup
-       4: Time Signal menu
+       2: Temp/Humi menu
+       3: Program menu
+       4: Output (Time Signal) menu
        5: Chamber operating mode
+       6: Constant setup
     '''
     # main menu 
     main_menu = {
+        't': 'Temp/Humi SP control          ',
         'p': 'Program control               ',
         'c': 'Constant Mode control         ',
         'e': 'Event control                 ',        
         's': 'Chamber operating mode        ',
         'z': 'Exit program                  '
     }
-  
+
+    # temp and humi ctrl menu
+    th_menu = {
+        'r': 'Read Const [1] Temp SP and PV    ',
+        't': 'Set Const [1] Temp Set Point     ',
+        'h': 'Read Const [1] Humi SP and PV    ',
+        's': 'Set Const [1] Humi Set Point     ',
+        'z': 'Return to Main Menu           '
+    }
+
     # program menu 
     prog_menu = {
         'm': 'Operating status              ',
@@ -673,10 +730,11 @@ def menu(choice):
 
     return {
         '1': lambda: main_menu,
-        '2': lambda: prog_menu,
-        '3': lambda: setup_menu,        
+        '2': lambda: th_menu,
+        '3': lambda: prog_menu,
         '4': lambda: ts_menu,
         '5': lambda: status_menu,
+        '6': lambda: setup_menu,
     }.get(choice, lambda: print('\nrsp> Not a valid option') )()
 
 if __name__ == "__main__":
