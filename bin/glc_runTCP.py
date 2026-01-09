@@ -259,30 +259,33 @@ def const_ssetup():
     Return:
         value,[str] 
     '''
+    param="REF"
     try: 
         while True:
             try:
                 cstnum = int(input(f'\nEnter Constant # '))
                 if isinstance(cstnum,int) and cstnum in [1,2,3]:
-                    current = CONTROLLER.get_constant_set(cstnum,'REF')
+                    current = CONTROLLER.get_constant_set(cstnum,param)
                     print(f'\nrsp> Current Setting: {current}') 
                 else:
                     print(f'ERR: Invalid input; exiting setup.')
                     const_setup()  
 
                 val = input(f'Enter new refrig set point (e.g.: Off,25,50,100,Auto): ')
-
+                print(f'val = {val}')
                 if isinstance(val,int) and val in [25,50,100]:
-                    print('Number PASSED!')
+                    print(f'val = {val}')
                     cstnum = int(input(f'\nPAUSED: '))
-                    const_setup()
+                    break 
                 elif isinstance(val,str) and val.upper() in ['OFF', 'AUTO']:
-                    print('STR PASSED!')
+                    print(f'val = {val}')
                     cstnum = int(input(f'\nPAUSED: '))
-                    const_setup()
+                    break
                 else:
                     print ('ERROR! Refrig value out of range. \n')
-
+                    x=input("ENTER!!!")
+                    #const_setup()
+                    break  
             except ValueError:
                 print ('Invalid value.\n')
             except KeyboardInterrupt:
