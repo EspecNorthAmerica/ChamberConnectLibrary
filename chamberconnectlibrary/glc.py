@@ -1688,6 +1688,17 @@ class GLC(object):
         else:
             raise ValueError('Invalid parameter values and cnum must be between 1 and 3')
 
+    def write_constant_set_mode_ref(self, cnum, arg, value):
+        '''
+        Get the constant settings for all system parameters: REF
+
+        returns:
+            [int] and [string]
+        '''
+        if arg in ['REF'] and cnum in [1,2,3]:            
+            self.ctlr.interact(f'CONSTANT SET,{cnum},{arg},{value}').decode('utf-8', 'replace').split(',')
+        else:
+            raise ValueError('Invalid parameter values and cnum must be between 1 and 3')
 
     def write_constant_set_relay(self, cstnum, relays):
         '''

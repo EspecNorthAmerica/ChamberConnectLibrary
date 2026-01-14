@@ -35,6 +35,7 @@ This library has been completely tested under the following Python 3 versions:
 * Python 3.8.x
 * Python 3.9.x
 * Python 3.10.x
+* Python 3.13.x
 
 Such requirements were due to the use of a print format function for strings, called f-strings, which was added in Python 3.6. 
 

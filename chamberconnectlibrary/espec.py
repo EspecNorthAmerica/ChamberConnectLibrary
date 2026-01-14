@@ -815,6 +815,11 @@ class Espec(ControllerInterface):
 
     # NEW GL 
     @exclusive
+    def set_const_mode_ref(self, cstnum, param, value):
+        self.client.write_constant_set_mode_ref(cstnum, param, value)
+
+    # NEW GL 
+    @exclusive
     def set_const_relay_gl(self, cstnum, value):
         self.client.write_constant_set_relay(cstnum, value)
 

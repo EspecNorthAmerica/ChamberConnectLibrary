@@ -251,10 +251,10 @@ def const_hsetup():
     current = CONTROLLER.get_constant_set(cstnum,param)
     print(f'\nrsp> New reading: {current}\n\n')
 
-def const_ssetup():
+def const_rsetup():
     '''
-    Read Constant [1,2,3] HUMI, HHUMI, LHUMI value
-    Set Constant [1,2,3] HUMI, HHUMI, LHUMI value
+    Read Constant [1,2,3] for REF
+    Set Constant [1,2,3] for REF
     
     Return:
         value,[str] 
@@ -271,23 +271,41 @@ def const_ssetup():
                     print(f'ERR: Invalid input; exiting setup.')
                     const_setup()  
 
-                val = input(f'Enter new refrig set point (e.g.: Off,25,50,100,Auto): ')
-                print(f'val = {val}')
-                if isinstance(val,int) and val in [25,50,100]:
-                    print(f'val = {val}')
-                    cstnum = int(input(f'\nPAUSED: '))
+                mode = input(f'Select Op mode: (e.g.: off, auto, manual): ')
+                if mode.upper() in ['OFF', 'off']: 
+                    act = 'REF0'
+                    CONTROLLER.set_const_mode_ref(cstnum,param,act) 
+                    print(f'\nrsp> Done') 
                     break 
-                elif isinstance(val,str) and val.upper() in ['OFF', 'AUTO']:
-                    print(f'val = {val}')
-                    cstnum = int(input(f'\nPAUSED: '))
+                elif mode.upper() in ['AUTO', 'auto']:
+                    act='REF9'
+                    CONTROLLER.set_const_mode_ref(cstnum,param,act)
+                    print(f'\nrsp> Done') 
                     break
+                elif mode.upper() in ['MANUAL', 'manual']:
+                    val = int(input(f'Enter refrig set point (e.g., 25,50,100): '))
+                    if isinstance(val,int) and val == 25:
+                        act='REF1'
+                        CONTROLLER.set_const_mode_ref(cstnum,param,act)                        
+                        print(f'\nrsp> Done') 
+                        break
+                    elif isinstance(val,int) and val == 50:
+                        act='REF3'
+                        CONTROLLER.set_const_mode_ref(cstnum,param,act)
+                        print(f'\nrsp> Done') 
+                        break
+                    elif isinstance(val,int) and val == 100:
+                        act='REF6'
+                        CONTROLLER.set_const_mode_ref(cstnum,param,act)
+                        print(f'\nrsp> Done') 
+                        break  
+                    else:
+                        raise ValueError('param "set point" must be soemhting')
+                        #break  
                 else:
-                    print ('ERROR! Refrig value out of range. \n')
-                    x=input("ENTER!!!")
-                    #const_setup()
-                    break  
+                    raise ValueError('param "mode" must be: "off"/"Off"') 
             except ValueError:
-                print ('Invalid value.\n')
+                print (f'\nrsp> Invalid input.\n')
             except KeyboardInterrupt:
                 pass 
     except KeyboardInterrupt:
@@ -295,6 +313,18 @@ def const_ssetup():
 
     current = CONTROLLER.get_constant_set(cstnum,param)
     print(f'\nrsp> New reading: {current}\n\n')
+
+def const_ssetup():
+    '''
+    Read Constant [1,2,3] for REF
+    Set Constant [1,2,3] for REF
+    
+    Return:
+        value,[str] 
+    '''
+    param="RELAY"
+    print(f'\nrsp> Not yet implemented.')
+    const_setup() 
 
 def read_val(str,loop):
     '''
@@ -649,7 +679,7 @@ def const_setup():
         return {
             't': lambda: const_tsetup(),
             'h': lambda: const_hsetup(),
-            'r': lambda: const_ssetup(),            
+            'r': lambda: const_rsetup(),            
             's': lambda: const_ssetup(),
             'z': lambda: main_menu()
         }.get(option, lambda: print (f'\nrsp> Not a valid option.')) () 
@@ -790,6 +820,7 @@ if __name__ == "__main__":
     #    'interface':'Serial',
     #    'baudrate':'19200',          # opt: 9600, 19200
     #    #'serialport':'//./COM5',    # for MS Windows platform
+    #    apply 'chgport' command to check the detected USB; and use for COM#
     #    'serialport':'/dev/ttyUSB1', # GNU/Linux platform 
     #    'adr':1
     #}
