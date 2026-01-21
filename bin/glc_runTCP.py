@@ -316,8 +316,8 @@ def const_rsetup():
 
 def const_ssetup():
     '''
-    Read Constant [1,2,3] for REF
-    Set Constant [1,2,3] for REF
+    Read Constant [1,2,3] for Relay
+    Set Constant [1,2,3] for Relay
     
     Return:
         value,[str] 
