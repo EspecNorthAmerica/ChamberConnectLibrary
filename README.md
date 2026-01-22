@@ -69,11 +69,19 @@ These and other sample programs may be modified to include different communicati
 
 **MS Windows**: To test the above program, navigate to first-level chamberconnectlibrary directory and execute the program as follows:
 
-```python bin/f4t_runTCP.py```
+```cd \path\to\chamberconnectlibrary```
+
+start venv:
+
+```venv\scripts\activate```
+
+```run a specific programm:``
+
+```venv\scripts\python bin\f4t_runTCP.py``` 
 
 or 
 
-```python bin/f4t_runRTU.py```
+```venv\scripts\python bin\f4t_runRTU.py```
 
 **GNU/Linux**: To test the above program, navigate to first-level chamberconnectlibrary (root) directory and execute the program as follows:
 
