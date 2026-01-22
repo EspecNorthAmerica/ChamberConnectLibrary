@@ -32,9 +32,8 @@ setup(
         ],
 
     classifiers=[
-        'Programming Language :: Python :: 3.7.3',
-        'Programming Language :: Python :: 3.8.10',
-        'Programming Language :: Python :: 3.9.3',
-        'Programming Language :: Python :: 3.10.12',
+        'Programming Language :: Python :: 3.11',
+        'Programming Language :: Python :: 3.12',
+        'Programming Language :: Python :: 3.13'
     ],
 )
