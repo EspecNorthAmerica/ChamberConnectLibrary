@@ -5,6 +5,7 @@ technical support, guaranttee or liability. However, the offered product here ha
 
 This library for interfacing with ESPEC North America chambers supports the following controllers: 
 
+- ESPEC GL,
 - ESPEC P300,
 - P300 w/ vibration, 
 - SCP-220, 
@@ -12,8 +13,6 @@ This library for interfacing with ESPEC North America chambers supports the foll
 - Watlow F4T and Watlow F4S/D controllers
 
 Interfacing can be configured to use Serial RS232C or TCP/IP.
-
-**NOTE:** The library for the P-300 can be used for the GL controller (with some new functionality not yet available). The library for the GL controller is currently unavailable. 
 
 Please read the disclaimer on liability in the LICENSE document as well as in all sample programs and interfacing libraries. 
 
@@ -28,8 +27,6 @@ OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ## Requirements
 
-Python 3.6 and above is required for using this distributed library. 
-
 This library has been completely tested under the following Python 3 versions: 
 
 * Python 3.8.x
@@ -37,7 +34,7 @@ This library has been completely tested under the following Python 3 versions:
 * Python 3.10.x
 * Python 3.13.x
 
-Such requirements were due to the use of a print format function for strings, called f-strings, which was added in Python 3.6. 
+As of January 2026, Python 3.11 or higher is recommended (and should be used), as older version are nearing their end-of-life.
 
 ## Installation
 
@@ -54,6 +51,7 @@ Sample programs are included in the bin folder. Program names specify the type o
 
 Sample programs are available as follows: 
 
+* ```GL_runTCP.py```: Sample program via TCP/IP and serial RS232C
 * ```f4t_runTCP.py```: Sample program via TCP/IP for F4T w/ Temp
 * ```f4t_runTCP_TempHumi.py```: Sample program via TCP/IP for F4T w/ Temp and Humi
 * ```f4t_runRTU.py```: Sample program via RTU Modbus for F4T w/ Temp
