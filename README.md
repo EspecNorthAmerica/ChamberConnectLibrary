@@ -1,4 +1,4 @@
-# ChamberConnectLibrary (codename: cclibrary-py3) 
+# ChamberConnectLibrary (codename: glclib-py3) 
 
 ESPEC Chamber Connect Library for Python 3 is offered "as is" without 
 technical support, guaranttee or liability. However, the offered product here has been prepared and carefully tested by ESPEC software engineer to ensure its operability and compatibility. The library also comes with a long list various sample programs to help ESPEC customers or the public to get started with their project.
@@ -45,7 +45,7 @@ There are two ways to use this distribution:
 
 HOWEVER, the PyPI package or the src distribution folder has not yet been published. 
 
-In the meantime, to take advantage of this free library, simply clone it to your local system and git checkout cclibrary-py3. The clone directory must also carry the name ```chamberconnectlibrary```; navigate to this root directory to execute and test run the sample programs provided in the bin directory. 
+In the meantime, to take advantage of this free library, simply clone it to your local system and git checkout glclib-py3. The clone directory must also carry the name ```chamberconnectlibrary```; navigate to this root directory to execute and test run the sample programs provided in the bin directory. 
 
 Sample programs are included in the bin folder. Program names specify the type of controllerfor, for instance, ```f4_runRTU.py``` is a program to control and operate a chamber with Watlow F4. With this clone, it is probably best that a virtualenv with specific Python 3 version created in the root directory to test and run these sample programs. This is to avoid any conflict with base Python 3 already exists on your system, unless it was installed specifically for this project. For RTU modbus (serial connect), the ```serial_requirements.txt``` is needed to install the pyserial and/or minimalmodbus modules in this virtualenv. 
 
