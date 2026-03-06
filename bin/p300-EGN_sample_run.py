@@ -89,7 +89,7 @@ import time,re
 import os, sys
 import logging
 import serial 
-sys.path.insert(0,'../chamberconnectlibrary')
+sys.path.insert(0,'../ChamberConnectLibrary')
 
 from chamberconnectlibrary.espec import Espec 
 from chamberconnectlibrary.p300 import P300

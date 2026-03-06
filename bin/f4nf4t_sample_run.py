@@ -80,7 +80,7 @@ OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 import pprint
 import time
 import os, sys, re
-sys.path.insert(0,'../chamberconnectlibrary')
+sys.path.insert(0,'../ChamberConnectLibrary')
 
 from chamberconnectlibrary.watlowf4 import WatlowF4
 from chamberconnectlibrary.watlowf4t import WatlowF4T
