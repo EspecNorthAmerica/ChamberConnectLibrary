@@ -1,7 +1,7 @@
 # ChamberConnectLibrary (codename: glclib-py3) 
 
 ESPEC Chamber Connect Library for Python 3 is offered "as is" without 
-technical support, guaranttee or liability. However, the offered product here has been prepared and carefully tested by ESPEC software engineer to ensure its operability and compatibility. The library also comes with a long list various sample programs to help ESPEC customers or the public to get started with their project.
+technical support, guaranttee or liability. However, the offered product here has been prepared and carefully tested by ESPEC software engineer to ensure its operability and compatibility. The library also comes with a long list of various sample programs to help ESPEC customers or the public to get started with their project.
 
 This library for interfacing with ESPEC North America chambers supports the following controllers: 
 
@@ -34,7 +34,7 @@ This library has been completely tested under the following Python 3 versions:
 * Python 3.10.x
 * Python 3.13.x
 
-As of January 2026, Python 3.11 or higher is recommended (and should be used), as older version are nearing their end-of-life.
+As of January 2026, Python 3.11 or higher is recommended (and should be used), as older versions are nearing their end-of-life.
 
 ## Installation
 
@@ -45,7 +45,7 @@ There are two ways to use this distribution:
 
 HOWEVER, the PyPI package or the src distribution folder has not yet been published. 
 
-In the meantime, to take advantage of this free library, simply clone it to your local system and git checkout glclib-py3. The clone directory must also carry the name ```chamberconnectlibrary```; navigate to this root directory to execute and test run the sample programs provided in the bin directory. 
+In the meantime, to take advantage of this free library, simply clone it to your local system and git checkout glclib-py3. Use the default clone name when cloning the repository. Navigate to the root directory to execute and test run the sample programs provided in the bin directory. 
 
 Sample programs are included in the bin folder. Program names specify the type of controllerfor, for instance, ```f4_runRTU.py``` is a program to control and operate a chamber with Watlow F4. With this clone, it is probably best that a virtualenv with specific Python 3 version created in the root directory to test and run these sample programs. This is to avoid any conflict with base Python 3 already exists on your system, unless it was installed specifically for this project. For RTU modbus (serial connect), the ```serial_requirements.txt``` is needed to install the pyserial and/or minimalmodbus modules in this virtualenv. 
 
@@ -63,11 +63,11 @@ Sample programs are available as follows:
 * ```espec-cntlr-comm_rs232.py```: Sample program with option to communicate and control ESPEC P300, P300 w/ vibration, SCP-220 and ES-102 directly via raw text commands. This is a good program to test communication between the device and the target chamber/controller through controller's native commands. 
 * ```p300vib_sample_run.py```: Sample program to test, control and operate P300 w/ Vibration. Programmer may modify communication using RS232 or TCP/IP.  
 * ```p300_sample_run.py```: Sample program to test, control and operate P300. Programmer may modify communication using RS232 or TCP/IP.  
-
+* ```glc_runTCP.py```: Sample program to test, control and operate our new GL controller. Programmer may modify communication using RS232 or TCP/IP. Default communication protocol is TCP/IP. 
 
 These and other sample programs may be modified to include different communication interfaces for your application requirements as outlined in the [controllerinterface.md](controllerinterface.md). 
 
-**MS Windows**: To test the above program, navigate to first-level chamberconnectlibrary directory and execute the program as follows:
+**MS Windows**: To test the above program, navigate to first-level ChamberConnectLibrary directory and execute the program as follows:
 
 ```cd \path\to\chamberconnectlibrary```
 
@@ -83,7 +83,7 @@ or
 
 ```venv\scripts\python bin\f4t_runRTU.py```
 
-**GNU/Linux**: To test the above program, navigate to first-level chamberconnectlibrary (root) directory and execute the program as follows:
+**GNU/Linux**: To test the above program, navigate to first-level ChamberConnectLibrary (root) directory and execute the program as follows:
 
 ```sudo python3 bin/f4t_runTCP.py```
 

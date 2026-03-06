@@ -19,7 +19,7 @@ setup(
     packages=['chamberconnectlibrary'],
     install_requires=['pyserial', 'minimalmodbus'],
     zip_safe=False,
-    keywords='Espec P300 P300vib SCP220 ES102 F4T F4',
+    keywords='ESPEC GL P300 P300vib SCP220 ES102 F4T F4',
     include_package_data=True,
     scripts=[
         'bin/f4t_runTCP.py', 
@@ -27,8 +27,9 @@ setup(
         'bin/f4t_runTCP_TempHumi.py',
         'bin/f4t_runTCP_PTCON_cascade.py',
         'bin/p300_sample_run.py',
-        'bin/p300vib_sample_run.py'
-        'bin/sco220_sample_run.py'
+        'bin/p300vib_sample_run.py',
+        'bin/scp220_sample_run.py',
+        'bin/glc_runTCP.py'
         ],
 
     classifiers=[
