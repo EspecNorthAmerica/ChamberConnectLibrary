@@ -86,7 +86,7 @@ import serial
 import os, sys
 import re
 import logging
-sys.path.insert(0,'../chamberconnectlibrary')
+sys.path.insert(0,'../ChamberConnectLibrary')
 
 from chamberconnectlibrary.p300serial import EspecP300
 from chamberconnectlibrary.dictcode import dict_code

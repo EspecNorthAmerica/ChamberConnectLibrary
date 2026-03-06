@@ -71,7 +71,7 @@ OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 import time,re
 import os, sys
 import logging
-sys.path.insert(0,'../chamberconnectlibrary')
+sys.path.insert(0,'../ChamberConnectLibrary')
 
 from chamberconnectlibrary.watlowf4t import WatlowF4T
 from chamberconnectlibrary.controllerinterface import ControllerInterfaceError
