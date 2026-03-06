@@ -43,7 +43,11 @@ OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 import time,re
 import os, sys
 import logging
+<<<<<<< HEAD
 sys.path.insert(0,'../ChamberConnectLibrary')
+=======
+sys.path.insert(0,'../ChamberConnectLibrary') 
+>>>>>>> origin/cclibrary-py3
 
 from datetime import datetime 
 from chamberconnectlibrary.watlowf4t import WatlowF4T
