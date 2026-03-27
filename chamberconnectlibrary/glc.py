@@ -11,7 +11,7 @@ This is the GL controller native command library for Python 3.6 and higher.
 It is a direct implimentation of the GL controller's communication interface.
 
 Tested: 
-GNU/Linux platform: Python 3.8.x, 3.9.x, 3.10.x
+GNU/Linux platform: Python 3.9 - 3.13
 MS Windows platform: Python 3.9.x
 '''
 #pylint: disable=W0703
