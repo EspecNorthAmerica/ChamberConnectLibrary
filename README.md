@@ -34,9 +34,9 @@ This library has been completely tested under the following Python 3 versions:
 * Python 3.10.x
 * Python 3.13.x
 
-As of January 2026, Python 3.11 or higher is recommended (and should be used), as older versions are nearing their end-of-life.
+As of January 2026, Python 3.11 or higher is recommended and should be used, as older versions (e.g., Python 3.9) have reached their end-of-life; and Python 3.10 is nearing its end-of-life cycle. 
 
-## Installation
+## Installation and Configuration
 
 There are two ways to use this distribution: 
 
@@ -45,9 +45,30 @@ There are two ways to use this distribution:
 
 HOWEVER, the PyPI package or the src distribution folder has not yet been published. 
 
-In the meantime, to take advantage of this free library, simply clone it to your local system and git checkout glclib-py3. Use the default clone name when cloning the repository. Navigate to the root directory to execute and test run the sample programs provided in the bin directory. 
+In the meantime, the simplest way to take advantage of this free library is to clone it to your local system and checkout glclib-py3. **Note:** If you do not checkout the branch, your clone contains the master branch which is the old branch (Python 2.7); and you will encounter compability issues. Use the default clone name when cloning the repository (i.e., ChamberConnectLibrary). Navigate to the root directory to execute and test run the sample programs provided in the bin directory. 
 
-Sample programs are included in the bin folder. Program names specify the type of controllerfor, for instance, ```f4_runRTU.py``` is a program to control and operate a chamber with Watlow F4. With this clone, it is probably best that a virtualenv with specific Python 3 version created in the root directory to test and run these sample programs. This is to avoid any conflict with base Python 3 already exists on your system, unless it was installed specifically for this project. For RTU modbus (serial connect), the ```serial_requirements.txt``` is needed to install the pyserial and/or minimalmodbus modules in this virtualenv. 
+* ``git clone git@github.com:EspecNorthAmerica/ChamberConnectLibrary.git ``
+* ``git checkout glclib-py3``
+
+With this clone, it is probably best to create virtualenv with specific Python 3 version created in the root directory to test and run these sample programs. This is to avoid any conflict with the base Python 3 already exists on your system, unless it was installed and configured specifically for this project.
+
+### GNU/Linux 
+
+This procedure uses the old-school PIP configuration method. Modern **uv** can be used to pull a desired Python3 version to use with this library; we, however, will not cover it here. The goal here is to provide the simplest and straight-forward option to get the library working to control your chamber.
+
+* Navigate to the cloned directory
+* Install python3-pip python3-virtualenv 
+* Create virtualenv with: python3 -m venv venv
+* Activate the venv with: source venv/bin/activate 
+* Update pip and run pip to install the ``serial_requirement.txt`` file for serial communication using Modbus RTU. You can install these packages (pyserial and minimalmodbus) manually using pip, if a new version is required.
+
+### Windows 
+
+To set up Python 3 virtualenv, we set up from the base system first. 
+
+## Program Application 
+
+Sample programs are included in the bin folder. Program names specify the type of controllerfor, for instance, ```f4_runRTU.py``` is a program to control and operate a chamber with Watlow F4. 
 
 Sample programs are available as follows: 
 
