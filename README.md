@@ -52,25 +52,36 @@ In the meantime, the simplest way to take advantage of this free library is to c
 
 Navigate to the root directory to execute and test run the sample programs provided in the bin directory. 
 
-With this clone, it is probably best to create virtualenv with specific Python 3 version created in the root directory to test and run these sample programs. This is to avoid any conflict with the base Python 3 already exists on your system, unless it was installed and configured specifically for this project.
+With this clone, it is probably best to create virtualenv with specific Python 3 version created in the root directory to test and run these sample programs, provided the ``pyserial`` and ``minimalmodbus`` packages have been installed (explained below). This is to avoid any conflict with the base Python 3 already exists on your system, unless it was installed and configured specifically for this project.
 
 ### GNU/Linux 
 
 This procedure uses the old-school PIP configuration method. Modern **uv** can be used to pull a desired Python3 version to use with this library; we, however, will not cover it here. The goal here is to provide the simplest and straight-forward option to quickly get the library working to control your chamber.
 
+* Clone the repository
 * Navigate to the cloned directory
+* Checkout ``glclib-py3``
 * Install python3-pip python3-virtualenv 
-* Create virtualenv with: python3 -m venv venv
-* Activate the venv with: source venv/bin/activate 
+* Create virtualenv with: ``python3 -m venv venv``
+* Activate the venv with: ``source venv/bin/activate`` 
 * Update pip and run pip to install the ``serial_requirement.txt`` file for serial communication using Modbus RTU. You can install these packages (pyserial and minimalmodbus) manually using pip, if a new version is required.
 
 ### Windows 
 
 To set up Python 3 virtualenv, we set up from the base system first. 
 
+* Ensure Python 3.x is installed on MS Windows 10/11
+* Clone the repository
+* Navigate to the cloned directory
+* Checkout ``glclib-py3`` 
+* Create virtualenv: ``python -m virtual venv``
+* Activate virtualenv: ``venv\scripts\activate`` 
+* Install and update/upgrade pip: ``venv\scripts\python -m pip install --upgrade pop`` or ``pip install -U pip``
+* Install required pkgs with pip: ``venv\scripts\python -m pip install -r serial_requirement.txt``. You can install these packages (pyserial and minimalmodbus) manually using pip, if a new version is required.
+
 ## Program Application 
 
-Sample programs are included in the bin folder. Program names specify the type of controllerfor, for instance, ```f4_runRTU.py``` is a program to control and operate a chamber with Watlow F4. 
+Sample programs are included in the bin folder. Program names specify the type of controllerfor; for instance, ```f4t_runRTU.py``` is a program to control and operate ESPEC chamber with Watlow F4T via Modbus RTU communication protocol, while ``f4t_runTCP.py`` is for TCP/IP communication. However, each program can be modified to one communication protocol or the other.   
 
 ### TCP/IP Communication Protocol 
 
@@ -102,6 +113,8 @@ Sample programs are available as follows:
 These and other sample programs may be modified to include different communication interfaces for your application requirements as outlined in the [controllerinterface.md](controllerinterface.md). 
 
 ### MISC Communication Protocol
+
+These are few experimental programs. 
 
 * ```f4nf4t_sample_run.py```: Sample program with options on F4 RTU, F4T RTU and F4T TCP/IP. A connection to either F4 or F4T via RTU or TCP/IP must be established prior to selecting the option. Default baud rate for F4T is 38400 and F4 9600. It is best to select the one used by the controller.  
 * ```p300_rs232-direct.py```: Sample program using a direct serial connect via RS232 to a "modified" ESPEC P300 main library (called ```p300serial.py```); this program bypasses the chamberconnectlibrary (espec.py and especinteract.py). ```p300serial.py``` is simply a modified ```p300.py``` to provide a direct connect via RS232. 
