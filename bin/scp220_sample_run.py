@@ -96,6 +96,21 @@ from chamberconnectlibrary.scp220 import SCP220
 from chamberconnectlibrary.especinteract import EspecSerial, EspecTCP 
 from chamberconnectlibrary.controllerinterface import ControllerInterfaceError
 
+def ip_addr():
+    '''select and check for proper IP address format
+    '''
+    while True:
+        try:
+            ip_addr = input('Enter controller IP address (e.g., 192.168.0.101): ')
+            #ip_addr = "10.30.100.175"
+            chk_ip = re.match(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$", ip_addr)
+            if chk_ip:
+                print ('\n')
+                break
+        except Exception:
+            print ('Invalid IP address.')
+    return ip_addr
+
 def set_loop(str, loop):
     '''set new temp value
     '''
@@ -474,10 +489,14 @@ if __name__ == "__main__":
     #}
     
     # using TCP/IP for communication 
-    interface_params = {
-        'interface':'TCP',
-        'host':'10.30.200.236'  # use correct IP addr
-    }
+    #interface_params = {
+    #    'interface':'TCP',
+    #    'host':'10.30.200.236'  # use correct IP addr
+    #}
+
+    # to manually enter IP address of GL controller system
+    interface_params = {'interface':'TCP', 'host':ip_addr()}
+
    
     CONTROLLER = Espec220(
         ctrl_type=controller_type,
