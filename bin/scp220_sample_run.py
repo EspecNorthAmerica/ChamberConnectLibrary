@@ -476,7 +476,7 @@ if __name__ == "__main__":
     # using TCP/IP for communication 
     interface_params = {
         'interface':'TCP',
-        'host':'10.30.200.237'  # use correct IP addr
+        'host':'10.30.200.236'  # use correct IP addr
     }
    
     CONTROLLER = Espec220(
